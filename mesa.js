@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { glazes, stages } from './reglas.js';
+import { DiceArt, tileArt } from './arte.js?v=horno-3';
 
-export const HAND = 10;
+export const HAND = 32;
+export const POWER = 48;
 export const ROLL_TIME = 850;
 const spacing = 1.365;
-const gray = { color: '#65737c', light: '#a7adb1' };
-const positions = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const xAxis = new THREE.Vector3(1, 0, 0);
 const yAxis = new THREE.Vector3(0, 1, 0);
 const zAxis = new THREE.Vector3(0, 0, 1);
@@ -17,49 +16,6 @@ const orientations = [null, new THREE.Quaternion(), new THREE.Quaternion().setFr
   new THREE.Quaternion().setFromAxisAngle(zAxis, Math.PI / 2), new THREE.Quaternion().setFromAxisAngle(zAxis, -Math.PI / 2),
   new THREE.Quaternion().setFromAxisAngle(xAxis, Math.PI / 2), new THREE.Quaternion().setFromAxisAngle(xAxis, Math.PI)];
 
-function faceTexture(glaze, value, stone) {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  const enamel = stone ? gray : glazes[glaze];
-  const wash = ctx.createLinearGradient(13, 12, 114, 121);
-  wash.addColorStop(0, enamel.light);
-  wash.addColorStop(.62, enamel.color);
-  wash.addColorStop(1, enamel.color);
-  ctx.fillStyle = wash;
-  ctx.fillRect(0, 0, 128, 128);
-  ctx.strokeStyle = stone ? '#c2c3bfaa' : '#f6e7c7b9';
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.roundRect(11, 11, 106, 106, 11);
-  ctx.stroke();
-  for (const x of [23, 105]) for (const y of [23, 105]) {
-    ctx.beginPath();
-    ctx.arc(x, y, 6.2, 0, 2 * Math.PI);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x, y, 2.2, 0, 2 * Math.PI);
-    ctx.fillStyle = ctx.strokeStyle;
-    ctx.fill();
-  }
-  for (const pip of positions[value]) {
-    const x = 37 + pip % 3 * 27;
-    const y = 37 + Math.floor(pip / 3) * 27;
-    ctx.beginPath();
-    ctx.arc(x, y + 1.3, 7.9, 0, 2 * Math.PI);
-    ctx.fillStyle = '#18273290';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x, y, 7, 0, 2 * Math.PI);
-    ctx.fillStyle = stone ? '#24323b' : '#fff0d1';
-    ctx.fill();
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
-  return texture;
-}
-
 function mesh(geometry, material, x, y, z, shadow = true) {
   const result = new THREE.Mesh(geometry, material);
   result.position.set(x, y, z);
@@ -69,9 +25,10 @@ function mesh(geometry, material, x, y, z, shadow = true) {
 }
 
 export class Table {
-  constructor(canvas, labels) {
+  constructor(canvas, labels, art = new DiceArt()) {
     this.canvas = canvas;
     this.labels = labels;
+    this.art = art;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.6));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -86,16 +43,21 @@ export class Table {
     this.dragPlane = new THREE.Plane(yAxis, -1.16);
     this.board = new THREE.Group();
     this.effects = new THREE.Group();
+    this.powerShelf = new THREE.Group();
+    this.powerMeshes = [];
+    this.highlight = new THREE.Group();
+    this.lit = new Set();
     this.models = new Map();
     this.tray = [];
     this.cells = [];
     this.tags = [];
     this.rows = 2;
+    this.cols = 3;
     this.boardSets = new Map();
     this.selected = -1;
     this.focused = -1;
     this.dirty = true;
-    this.scene.add(this.board, this.effects);
+    this.scene.add(this.board, this.effects, this.powerShelf, this.highlight);
     this.reset();
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(canvas);
@@ -119,17 +81,13 @@ export class Table {
     this.aqua = new THREE.MeshBasicMaterial({ color: 0x6aebdc, toneMapped: false });
     this.porcelain = new THREE.MeshStandardMaterial({ map: tile, roughness: .59 });
     this.tileMaterials = [this.clay, this.clay, this.porcelain, this.clay, this.clay, this.clay];
-    this.dieShape = new RoundedBoxGeometry(.86, .86, .86, 3, .105);
-    this.dieMaterials = [...glazes, gray].map((_, glaze) => [3, 4, 1, 6, 2, 5].map(value =>
-      new THREE.MeshPhysicalMaterial({ map: faceTexture(glaze, value, glaze === 4), roughness: glaze === 4 ? .65 : .32,
-        clearcoat: glaze === 4 ? 0 : .26, clearcoatRoughness: .36 })));
 
     const hemisphere = new THREE.HemisphereLight(0xf6e6cf, 0x657f9f, 1.72);
     const lamp = new THREE.DirectionalLight(0xffead4, 2.35);
     lamp.position.set(-3, 8, 3.4);
     lamp.castShadow = true;
     lamp.shadow.mapSize.set(1024, 1024);
-    Object.assign(lamp.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: .5, far: 20 });
+    Object.assign(lamp.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: .5, far: 22 });
     lamp.shadow.bias = -.00035;
     lamp.shadow.normalBias = .022;
     const fill = new THREE.DirectionalLight(0x9bbdeb, .66);
@@ -138,10 +96,10 @@ export class Table {
     const floor = mesh(new THREE.PlaneGeometry(40, 40), material(0x142132), 0, -.93, 0, false);
     floor.rotation.x = -Math.PI / 2;
     this.scene.add(floor);
-    this.scene.add(mesh(new RoundedBoxGeometry(9.5, .43, 8.48, 2, .12), this.wood, 0, -.67, .46));
+    this.scene.add(mesh(new RoundedBoxGeometry(10.6, .43, 9.75, 2, .12), this.wood, 0, -.67, -.09));
     const tablecloth = new THREE.MeshStandardMaterial({ map: mat, roughness: .81 });
-    this.scene.add(mesh(new RoundedBoxGeometry(8.73, .08, 7.77, 1, .03),
-      [this.cobalt, this.cobalt, tablecloth, this.cobalt, this.cobalt, this.cobalt], 0, -.41, .46, false));
+    this.scene.add(mesh(new RoundedBoxGeometry(9.81, .08, 9.04, 1, .03),
+      [this.cobalt, this.cobalt, tablecloth, this.cobalt, this.cobalt, this.cobalt], 0, -.41, -.09, false));
 
     this.scene.add(mesh(new RoundedBoxGeometry(4.84, .24, 1.27, 2, .105), this.cobalt, 0, -.22, 2.83));
     this.scene.add(mesh(new RoundedBoxGeometry(4.68, .073, 1.13, 1, .035), this.brass, 0, -.083, 2.83));
@@ -155,7 +113,7 @@ export class Table {
       this.scene.add(socket);
     }
     for (const side of [-1, 1]) {
-      const ornament = mesh(new RoundedBoxGeometry(.61, .12, .61, 2, .05), this.tileMaterials, side * 3.16, -.307, -1.64);
+      const ornament = mesh(new RoundedBoxGeometry(.61, .12, .61, 2, .05), this.tileMaterials, side * 3.79, -.307, -1.64);
       ornament.rotation.y = angle(side * 21);
       this.scene.add(ornament);
     }
@@ -167,11 +125,12 @@ export class Table {
     }
     this.focusRing.visible = false;
     this.scene.add(this.focusRing);
-    this.configure(2);
+    this.configure(2, 3);
   }
 
   cell(index) {
-    return new THREE.Vector3((index % 3 - 1) * spacing, .349, -.31 + (Math.floor(index / 3) + 2 - this.rows) * spacing);
+    return new THREE.Vector3((index % this.cols - (this.cols - 1) / 2) * spacing, .349,
+      1.055 + (Math.floor(index / this.cols) + 1 - this.rows) * spacing);
   }
 
   slot(index) { return new THREE.Vector3((index - 1.5) * 1.105, .052, 2.83); }
@@ -182,20 +141,23 @@ export class Table {
     return at;
   }
 
-  configure(rows) {
+  configure(rows, cols) {
     this.rows = rows;
+    this.cols = cols;
     this.board.clear();
-    let set = this.boardSets.get(rows);
+    const size = `${rows}x${cols}`;
+    let set = this.boardSets.get(size);
     if (!set) {
-      const center = -.31 + (3 - rows) * spacing / 2;
-      const reduction = (3 - rows) * spacing;
+      const center = 1.055 - (rows - 1) * spacing / 2;
+      const width = (cols - 3) * spacing;
+      const depth = (rows - 3) * spacing;
       const group = new THREE.Group();
-      group.add(mesh(new RoundedBoxGeometry(4.64, .15, 4.64 - reduction, 2, .065), this.wood, 0, -.31, center));
-      group.add(mesh(new RoundedBoxGeometry(4.70, .36, 4.70 - reduction, 2, .15), this.cobalt, 0, -.105, center));
-      group.add(mesh(new RoundedBoxGeometry(4.58, .077, 4.58 - reduction, 1, .031), this.brass, 0, .058, center));
-      group.add(mesh(new RoundedBoxGeometry(4.44, .12, 4.44 - reduction, 2, .05), this.slates, 0, .118, center));
+      group.add(mesh(new RoundedBoxGeometry(4.64 + width, .15, 4.64 + depth, 2, .065), this.wood, 0, -.31, center));
+      group.add(mesh(new RoundedBoxGeometry(4.70 + width, .36, 4.70 + depth, 2, .15), this.cobalt, 0, -.105, center));
+      group.add(mesh(new RoundedBoxGeometry(4.58 + width, .077, 4.58 + depth, 1, .031), this.brass, 0, .058, center));
+      group.add(mesh(new RoundedBoxGeometry(4.44 + width, .12, 4.44 + depth, 2, .05), this.slates, 0, .118, center));
       const geometry = new RoundedBoxGeometry(1.28, .175, 1.28, 2, .055);
-      const cells = Array.from({ length: rows * 3 }, (_, index) => {
+      const cells = Array.from({ length: rows * cols }, (_, index) => {
         const at = this.cell(index);
         const tile = mesh(geometry, this.tileMaterials, at.x, .261, at.z);
         tile.userData.id = index;
@@ -203,11 +165,42 @@ export class Table {
         return tile;
       });
       set = { group, cells };
-      this.boardSets.set(rows, set);
+      this.boardSets.set(size, set);
     }
     this.board.add(set.group);
     this.cells = set.cells;
     this.reset();
+  }
+
+  mount(powers) {
+    const key = `${this.rows}/${powers.join('/')}`;
+    if (key === this.mountKey) return;
+    this.mountKey = key;
+    for (const piece of this.powerShelf.children) {
+      piece.geometry.dispose();
+      if (Array.isArray(piece.material)) piece.material[2].dispose();
+    }
+    this.powerShelf.clear();
+    this.powerMeshes = [];
+    if (!powers.length) { this.dirty = true; return; }
+    const z = this.cell(0).z - 1.04;
+    this.powerShelf.add(mesh(new RoundedBoxGeometry(powers.length * .76 + .24, .15, .8, 2, .059), this.cobalt, 0, -.24, z));
+    powers.forEach((id, index) => {
+      const surface = new THREE.MeshStandardMaterial({ map: tileArt(id).map, roughness: .38 });
+      const piece = mesh(new RoundedBoxGeometry(.63, .14, .63, 2, .055),
+        [this.brass, this.brass, surface, this.brass, this.brass, this.brass], (index - (powers.length - 1) / 2) * .76, -.08, z);
+      piece.userData.id = POWER + index;
+      this.powerMeshes.push(piece);
+      this.powerShelf.add(piece);
+    });
+    this.dirty = true;
+  }
+
+  powerAnchor(index) {
+    const piece = this.powerMeshes[index];
+    if (!piece || !this.width) return null;
+    const screen = piece.position.clone().project(this.camera);
+    return { x: (screen.x + 1) / 2 * this.width, y: (1 - screen.y) / 2 * this.height };
   }
 
   resize() {
@@ -242,8 +235,8 @@ export class Table {
   updateCamera() {
     const pitch = angle(this.elevation);
     const yaw = angle(this.azimuth);
-    const distance = (this.rows === 2 ? 10.35 : 11.45) * this.zoom;
-    const target = new THREE.Vector3(0, -.03, this.rows === 2 ? 1.19 : .63);
+    const distance = (10.35 + (this.rows - 2) * 1.47 + (this.cols - 3) * .71) * this.zoom;
+    const target = new THREE.Vector3(0, -.03, 1.19 - (this.rows - 2) * .60);
     this.camera.position.set(Math.sin(yaw) * Math.cos(pitch) * distance, Math.sin(pitch) * distance,
       Math.cos(yaw) * Math.cos(pitch) * distance).add(target);
     this.camera.lookAt(target);
@@ -266,7 +259,7 @@ export class Table {
     const targets = [...this.models.values()].filter(piece => !piece.dragged && !piece.removing &&
       now >= piece.start + piece.duration && (!boardOnly || piece.id < HAND)).map(piece => piece.mesh);
     targets.push(...this.cells);
-    if (!boardOnly) targets.push(...this.tray);
+    if (!boardOnly) targets.push(...this.tray, ...this.powerMeshes);
     const hit = this.ray.intersectObjects(targets, false)[0];
     return hit?.object.userData.id ?? -1;
   }
@@ -282,11 +275,10 @@ export class Table {
     this.dirty = true;
   }
 
-  focus(slot, cell, chisel = false) {
-    if (this.selected === slot && this.focused === cell && this.chiseling === chisel) return;
-    this.selected = slot;
+  focus(id, cell) {
+    if (this.selected === id && this.focused === cell) return;
+    this.selected = id;
     this.focused = cell;
-    this.chiseling = chisel;
     this.focusRing.visible = cell >= 0 && cell < this.cells.length;
     if (this.focusRing.visible) {
       this.focusRing.position.copy(this.cell(cell));
@@ -295,9 +287,23 @@ export class Table {
     this.dirty = true;
   }
 
+  lightCells(cells) {
+    this.lit = new Set(cells);
+    this.highlight.clear();
+    for (const cell of cells) {
+      const ring = this.focusRing.clone();
+      ring.visible = true;
+      ring.position.copy(this.cell(cell));
+      ring.position.y = .385;
+      this.highlight.add(ring);
+    }
+    this.dirty = true;
+  }
+
   sync(state, now, { roll = false, dissolve = false } = {}) {
-    const rows = stages[state.stage].rows;
-    if (rows !== this.rows) this.configure(rows);
+    const { rows, cols } = state;
+    if (rows !== this.rows || cols !== this.cols) this.configure(rows, cols);
+    this.mount(state.powers);
     const live = new Map();
     state.board.forEach((die, id) => { if (die) live.set(die, id); });
     state.hand.forEach((die, slot) => { if (die) live.set(die, HAND + slot); });
@@ -314,8 +320,13 @@ export class Table {
     for (const [die, id] of live) {
       const existing = this.models.get(die);
       if (existing) {
-        if (existing.stone !== die.stone) {
-          existing.mesh.material = this.dieMaterials[die.stone ? 4 : die.glaze];
+        if (existing.stone !== die.stone || existing.spec !== state.bag[die.id]) {
+          const spec = state.bag[die.id];
+          const next = this.art.create(spec, die.stone);
+          this.art.release(existing.mesh);
+          existing.mesh.material = next.material;
+          existing.mesh.userData.art = next.userData.art;
+          existing.spec = spec;
           existing.stone = die.stone;
         }
         if (existing.id !== id || existing.dragged) {
@@ -329,12 +340,14 @@ export class Table {
         continue;
       }
       const to = this.destination(id);
-      const model = mesh(this.dieShape, this.dieMaterials[die.stone ? 4 : die.glaze], to.x, to.y, to.z);
+      const spec = state.bag[die.id];
+      const model = this.art.create(spec, die.stone);
+      model.position.copy(to);
       model.userData.id = id;
-      const rotation = new THREE.Quaternion().setFromAxisAngle(yAxis, angle((die.slot - 1.5) * 5)).multiply(orientations[die.value]);
+      const rotation = new THREE.Quaternion().setFromAxisAngle(yAxis, angle((die.slot - 1.5) * 5)).multiply(orientations[die.face + 1]);
       model.quaternion.copy(rotation);
-      const rolling = roll && id >= HAND;
-      const piece = { mesh: model, id, stone: die.stone, to, from: to.clone(), rotation,
+      const rolling = id >= HAND && (roll === true || roll instanceof Set && roll.has(die.id));
+      const piece = { mesh: model, id, spec, stone: die.stone, to, from: to.clone(), rotation,
         rolling, start: now + die.slot * 54, duration: rolling ? 680 : 0 };
       this.models.set(die, piece);
       this.scene.add(model);
@@ -342,11 +355,12 @@ export class Table {
     this.dirty = true;
   }
 
-  remove(die, piece) { this.scene.remove(piece.mesh); this.models.delete(die); }
+  remove(die, piece) { this.scene.remove(piece.mesh); this.art.release(piece.mesh); this.models.delete(die); }
 
   clear() {
     for (const [die, piece] of this.models) this.remove(die, piece);
     this.marks([]);
+    this.lightCells([]);
     this.dirty = true;
   }
 
@@ -367,7 +381,9 @@ export class Table {
       }
       const tag = document.createElement('span');
       tag.className = `match${match.column ? ' column' : ''}`;
-      tag.textContent = `${match.name} +${match.points}`;
+      const points = match.points ? `+${match.points}` : '';
+      const bonus = match.add ? `+${(match.add / 100).toLocaleString('es-ES')}×` : '';
+      tag.textContent = `${match.name} ${[points, bonus].filter(Boolean).join(' · ')}`;
       this.labels.append(tag);
       first.y = .63;
       if (match.column) first.z -= .79;
@@ -416,7 +432,8 @@ export class Table {
         at.y += Math.sin(t * Math.PI) * .28;
       } else {
         piece.mesh.quaternion.copy(piece.rotation);
-        if (piece.id === HAND + this.selected) at.y += .16;
+        if (piece.id === this.selected) at.y += .16;
+        piece.mesh.scale.setScalar(this.lit.has(piece.id) ? 1.095 : 1);
       }
       if (t < 1 || !at.equals(old)) moving = true;
       old.copy(at);

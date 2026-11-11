@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101a28">
-  <meta name="description" content="Juega a Mosaic Roll 3D. Combina dados de cerámica y compra azulejos de poder para completar tres mosaicos.">
+  <meta name="description" content="Juega a Mosaic Roll 3D. Combina dados de cerámica, compra azulejos y forja quimeras entre mosaicos.">
   <title>Mosaic Roll 3D</title>
-  <link rel="stylesheet" href="estilo.css">
+  <link rel="stylesheet" href="estilo.css?v=horno-3">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js"></script>
+  <script type="module" src="juego.js?v=horno-3"></script>
 </head>
 <body>
   <main class="start" id="start">
@@ -32,7 +32,6 @@
     <header class="game-header">
       <button class="button quiet pause-button" type="button" id="pause" aria-label="Pausa"><span aria-hidden="true">‹</span> Pausa</button>
       <div class="stage"><span class="eyebrow" id="stage-label"></span><h1 id="stage-name"></h1></div>
-      <ol class="journey" id="journey" aria-label="Mosaicos"></ol>
       <button class="button quiet sound-button" type="button" id="sound" aria-label="Sonido" aria-pressed="true"><span aria-hidden="true">♪</span><span>Sonido</span></button>
     </header>
     <div class="mobile-stats" aria-live="polite" id="mobile-stats"></div>
@@ -41,16 +40,20 @@
         <div class="world" id="world">
           <canvas id="canvas" tabindex="0" aria-label="Tablero de dados 3D" aria-describedby="hint"></canvas>
           <div class="world-labels" id="world-labels" aria-hidden="true"></div>
-          <output class="flash" id="flash" hidden></output>
+          <div class="power-tooltip" id="power-tooltip" role="tooltip" hidden></div>
+          <div class="score-sequence" id="sequence" hidden>
+            <div><span class="eyebrow" id="sequence-phase"></span><strong id="sequence-value"></strong><small id="sequence-detail"></small></div>
+            <button class="button quiet" id="skip-score" type="button">Saltar</button>
+          </div>
         </div>
         <div class="table-controls">
           <p id="hint" aria-live="polite"></p>
+          <button class="button quiet" type="button" id="recall" hidden>Retirar dado</button>
           <button class="button quiet" type="button" id="top">Vista cenital</button>
           <button class="button quiet" type="button" id="reset-camera">Centrar</button>
         </div>
         <p class="key-tip">Botón derecho para girar · Rueda para acercar · 1–4 para elegir · Espacio para puntuar</p>
         <div class="mobile-actions">
-          <button class="button" type="button" id="mobile-chisel">Cincel</button>
           <button class="button primary" type="button" id="mobile-confirm" disabled>Puntuar <strong id="mobile-points">+0</strong></button>
         </div>
       </section>
@@ -61,7 +64,7 @@
           <progress id="progress" value="0" aria-label="Objetivo del mosaico"></progress>
           <div class="turns-and-chisel">
             <div><span class="eyebrow">Turnos</span><div class="turns" id="turns"></div></div>
-            <button class="button" type="button" id="chisel" aria-pressed="false">Cincel</button>
+            <span class="chisel-count" id="chisel-count"></span>
           </div>
         </section>
         <section class="patterns">
@@ -74,7 +77,7 @@
           <p class="placement" id="placed"></p>
         </section>
         <button class="button primary confirm" id="confirm" type="button" disabled>Puntuar jugada <span aria-hidden="true">→</span></button>
-        <div class="inventory"><p id="inventory"></p><p id="active-powers"></p></div>
+        <div class="inventory"><p id="inventory"></p><div class="active-powers" id="active-powers" aria-label="Azulejos equipados"></div></div>
       </aside>
     </div>
   </main>
