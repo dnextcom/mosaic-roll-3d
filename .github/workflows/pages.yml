@@ -1,0 +1,41 @@
+name: Publicar Mosaic Roll 3D
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '*.html'
+      - '*.css'
+      - '*.js'
+      - '*.jpg'
+      - '*.zip'
+      - 'vendor/**'
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Preparar archivos del juego
+        run: |
+          mkdir -p _site
+          cp index.html estilo.css juego.js mesa.js reglas.js portada.jpg mesa.jpg azulejo.jpg Mosaic-Roll-3D.zip _site/
+          cp -R vendor _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - uses: actions/deploy-pages@v4
+        id: publish
