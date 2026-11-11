@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1522">
+  <meta name="description" content="Descarga Mosaic Roll 3D, un videojuego de dados y azulejos para Windows.">
+  <title>Mosaic Roll 3D · Descarga para Windows</title>
+  <style>
+    :root { color-scheme: dark; font-family: 'Segoe UI', system-ui, sans-serif; background: #0c1522; color: #f6ecd6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    h1, h2, p, figure { margin: 0; }
+    main { width: min(1140px, calc(100% - 48px)); margin: 36px auto 52px; }
+    .hero { min-height: 490px; display: flex; align-items: center; padding: clamp(28px, 7vw, 84px); border: 1px solid #7c694e; border-radius: 15px; background: linear-gradient(90deg, #07111ff7 0%, #0a1424e8 34%, #07111f16 79%), url('portada.jpg') center / cover; }
+    .hero > div { max-width: 490px; }
+    h1 { font: 700 clamp(47px, 7.3vw, 94px)/.96 Georgia, serif; letter-spacing: -.055em; text-wrap: balance; }
+    h1 span { color: #f4cc8d; }
+    .lead { margin-top: 22px; max-width: 34ch; color: #e0e4eb; font-size: clamp(16px, 2vw, 19px); line-height: 1.6; }
+    .download { display: inline-flex; gap: 12px; align-items: center; min-height: 54px; margin-top: 26px; padding: 12px 20px; border-radius: 7px; background: #f1c782; color: #2d2116; text-decoration: none; font-weight: 750; }
+    .download:hover { background: #ffdb9e; }
+    .download:focus-visible { outline: 2px solid #fff1d4; outline-offset: 4px; }
+    .download svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .platform { margin-top: 12px; color: #d0d6df; font-size: 14px; }
+    .preview { display: grid; grid-template-columns: 1.65fr 1fr; gap: clamp(24px, 5vw, 64px); align-items: center; margin-top: 40px; }
+    .preview img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid #43536a; }
+    h2 { font: 400 clamp(26px, 4vw, 38px)/1.1 Georgia, serif; letter-spacing: -.035em; }
+    .preview p { margin-top: 13px; color: #bec9d9; line-height: 1.6; }
+    @media (max-width: 680px) {
+      main { width: calc(100% - 24px); margin-top: 12px; }
+      .hero { min-height: 430px; align-items: end; background-image: linear-gradient(0deg, #07111ff5 0%, #07111fdf 54%, #07111f30 100%), url('portada.jpg'); background-position: 60% center; }
+      .preview { grid-template-columns: 1fr; margin-top: 22px; gap: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero" aria-labelledby="title">
+      <div>
+        <h1 id="title">Mosaic Roll <span>3D</span></h1>
+        <p class="lead">Haz rodar los dados de cerámica y combina sus caras para completar tres mosaicos.</p>
+        <a class="download" href="Mosaic-Roll-3D.zip" download>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg>
+          Descargar para Windows
+        </a>
+        <p class="platform">ZIP · Windows de 64 bits · Sin instalación</p>
+      </div>
+    </section>
+    <section class="preview" aria-labelledby="preview-title">
+      <figure><img src="partida.webp" width="1280" height="800" alt="Tablero de azulejos en 3D con una escalera de dados del dos al cuatro"></figure>
+      <div>
+        <h2 id="preview-title">En la mesa de juego</h2>
+        <p>Extrae el ZIP y abre Mosaic Roll 3D.exe. Arrastra los dados al tablero, gira la cámara con el botón derecho y pulsa F11 para jugar a pantalla completa.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
