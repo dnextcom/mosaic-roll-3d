@@ -1,8 +1,8 @@
 import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=horno-3';
 import { DiceArt, tileArt } from './arte.js?v=horno-3';
-import { MarketUI } from './mercado.js?v=horno-3';
+import { MarketUI } from './mercado.js?v=canje-1';
 import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=horno-3';
-import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=horno-3';
+import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=canje-1';
 
 const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';
@@ -167,7 +167,7 @@ function hint(count) {
   if (movable(selected)) {
     const die = at(selected), spec = run.bag[die.id];
     const value = [die.value, hasFace(spec.boost, die.face) && '×2', hasFace(spec.wild, die.face) && '★'].filter(Boolean).join(' ');
-    return `${diceName(spec)} · ${value}. Elige una casilla.`;
+    return `${diceName(spec)} · ${value}. ${selected >= HAND ? 'Elige una casilla para colocarlo o sustituir otro.' : 'Recolócalo o devuélvelo a la bandeja.'}`;
   }
   if (hovered >= 0 && hovered < HAND && run.board[hovered]?.stone) return run.chisels ? 'Pulsa la piedra para cincelarla.' : 'Has agotado las cargas del cincel.';
   if (run.board.every(Boolean) && !count && run.chisels) return 'Tablero lleno. Pulsa una piedra para liberar una casilla.';
@@ -305,7 +305,7 @@ function help() {
   showDialog('help', `<h2 id="dialog-title">Cómo jugar</h2>
     <p>El tablero crece cada tres mosaicos hasta 4 × 4. Supera el objetivo para pasar por el taller y seguir jugando.</p>
     <ol class="help-list">
-      <li><strong>Coloca y recoloca.</strong> Arrastra o toca un dado y una casilla. Los dados sin jugar conservan su tirada.</li>
+      <li><strong>Coloca y recoloca.</strong> Si pones un dado encima de otro recién colocado, el anterior vuelve a la mano. También puedes arrastrarlo a la bandeja. Los dados sin jugar conservan su tirada.</li>
       <li><strong>Puntúa.</strong> Los números aportan puntos base y los colores añaden multiplicador. Las líneas se marcan sobre la mesa.</li>
       <li><strong>Libera espacio.</strong> Toca una piedra para cincelarla. Su número sirve para combos mientras siga en la mesa.</li>
       <li><strong>Mejora la bolsa.</strong> Inspecciona los dados flotantes, compra hasta cinco azulejos o lleva dados al horno.</li>
@@ -405,7 +405,7 @@ canvas.addEventListener('pointermove', event => {
   }
   focused = -1;
   const previous = hovered;
-  hovered = table.pick(event.clientX, event.clientY, Boolean(pointer?.drag));
+  hovered = table.pick(event.clientX, event.clientY, Boolean(pointer?.drag && selected >= HAND));
   if (!pointer && !pinned && event.pointerType === 'mouse' && previous !== hovered) showPower(hovered >= POWER ? hovered - POWER : -1);
   canvas.style.cursor = pointer?.drag ? 'grabbing' : hovered >= 0 ? 'pointer' : 'default';
   if (ready() && previous !== hovered) $('hint').textContent = hint(run.board.filter(isFresh).length);
@@ -419,8 +419,13 @@ canvas.addEventListener('pointerup', event => {
   if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
   if (!gesture.orbit && ready()) {
     if (gesture.drag) {
-      const cell = table.pick(event.clientX, event.clientY, true);
-      if (!applyCell(cell, false)) table.sync(run, performance.now());
+      const target = table.pick(event.clientX, event.clientY, selected >= HAND);
+      const accepted = target >= HAND && target < POWER ? returnDie() : applyCell(target, false);
+      if (!accepted) table.sync(run, performance.now());
+    } else if (gesture.target >= HAND && !gesture.movable && selected < HAND) {
+      returnDie();
+    } else if (gesture.target < HAND && selected >= HAND && canTarget(gesture.target)) {
+      applyCell(gesture.target);
     } else if (gesture.movable) select(gesture.target);
     else applyCell(gesture.target);
   }
@@ -448,8 +453,10 @@ document.addEventListener('keydown', event => {
   if (!ready() || pointer || event.altKey || event.ctrlKey || event.metaKey) return;
   if (/^[1-4]$/.test(event.key)) {
     if (!event.repeat) {
-      focused = Math.max(0, run.board.findIndex(cell => cell === null));
-      select(HAND + Number(event.key) - 1);
+      const slot = Number(event.key) - 1;
+      const empty = run.board.indexOf(null);
+      focused = empty >= 0 ? empty : run.board.findIndex((_, cell) => canPlace(run, slot, cell));
+      select(HAND + slot);
       canvas.focus({ preventScroll: true });
     }
     event.preventDefault();

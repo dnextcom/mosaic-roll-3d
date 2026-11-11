@@ -1,5 +1,5 @@
 import { glazes, rarities, powers, upgrades, diceName, hasFace, dieCount } from './catalogo.js?v=horno-3';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit } from './reglas.js?v=horno-3';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit } from './reglas.js?v=canje-1';
 import { tileArt } from './arte.js?v=horno-3';
 import { Workshop } from './taller.js?v=horno-3';
 

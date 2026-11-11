@@ -52,11 +52,14 @@ export function newRun(random = Math.random) {
 }
 
 export function canPlace(state, slot, cell) {
-  return state.phase === 'play' && Boolean(state.hand[slot]) && state.board[cell] === null;
+  const target = state.board[cell];
+  return state.phase === 'play' && Boolean(state.hand[slot]) &&
+    (target === null || isFresh(target) && !state.hand[target.slot]);
 }
 
 export function place(state, slot, cell) {
   if (!canPlace(state, slot, cell)) return false;
+  if (state.board[cell]) recall(state, cell);
   state.board[cell] = state.hand[slot];
   state.hand[slot] = null;
   return true;
