@@ -1,10 +1,10 @@
-import { glazes, rarities, powers, upgrades, plainDie, market, hasFace, choose, dieCount, canEnchant, enchant, fuse } from './catalogo.js?v=horno-3';
+import { glazes, rarities, powers, upgrades, plainDie, market, ovenOffers, hasFace, choose, dieCount, canEnchant, enchant, fuse } from './catalogo.js?v=azulejos-1';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 export const handSize = 4;
 export const tileLimit = 5;
 export const isFresh = die => Boolean(die && !die.fixed);
-export const comboPoints = { line: 3, pair: 6, trio: 12, quartet: 23, straight: 10, longStraight: 17, mono: .4, chromatic: .25 };
+export const comboPoints = { line: 3, pair: 6, trio: 12, quartet: 23, straight: 10, longStraight: 17, panel: 10, mono: .4, chromatic: .25 };
 
 export function stageAt(index) {
   const group = Math.floor(index / 3);
@@ -193,7 +193,11 @@ export function preview(state) {
   });
   if (basalt.length && state.powers.includes('basalt')) score.colorSteps.push({ name: 'Campanas de basalto', add: basalt.length * 8, cells: basalt });
   if (cobalt.length && state.powers.includes('cobalt')) score.colorSteps.push({ name: 'Resonancia cobalto', add: cobalt.length * 15, cells: cobalt });
-  if (state.powers.includes('alhambra') && state.board.every(Boolean)) score.colorSteps.push({ name: 'Gran Alhambra', factor: 1.35, cells: state.board.map((_, i) => i) });
+  if (state.board.every(Boolean)) {
+    const cells = state.board.map((_, index) => index);
+    score.numberSteps.push({ name: 'Panel completo', points: comboPoints.panel, cells });
+    if (state.powers.includes('alhambra')) score.colorSteps.push({ name: 'Gran Alhambra', factor: 1.35, cells });
+  }
   score.base = [...score.dieSteps, ...score.numberSteps].reduce((sum, item) => sum + item.points, 0);
   score.multiplier = score.colorSteps.reduce((multiplier, item) => item.factor ? multiplier * item.factor : multiplier + item.add / 100, 1);
   score.total = Math.round(score.base * score.multiplier);
@@ -260,7 +264,7 @@ export function sellTile(state, key) {
 
 export function canForge(state, key, ids, color) {
   const upgrade = upgrades[key];
-  return state.phase === 'shop' && Boolean(upgrade) && state.gold >= upgrade.price && ids.length === upgrade.slots &&
+  return state.phase === 'shop' && state.market.oven.includes(key) && state.gold >= upgrade.price && ids.length === upgrade.slots &&
     new Set(ids).size === ids.length && ids.every(id => state.forgeHand.includes(id) && state.bag[id]) &&
     (key === 'fusion' ? dieCount(state) > handSize : canEnchant(state.bag[ids[0]], key, color));
 }
@@ -304,10 +308,15 @@ export function validSave(state) {
   return state.bag.every(spec => spec === null || validSpec(spec)) && new Set(active.map(die => die.id)).size === active.length &&
     active.every(die => Number.isInteger(die.slot) && die.slot >= 0 && die.slot < handSize && state.bag[die.id]?.faces[die.face] === die.value) &&
     (state.phase !== 'shop' || (Array.isArray(state.market?.dice) && state.market.dice.every(validSpec) && Array.isArray(state.market.tiles) &&
-      state.market.tiles.every(key => Object.hasOwn(powers, key)) && Array.isArray(state.market.purchased) && state.forgeHand.every(id => state.bag[id])));
+      state.market.tiles.every(key => Object.hasOwn(powers, key)) && Array.isArray(state.market.purchased) && state.forgeHand.every(id => state.bag[id]) &&
+      Array.isArray(state.market.oven) && state.market.oven[0] === 'fusion' && state.market.oven.length === 4 &&
+      new Set(state.market.oven).size === 4 && state.market.oven.every(key => Object.hasOwn(upgrades, key))));
 }
 
 export function restoreRun(old, random = Math.random) {
+  if (old?.version === 3 && old.phase === 'shop' && old.market && !Object.hasOwn(old.market, 'oven')) {
+    old = { ...old, market: { ...old.market, oven: ovenOffers(random) } };
+  }
   if (validSave(old)) return old;
   if (old?.version !== 2 || ![0, 1, 2].includes(old.stage) || !Array.isArray(old.bag) || !Array.isArray(old.board) ||
       !Array.isArray(old.hand) || !Array.isArray(old.results) || !Array.isArray(old.powers)) return null;

@@ -7,6 +7,8 @@
   --ivory: #f6edd9;
   --muted: #b5c4d5;
   --aqua: #86e4db;
+  --glaze: linear-gradient(#34618a, #20496f 47%, #173752);
+  --ceramic-rim: #7296ad;
   --serif: Georgia, serif;
   font-family: 'Segoe UI', system-ui, sans-serif;
   background: #0b1420;
@@ -23,12 +25,21 @@ button:focus-visible, a:focus-visible, canvas:focus-visible { outline: 2px solid
 button:disabled { cursor: default; }
 .eyebrow { color: var(--gold); text-transform: uppercase; letter-spacing: .13em; font-size: .68rem; font-weight: 730; }
 .diamond { display: inline-block; width: 9px; height: 9px; border-radius: 1px; background: var(--gold); transform: rotate(45deg); }
-.button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 42px; padding: 8px 15px; border: 1px solid var(--edge); border-radius: 8px; background: #182c41; color: var(--ivory); font-size: .86rem; font-weight: 670; transition: border-color .14s, background .14s; }
-.button:not(:disabled):hover { border-color: #8298ab; background: #233d54; }
-.button:disabled { border-color: #2b4052; background: #142234; color: #8d9aab; }
-.button.primary:not(:disabled) { border-color: var(--gold); background: var(--gold); color: #2a2016; box-shadow: inset 0 1px #ffe0a4; }
-.button.primary:not(:disabled):hover { background: #ffdda5; }
-.button.quiet { background: #122236; }
+.button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 42px;
+  padding: 8px 15px; border: 1px solid var(--ceramic-rim); border-radius: 7px;
+  background: var(--glaze); color: var(--ivory); font-size: .86rem; font-weight: 670;
+  box-shadow: inset 0 0 0 2px #dbedff1f, 0 2px #0a1421;
+  transition: border-color .14s, filter .14s;
+}
+.button:not(:disabled):hover { border-color: #c3dae1; filter: brightness(1.14); }
+.button:not(:disabled):active { box-shadow: inset 0 2px 5px #0a142169; }
+.button:disabled { border-color: #455d70; background: #1b3043; color: #a5b1bb; box-shadow: inset 0 0 0 2px #bacce70c; }
+.button.primary:not(:disabled) {
+  border-color: #f3d9ac; background: linear-gradient(#fff0cd, #f3d3a0 65%, #dbab70); color: #322619;
+  box-shadow: inset 0 0 0 2px #b15c3c70, inset 0 0 0 3px #ffefd1a0, 0 2px #572e25;
+}
+.button.quiet:not(:disabled) { background: linear-gradient(#25435f, #14293f); }
 
 .start { min-height: 100svh; display: grid; padding: clamp(10px, 2.4vw, 34px); background: #0b1420; }
 .start-frame { position: relative; isolation: isolate; display: flex; min-height: 640px; align-items: center; overflow: hidden; border: 1px solid #9b80544e; border-radius: 15px; background: #122032 url('portada.jpg') center / cover; }
@@ -55,7 +66,18 @@ body:has(.game:not([hidden])) { background: radial-gradient(ellipse at 8% 0, #1b
 .sound-button[aria-pressed="false"] span:first-child { color: #9eaab8; text-decoration: line-through; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); gap: clamp(17px, 2.4vw, 32px); align-items: start; }
 .play-area, .hud { min-width: 0; }
-.world { position: relative; height: clamp(390px, calc(100svh - 190px), 720px); overflow: hidden; border: 1px solid #526a82; border-radius: 12px; background: #0c1725; box-shadow: 0 12px 30px #04090d4a; }
+.equipped-rail {
+  display: flex; align-items: center; gap: 14px; min-height: 62px; margin-bottom: 8px; padding: 6px 12px;
+  border: 1px solid #7090a3; border-radius: 8px; background: linear-gradient(110deg, #1a3d5afb 5%, #183a57cc 60%, #183b57b8), url('azulejo.jpg') right center / 96px;
+  box-shadow: inset 0 0 0 2px #dfedfa22;
+}
+.equipped-rail .eyebrow { max-width: 13ch; color: var(--ivory); line-height: 1.25; }
+.active-powers { display: flex; gap: 6px; }
+.active-powers button { width: 48px; height: 48px; padding: 2px; overflow: hidden; border: 1px solid var(--tile-edge); border-radius: 6px; background: #153553; box-shadow: 0 2px 4px #0513228a; }
+.active-powers button:hover { background: #376b8d; }
+.active-powers img { display: block; width: 100%; height: 100%; border-radius: 3px; }
+.world { position: relative; height: clamp(390px, calc(100svh - 190px - var(--rail-space, 0px)), 720px); overflow: hidden; border: 1px solid #6e8b9f; border-radius: 12px; background: #0c1725; box-shadow: 0 12px 30px #04090d4a; }
+.equipped-rail:not([hidden]) + .world { --rail-space: 70px; }
 .world canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .world canvas:focus-visible { outline-offset: -4px; }
 .world-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -100,6 +122,7 @@ progress::-moz-progress-bar { background: var(--gold); }
 .glyphs.mixed i:nth-child(1) { background: #396797; }
 .glyphs.mixed i:nth-child(2) { background: #8b6338; }
 .glyphs.mixed i:nth-child(3) { background: #3d725b; }
+.panel-glyph { display: block; width: 33px; height: 22px; border-radius: 2px; background: radial-gradient(closest-side, #c6d8e2 78%, transparent 86%) 0 0 / 11px 11px; }
 .play-total { padding: 13px 0 10px; }
 .play-total > div { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
 .play-total strong { font: 700 35px/1 var(--serif); }
@@ -107,12 +130,9 @@ progress::-moz-progress-bar { background: var(--gold); }
 .play-total .placement { color: #9bacbf; }
 .confirm { width: 100%; min-height: 49px; justify-content: space-between; }
 .inventory { margin-top: 11px; color: var(--muted); font-size: .75rem; line-height: 1.45; }
-.active-powers:not(:empty) { display: flex; gap: 5px; margin-top: 7px; }
-.active-powers button { padding: 0; width: 29px; height: 29px; overflow: hidden; border: 1px solid #9b8054; border-radius: 4px; background: #182a3d; }
-.active-powers img { display: block; width: 100%; height: 100%; }
 .mobile-stats, .mobile-actions { display: none; }
 
-dialog { width: min(540px, calc(100% - 24px)); max-height: calc(100svh - 28px); overflow: auto; padding: 29px; border: 1px solid #a1845c; border-radius: 13px; color: var(--ivory); background: #0f1c2d; box-shadow: 0 18px 65px #050b14bb; }
+dialog { width: min(540px, calc(100% - 24px)); max-height: calc(100svh - 28px); overflow: auto; padding: 29px; border: 1px solid #bca079; border-radius: 13px; color: var(--ivory); background: #0f1c2d; box-shadow: inset 0 0 0 3px #234660, 0 18px 65px #050b14bb; }
 dialog::backdrop { background: #060f1bd8; backdrop-filter: blur(3px); }
 dialog h2 { font: 400 clamp(31px, 5vw, 43px)/1.04 var(--serif); letter-spacing: -.04em; }
 dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: .92rem; }
@@ -120,7 +140,7 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
 .help-list { display: grid; gap: 10px; color: var(--muted); padding-left: 21px; margin-top: 16px; font-size: .88rem; line-height: 1.4; }
 .help-list strong { color: var(--ivory); }
 .shop { width: min(920px, calc(100% - 24px)); }
-.shop-header { display: flex; justify-content: space-between; align-items: start; gap: 15px; }
+.shop-header { display: flex; justify-content: space-between; align-items: start; gap: 15px; padding-bottom: 14px; border-bottom: 3px double #728b9d; }
 .purse { padding: 8px 13px; border: 1px solid #7d6749; border-radius: 8px; color: var(--gold); background: #172a40; font: 400 22px/1.2 var(--serif); white-space: nowrap; }
 .draft, .tile-stock { margin-top: 18px; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
@@ -146,8 +166,8 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
 .face-list .gilded { border-color: #997540; background: #563f27; color: #ffe4a1; }
 .tile-offers, .oven-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
 .oven-options { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
-.offer { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 74px; width: 100%; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 8px; background: #182a3d; color: var(--ivory); text-align: left; }
-.offer:not(:disabled):hover { border-color: var(--gold); background: #23384d; }
+.offer { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 74px; width: 100%; padding: 8px 10px; border: 1px solid #587b96; border-radius: 8px; background: linear-gradient(155deg, #234763, #182e44); color: var(--ivory); text-align: left; box-shadow: inset 0 0 0 2px #cbe3ef15; }
+.offer:not(:disabled):hover { border-color: var(--gold); background: linear-gradient(155deg, #305977, #223d57); }
 .offer:disabled { background: #132235; }
 .offer:disabled .offer-cost { color: var(--muted); }
 .offer-icon { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--gold); border-radius: 5px; color: #fff1d4; font: 26px 'Segoe UI Symbol', sans-serif; background: var(--offer-color); }
@@ -188,6 +208,10 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
   .sound-button { width: 36px; }
   .mobile-stats { display: flex; justify-content: space-between; gap: 6px; margin-bottom: 8px; padding: 7px 9px; border: 1px solid var(--edge); border-radius: 6px; color: var(--gold); background: #17283b; font-size: .73rem; font-weight: 680; }
   .layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .equipped-rail { gap: 8px; min-height: 55px; padding: 5px 8px; }
+  .equipped-rail .eyebrow { font-size: .59rem; letter-spacing: .08em; }
+  .active-powers { gap: 5px; }
+  .active-powers button { width: 44px; height: 44px; }
   .world { height: clamp(310px, 53svh, 560px); border-radius: 8px; }
   .table-controls { flex-wrap: wrap; margin-top: 7px; gap: 6px; }
   .table-controls p { flex: 1 1 100%; min-height: 23px; font-size: .77rem; }
@@ -210,6 +234,11 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
   .purse { font-size: 17px; }
   .offer { min-height: 59px; }
   .shop-foot { position: sticky; bottom: -20px; margin-inline: -10px; padding: 9px 10px; background: #0f1c2d; }
+}
+
+@media (max-width: 355px) {
+  .equipped-rail { flex-wrap: wrap; }
+  .equipped-rail .eyebrow { flex: 1 0 100%; max-width: none; }
 }
 
 @media (prefers-reduced-motion: reduce) { .button { transition: none; } }

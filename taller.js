@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { rarities } from './catalogo.js?v=horno-3';
+import { rarities } from './catalogo.js?v=azulejos-1';
 
 export class Workshop {
   constructor(art) {

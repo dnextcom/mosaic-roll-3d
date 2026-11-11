@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101a28">
   <meta name="description" content="Juega a Mosaic Roll 3D. Combina dados de cerámica, compra azulejos y forja quimeras entre mosaicos.">
   <title>Mosaic Roll 3D</title>
-  <link rel="stylesheet" href="estilo.css?v=horno-3">
+  <link rel="stylesheet" href="estilo.css?v=azulejos-1">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=canje-1"></script>
+  <script type="module" src="juego.js?v=azulejos-1"></script>
 </head>
 <body>
   <main class="start" id="start">
@@ -37,6 +37,10 @@
     <div class="mobile-stats" aria-live="polite" id="mobile-stats"></div>
     <div class="layout">
       <section class="play-area" aria-label="Mesa 3D">
+        <div class="equipped-rail" id="equipped-rail" hidden>
+          <span class="eyebrow" id="equipped-label">Azulejos equipados</span>
+          <div class="active-powers" id="active-powers" role="group" aria-labelledby="equipped-label"></div>
+        </div>
         <div class="world" id="world">
           <canvas id="canvas" tabindex="0" aria-label="Tablero de dados 3D" aria-describedby="hint"></canvas>
           <div class="world-labels" id="world-labels" aria-hidden="true"></div>
@@ -77,7 +81,7 @@
           <p class="placement" id="placed"></p>
         </section>
         <button class="button primary confirm" id="confirm" type="button" disabled>Puntuar jugada <span aria-hidden="true">→</span></button>
-        <div class="inventory"><p id="inventory"></p><div class="active-powers" id="active-powers" aria-label="Azulejos equipados"></div></div>
+        <p class="inventory" id="inventory"></p>
       </aside>
     </div>
   </main>

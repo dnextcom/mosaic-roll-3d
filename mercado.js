@@ -1,7 +1,7 @@
-import { glazes, rarities, powers, upgrades, diceName, hasFace, dieCount } from './catalogo.js?v=horno-3';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit } from './reglas.js?v=canje-1';
-import { tileArt } from './arte.js?v=horno-3';
-import { Workshop } from './taller.js?v=horno-3';
+import { glazes, rarities, powers, upgrades, diceName, hasFace, dieCount } from './catalogo.js?v=azulejos-1';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit } from './reglas.js?v=azulejos-1';
+import { tileArt } from './arte.js?v=azulejos-1';
+import { Workshop } from './taller.js?v=azulejos-1';
 
 const faceText = (spec, index) => [spec.faces[index], hasFace(spec.boost, index) && '×2', hasFace(spec.gild, index) && 'oro',
   hasFace(spec.wild, index) && '★'].filter(Boolean).join(' ');
@@ -93,18 +93,21 @@ export class MarketUI {
   oven() {
     this.scene?.clear();
     this.mode = 'oven';
+    const offers = this.run.market.oven.map(key => {
+      const effect = upgrades[key];
+      return `<button type="button" class="offer kiln-option" data-market="effect" data-key="${key}"${this.run.gold < effect.price ? ' disabled' : ''}>
+        <span><strong class="offer-name">${effect.name}</strong><small class="offer-detail">${effect.text}</small></span><span class="offer-cost">${effect.price} oro</span></button>`;
+    });
     this.callbacks.open('oven', `<header class="shop-header"><div><h2 id="dialog-title">Horno de azulejos</h2>
-      <p>Los cambios en los dados duran toda la partida.</p></div><strong class="purse">${this.run.gold} de oro</strong></header>
-      <div class="oven-options">${Object.entries(upgrades).map(([key, effect]) =>
-        `<button type="button" class="offer kiln-option" data-market="effect" data-key="${key}"${this.run.gold < effect.price ? ' disabled' : ''}>
-          <span><strong class="offer-name">${effect.name}</strong><small class="offer-detail">${effect.text}</small></span><span class="offer-cost">${effect.price} oro</span></button>`).join('')}</div>
+      <p>Tres mejoras permanentes por visita. La fusión siempre está disponible.</p></div><strong class="purse">${this.run.gold} de oro</strong></header>
+      <div class="oven-options">${offers.join('')}</div>
       <div class="shop-foot"><button class="button" type="button" data-market="shop">Volver al taller</button></div>`);
     this.dialog.scrollTop = 0;
   }
 
   altar(key) {
     const effect = upgrades[key];
-    if (!effect || this.run.gold < effect.price) return;
+    if (!this.run.market.oven.includes(key) || this.run.gold < effect.price) return;
     this.mode = 'forge';
     this.effect = key;
     this.slots = Array(effect.slots).fill(null);

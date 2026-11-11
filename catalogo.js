@@ -62,6 +62,9 @@ export function choose(items, count, random) {
   return result;
 }
 
+const permanentUpgrades = Object.keys(upgrades).filter(key => key !== 'fusion');
+export const ovenOffers = random => ['fusion', ...choose(permanentUpgrades, 3, random)];
+
 export function stockDie(rarity, random, glaze = Math.floor(random() * glazes.length)) {
   const die = plainDie(rarity === 4 ? 6 : glaze);
   die.rarity = rarity;
@@ -100,7 +103,7 @@ export function market(stage, owned, random) {
     const possible = pool.filter(key => powers[key].rarity >= minimum && powers[key].rarity <= maximum);
     if (pool.length) tiles.push(pick(possible.length ? possible : pool, random));
   }
-  return { dice, tiles, purchased: [] };
+  return { dice, tiles, oven: ovenOffers(random), purchased: [] };
 }
 
 export function canEnchant(spec, key, color) {

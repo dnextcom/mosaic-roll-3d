@@ -1,14 +1,15 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=horno-3';
-import { DiceArt, tileArt } from './arte.js?v=horno-3';
-import { MarketUI } from './mercado.js?v=canje-1';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=horno-3';
-import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=canje-1';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=azulejos-1';
+import { DiceArt, tileArt } from './arte.js?v=azulejos-1';
+import { MarketUI } from './mercado.js?v=azulejos-1';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=azulejos-1';
+import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=azulejos-1';
 
 const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';
 const soundStorage = `${storage}/sound`;
 const dialog = $('dialog');
 const canvas = $('canvas');
+const activePowers = $('active-powers');
 const decimal = value => value.toLocaleString('es-ES', { maximumFractionDigits: 2 });
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const patterns = [
@@ -145,13 +146,19 @@ function render() {
   const entries = run.cols === 4 ? [...patterns.slice(0, 4), ['Cuarteto', [4, 4, 4, 4], `+${comboPoints.quartet}`],
     ['Escalera larga', [1, 2, 3, 4], `+${comboPoints.longStraight}`], ...patterns.slice(4)] : patterns;
   $('patterns').innerHTML = entries.map(([name, faces, points, color]) => `<li${color ? ' class="color-pattern"' : ''}>
-    <span class="glyphs ${color || ''}" aria-hidden="true">${faces.map(face => `<i>${face}</i>`).join('')}</span>${name}<strong>${points}</strong></li>`).join('');
+    <span class="glyphs ${color || ''}" aria-hidden="true">${faces.map(face => `<i>${face}</i>`).join('')}</span>${name}<strong>${points}</strong></li>`).join('') +
+    `<li><span class="glyphs" aria-hidden="true"><span class="panel-glyph"></span></span>Panel completo<strong>+${comboPoints.panel}</strong></li>`;
   $('preview').textContent = $('mobile-points').textContent = `+${score.total}`;
   $('breakdown').textContent = score.count ? `${score.base} base × ${decimal(score.multiplier)}${score.gold ? ` · +${score.gold} oro` : ''}`
     : run.lastScore ? `Última jugada · +${run.lastScore}` : 'Coloca un dado para ver sus puntos.';
   $('placed').textContent = `${score.count} de 4 dados colocados`;
   $('inventory').textContent = `${run.gold} de oro · Bolsa de ${dieCount(run)} dados`;
-  $('active-powers').innerHTML = run.powers.map((key, index) => `<button type="button" data-power="${index}" aria-label="${powers[key].name}" title="${powers[key].name}"><img src="${tileArt(key).url}" alt=""></button>`).join('');
+  $('equipped-rail').hidden = !run.powers.length;
+  const equipped = run.powers.join('/');
+  if (activePowers.dataset.equipped !== equipped) {
+    activePowers.dataset.equipped = equipped;
+    activePowers.innerHTML = run.powers.map((key, index) => `<button type="button" data-power="${index}" aria-label="${powers[key].name}" style="--tile-edge:${rarities[powers[key].rarity].color}"><img src="${tileArt(key).url}" alt=""></button>`).join('');
+  }
   $('confirm').disabled = $('mobile-confirm').disabled = !ready() || !score.count;
   $('pause').disabled = Boolean(resolution);
   $('recall').hidden = !ready() || selected < 0 || selected >= HAND || !isFresh(run.board[selected]);
@@ -225,12 +232,14 @@ function returnDie() {
 function showPower(index, pin = false) {
   const element = $('power-tooltip');
   const key = run?.powers[index];
+  activePowers.children[tooltip]?.removeAttribute('aria-describedby');
   tooltip = key ? index : -1;
   pinned = Boolean(key && pin);
   element.hidden = !key;
   if (!key) return;
   const power = powers[key], rarity = rarities[power.rarity];
   element.innerHTML = `<strong style="color:${rarity.color}">${power.name}</strong><small>${rarity.name} · ${power.text}</small>`;
+  activePowers.children[index]?.setAttribute('aria-describedby', element.id);
   positionPower();
 }
 
@@ -239,7 +248,8 @@ function positionPower() {
   const element = $('power-tooltip'), anchor = table.powerAnchor(tooltip);
   if (!anchor) return;
   const x = Math.max(5, Math.min(table.width - element.offsetWidth - 5, anchor.x - element.offsetWidth / 2));
-  const y = Math.max(4, Math.min(table.height - element.offsetHeight - 4, anchor.y + 19));
+  const above = anchor.y - element.offsetHeight - 17;
+  const y = Math.max(4, Math.min(table.height - element.offsetHeight - 4, above >= 4 ? above : anchor.y + 19));
   element.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
 }
 
@@ -250,10 +260,10 @@ function scoreTurn() {
   clearSelection();
   save();
   resolution = { score, at: 0, next: performance.now(), base: 0, multi: 1, steps: [
-    ...score.dieSteps.map(step => ({ ...step, phase: 'Dados', time: 165 })),
-    ...score.numberSteps.map(step => ({ ...step, phase: 'Combos numéricos', time: 235 })),
-    ...score.colorSteps.map(step => ({ ...step, phase: 'Multiplicador', time: 235 })),
-    { name: 'Total de la jugada', phase: 'Total', time: 680, cells: [] },
+    ...score.dieSteps.map(step => ({ ...step, phase: 'Dados', time: 330 })),
+    ...score.numberSteps.map(step => ({ ...step, phase: 'Combos numéricos', time: 550 })),
+    ...score.colorSteps.map(step => ({ ...step, phase: 'Multiplicador', time: 550 })),
+    { name: 'Total de la jugada', phase: 'Total', time: 1000, cells: [] },
   ] };
   $('sequence').hidden = false;
   $('sequence-phase').textContent = 'Dados';
@@ -276,7 +286,7 @@ function scoringFrame(now) {
   $('sequence-detail').textContent = step.phase === 'Total' ? `${resolution.score.base} base × ${decimal(resolution.score.multiplier)}` : `${step.name}${bonus}`;
   table.lightCells(step.cells);
   if (!reducedMotion.matches || step.phase === 'Total') note(step.phase === 'Total' ? 'score' : step.phase === 'Multiplicador' ? 'color' : 'count');
-  resolution.next = now + (reducedMotion.matches && step.phase !== 'Total' ? 34 : step.time);
+  resolution.next = now + step.time;
 }
 
 function finishScore(now = performance.now()) {
@@ -306,7 +316,7 @@ function help() {
     <p>El tablero crece cada tres mosaicos hasta 4 × 4. Supera el objetivo para pasar por el taller y seguir jugando.</p>
     <ol class="help-list">
       <li><strong>Coloca y recoloca.</strong> Si pones un dado encima de otro recién colocado, el anterior vuelve a la mano. También puedes arrastrarlo a la bandeja. Los dados sin jugar conservan su tirada.</li>
-      <li><strong>Puntúa.</strong> Los números aportan puntos base y los colores añaden multiplicador. Las líneas se marcan sobre la mesa.</li>
+      <li><strong>Puntúa.</strong> Los números aportan puntos base y los colores añaden multiplicador. Completar el panel suma ${comboPoints.panel} puntos base. Las líneas se marcan sobre la mesa.</li>
       <li><strong>Libera espacio.</strong> Toca una piedra para cincelarla. Su número sirve para combos mientras siga en la mesa.</li>
       <li><strong>Mejora la bolsa.</strong> Inspecciona los dados flotantes, compra hasta cinco azulejos o lleva dados al horno.</li>
     </ol>
@@ -497,13 +507,22 @@ $('top').addEventListener('click', () => table.top());
 $('reset-camera').addEventListener('click', () => table.reset());
 $('recall').addEventListener('click', returnDie);
 $('skip-score').addEventListener('click', () => finishScore());
-$('active-powers').addEventListener('click', event => {
+activePowers.addEventListener('click', event => {
   const button = event.target.closest('[data-power]');
   if (button) {
-    $('world').scrollIntoView({ block: 'nearest' });
-    showPower(Number(button.dataset.power), true);
+    const index = Number(button.dataset.power);
+    showPower(pinned && tooltip === index ? -1 : index, true);
   }
 });
+activePowers.addEventListener('pointerover', event => {
+  const button = event.target.closest('[data-power]');
+  if (button && event.pointerType === 'mouse' && !pinned) showPower(Number(button.dataset.power));
+});
+activePowers.addEventListener('pointerleave', () => { if (!pinned) showPower(-1); });
+activePowers.addEventListener('focusin', event => {
+  if (event.target.matches('[data-power]:focus-visible')) showPower(Number(event.target.dataset.power));
+});
+activePowers.addEventListener('focusout', () => { if (!pinned) showPower(-1); });
 for (const id of ['confirm', 'mobile-confirm']) $(id).addEventListener('click', scoreTurn);
 $('sound').addEventListener('click', () => {
   muted = !muted;

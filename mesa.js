@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt } from './arte.js?v=horno-3';
+import { DiceArt, tileArt } from './arte.js?v=azulejos-1';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -183,12 +183,13 @@ export class Table {
     this.powerShelf.clear();
     this.powerMeshes = [];
     if (!powers.length) { this.dirty = true; return; }
-    const z = this.cell(0).z - 1.04;
-    this.powerShelf.add(mesh(new RoundedBoxGeometry(powers.length * .76 + .24, .15, .8, 2, .059), this.cobalt, 0, -.24, z));
+    const z = this.cell(0).z - 1.32;
+    const gap = 1.02;
+    this.powerShelf.add(mesh(new RoundedBoxGeometry(powers.length * gap + .15, .55, 1.11, 2, .075), this.cobalt, 0, -.052, z));
     powers.forEach((id, index) => {
       const surface = new THREE.MeshStandardMaterial({ map: tileArt(id).map, roughness: .38 });
-      const piece = mesh(new RoundedBoxGeometry(.63, .14, .63, 2, .055),
-        [this.brass, this.brass, surface, this.brass, this.brass, this.brass], (index - (powers.length - 1) / 2) * .76, -.08, z);
+      const piece = mesh(new RoundedBoxGeometry(.93, .16, .93, 2, .055),
+        [this.brass, this.brass, surface, this.brass, this.brass, this.brass], (index - (powers.length - 1) / 2) * gap, .303, z);
       piece.userData.id = POWER + index;
       this.powerMeshes.push(piece);
       this.powerShelf.add(piece);
