@@ -60,17 +60,15 @@ export function projectBoard(state) {
       case 'kiln':
         for (const neighbor of adjacent(row, col)) if (board[neighbor]?.stone) board[neighbor].stone = false;
         break;
-      case 'seal': {
-        const target = board[board.length - 1 - cell];
-        if (target) target.sealed = true;
-        break;
-      }
     }
   }
 
   for (const { cell, key } of sources) {
     const neighbors = adjacent(Math.floor(cell / cols), cell % cols);
-    if (key === 'compass') {
+    if (key === 'seal') {
+      const target = board[board.length - 1 - cell];
+      if (target && !target.stone) target.sealed = true;
+    } else if (key === 'compass') {
       const occupied = neighbors.filter(neighbor => board[neighbor]);
       if (occupied.length) colorSteps.push({ name: uniqueDice[key].name, add: occupied.length * 10, cells: [cell, ...occupied] });
     } else if (key === 'bridge') {

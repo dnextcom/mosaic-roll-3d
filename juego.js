@@ -1,9 +1,9 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=unicos-1';
-import { DiceArt, tileArt } from './arte.js?v=unicos-1';
-import { MarketUI } from './mercado.js?v=unicos-1';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=unicos-1';
-import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=unicos-1';
-import { uniqueDice } from './unicos.js?v=unicos-1';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=unicos-2';
+import { DiceArt, tileArt } from './arte.js?v=unicos-2';
+import { MarketUI } from './mercado.js?v=unicos-2';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=unicos-2';
+import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=unicos-2';
+import { uniqueDice } from './unicos.js?v=unicos-2';
 
 const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';

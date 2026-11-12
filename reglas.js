@@ -1,5 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, market, ovenOffers, hasFace, choose, dieCount, canEnchant, enchant, fuse } from './catalogo.js?v=unicos-1';
-import { projectBoard, uniqueDice } from './unicos.js?v=unicos-1';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, market, ovenOffers, hasFace, choose, dieCount, canEnchant, enchant, fuse } from './catalogo.js?v=unicos-2';
+import { projectBoard, uniqueDice } from './unicos.js?v=unicos-2';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 export const handSize = 4;

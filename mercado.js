@@ -1,8 +1,8 @@
-import { glazes, basicColors, rarities, powers, upgrades, diceName, hasFace, dieCount, fuse } from './catalogo.js?v=unicos-1';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit } from './reglas.js?v=unicos-1';
-import { tileArt } from './arte.js?v=unicos-1';
-import { Workshop } from './taller.js?v=unicos-1';
-import { uniqueDice } from './unicos.js?v=unicos-1';
+import { glazes, basicColors, rarities, powers, upgrades, diceName, hasFace, dieCount, fuse } from './catalogo.js?v=unicos-2';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit } from './reglas.js?v=unicos-2';
+import { tileArt } from './arte.js?v=unicos-2';
+import { Workshop } from './taller.js?v=unicos-2';
+import { uniqueDice } from './unicos.js?v=unicos-2';
 
 const faceText = (spec, index) => [spec.faces[index], hasFace(spec.boost, index) && '×2', hasFace(spec.gild, index) && 'oro',
   hasFace(spec.wild, index) && '★'].filter(Boolean).join(' ');
