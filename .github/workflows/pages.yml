@@ -32,7 +32,7 @@ jobs:
       - name: Preparar archivos del juego
         run: |
           mkdir -p _site
-          cp index.html estilo.css juego.js mesa.js reglas.js catalogo.js arte.js mercado.js taller.js unicos.js portada.jpg mesa.jpg azulejo.jpg Mosaic-Roll-3D.zip _site/
+          cp index.html estilo.css juego.js mesa.js reglas.js catalogo.js arte.js mercado.js taller.js unicos.js coleccion.js portada.jpg mesa.jpg azulejo.jpg Mosaic-Roll-3D.zip _site/
           cp -R vendor _site/
       - uses: actions/upload-pages-artifact@v3
         with:

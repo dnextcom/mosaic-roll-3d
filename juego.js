@@ -1,9 +1,10 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=unicos-2';
-import { DiceArt, tileArt } from './arte.js?v=unicos-2';
-import { MarketUI } from './mercado.js?v=unicos-2';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=unicos-2';
-import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=unicos-2';
-import { uniqueDice } from './unicos.js?v=unicos-2';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=campana-1';
+import { DiceArt, tileArt } from './arte.js?v=campana-1';
+import { MarketUI } from './mercado.js?v=campana-1';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=campana-1';
+import { stageAt, campaignLength, orderAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance } from './reglas.js?v=campana-1';
+import { uniqueDice } from './unicos.js?v=campana-1';
+import { collectionMarkup } from './coleccion.js?v=campana-1';
 
 const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';
@@ -36,6 +37,7 @@ let run = restore();
 let table, market, sound, resolution;
 let playing = false;
 let modal = '';
+let collectionReturn = '';
 let muted = read(soundStorage) === 'off';
 let selected = -1, focused = -1, hovered = -1;
 let tooltip = -1, pinned = false;
@@ -66,7 +68,7 @@ function note(type) {
 }
 
 const save = () => write(storage, JSON.stringify(run));
-const ongoing = () => run && (run.phase === 'play' || run.phase === 'shop');
+const ongoing = () => run && run.phase !== 'lost';
 const ready = () => playing && !modal && !resolution && !lockUntil && run.phase === 'play';
 const at = id => id >= HAND && id < POWER ? run.hand[id - HAND] : id >= 0 && id < HAND ? run.board[id] : null;
 const movable = id => isFresh(at(id));
@@ -74,7 +76,9 @@ const movable = id => isFresh(at(id));
 function closeDialog() {
   market?.close();
   modal = '';
+  collectionReturn = '';
   if (dialog.open) dialog.close();
+  dialog.classList.remove('collection-dialog');
   workshop.hidden = true;
   $('play-layout').hidden = false;
   $('game').classList.remove('workshop-open');
@@ -91,7 +95,8 @@ function title() {
   $('start').hidden = false;
   const button = $('play');
   button.disabled = !table;
-  button.innerHTML = `${table ? ongoing() ? 'Continuar partida' : 'Jugar' : 'Cargando partida…'} <span aria-hidden="true">→</span>`;
+  const label = !table ? 'Cargando partida…' : run?.phase === 'won' ? 'Ver victoria' : ongoing() ? 'Continuar partida' : 'Jugar';
+  button.innerHTML = `${label} <span aria-hidden="true">→</span>`;
   $('new').hidden = !table || !ongoing();
   if (table) button.focus({ preventScroll: true });
 }
@@ -138,7 +143,8 @@ function render() {
   const score = resolution?.score ?? preview(run);
   const points = resolution ? run.points - score.total : run.points;
   const dimensions = run.cols === 4 ? `${run.cols} × ${run.rows}` : `${run.rows} × ${run.cols}`;
-  $('stage-label').textContent = `Mosaico ${run.stage + 1} · ${dimensions}`;
+  const progress = run.endless ? `Modo libre · Mosaico ${run.stage + 1}` : `Mosaico ${run.stage + 1} de ${campaignLength}`;
+  $('stage-label').textContent = `${progress} · ${dimensions}`;
   $('stage-name').textContent = stage.name;
   $('score').textContent = points;
   $('goal').textContent = `/ ${run.goal}`;
@@ -159,6 +165,14 @@ function render() {
     : run.lastScore ? `Última jugada · +${run.lastScore}` : 'Coloca un dado para ver sus puntos.';
   $('placed').textContent = `${score.count} de 4 dados colocados`;
   $('inventory').textContent = `${run.gold} de oro · Bolsa de ${dieCount(run)} dados`;
+  const order = orderAt(run.stage);
+  $('order').hidden = !order;
+  if (order) {
+    const done = run.orders.includes(order.key);
+    $('order').classList.toggle('fulfilled', done);
+    $('order-label').textContent = order.label;
+    $('order-reward').textContent = `${done ? 'Cumplido · ' : ''}+${order.gold} oro`;
+  }
   $('equipped-rail').hidden = !run.powers.length;
   const equipped = run.powers.join('/');
   if (activePowers.dataset.equipped !== equipped) {
@@ -167,6 +181,7 @@ function render() {
   }
   $('confirm').disabled = $('mobile-confirm').disabled = !ready() || !score.count;
   $('pause').disabled = Boolean(resolution);
+  $('collection-button').disabled = Boolean(resolution);
   $('recall').hidden = !ready() || selected < 0 || selected >= HAND || !isFresh(run.board[selected]);
   $('hint').textContent = hint(score.count);
   table.mount(run.powers);
@@ -286,6 +301,7 @@ function scoreTurn() {
     ...score.numberSteps.map(step => ({ ...step, phase: 'Combos numéricos', time: 550 })),
     ...score.colorSteps.map(step => ({ ...step, phase: 'Multiplicador', time: 550 })),
     { name: 'Total de la jugada', phase: 'Total', time: 1000, cells: [] },
+    ...(score.order ? [{ name: score.order.label, phase: 'Encargo cumplido', reward: score.order.gold, time: 1050, cells: [] }] : []),
   ] };
   $('sequence').hidden = false;
   $('sequence-phase').textContent = 'Dados';
@@ -302,7 +318,7 @@ function scoringFrame(now) {
   if (step.add) resolution.multi += step.add / 100;
   if (step.factor) resolution.multi *= step.factor;
   $('sequence-phase').textContent = step.phase;
-  $('sequence-value').textContent = step.phase === 'Total' ? `+${resolution.score.total}` :
+  $('sequence-value').textContent = step.reward ? `+${step.reward} oro` : step.phase === 'Total' ? `+${resolution.score.total}` :
     step.phase === 'Multiplicador' ? `${resolution.base} × ${decimal(resolution.multi)}` : `${resolution.base}`;
   const bonus = step.points ? ` · +${step.points}` : step.add ? ` · +${decimal(step.add / 100)}×` : step.factor ? ` · ×${decimal(step.factor)}` : '';
   $('sequence-detail').textContent = step.phase === 'Total' ? `${resolution.score.base} base × ${decimal(resolution.score.multiplier)}` : `${step.name}${bonus}`;
@@ -328,8 +344,28 @@ function finishScore(now = performance.now()) {
 function showDialog(mode, content) {
   cancelPointer();
   modal = mode;
+  dialog.classList.toggle('collection-dialog', mode === 'collection');
   dialog.innerHTML = content;
   if (!dialog.open) dialog.showModal();
+}
+
+function showCollection(catalogOnly = false) {
+  if (resolution) return;
+  collectionReturn = modal;
+  showDialog('collection', collectionMarkup(catalogOnly ? null : run));
+  dialog.scrollTop = 0;
+}
+
+function closeCollection() {
+  modal = collectionReturn;
+  collectionReturn = '';
+  if (modal === 'outcome') {
+    showOutcome();
+    dialog.querySelector('[data-action]').focus({ preventScroll: true });
+  } else {
+    dialog.close();
+    dialog.classList.remove('collection-dialog');
+  }
 }
 
 function showWorkshop(mode, content) {
@@ -344,10 +380,11 @@ function showWorkshop(mode, content) {
 
 function help() {
   showDialog('help', `<h2 id="dialog-title">Cómo jugar</h2>
-    <p>El tablero crece cada tres mosaicos hasta 4 × 4. Supera el objetivo para pasar por el taller y seguir jugando.</p>
+    <p>Supera ${campaignLength} mosaicos para ganar la campaña. El tablero crece cada tres mosaicos hasta 4 × 4.</p>
     <ol class="help-list">
       <li><strong>Coloca y recoloca.</strong> Si pones un dado encima de otro recién colocado, el anterior vuelve a la mano. También puedes arrastrarlo a la bandeja. Los dados sin jugar conservan su tirada.</li>
       <li><strong>Puntúa.</strong> Los números aportan puntos base y los colores añaden multiplicador. Completar el panel suma ${comboPoints.panel} puntos base. Las líneas se marcan sobre la mesa.</li>
+      <li><strong>Completa encargos.</strong> Cada grupo de tres mosaicos tiene un encargo opcional. Puntúa la combinación indicada para ganar su recompensa una vez.</li>
       <li><strong>Libera espacio.</strong> Toca una piedra para cincelarla. Su número sirve para combos mientras siga en la mesa.</li>
       <li><strong>Mejora la bolsa.</strong> Recibes un dado al pasar de mosaico. En el taller puedes comprar dados, equipar hasta cinco azulejos y usar el horno una vez.</li>
       <li><strong>Dados únicos.</strong> Selecciónalos para leer su poder. Cuentan como cualquier color y sus efectos duran hasta puntuar. Si los mueves, el poder sigue a la nueva casilla.</li>
@@ -367,10 +404,19 @@ function pause() {
 
 function showOutcome() {
   if (run.phase === 'shop') { window.scrollTo(0, 0); market.open(run); return; }
+  const total = run.results.reduce((sum, points) => sum + points, 0);
+  if (run.phase === 'won') {
+    showDialog('outcome', `<p class="eyebrow">${campaignLength} de ${campaignLength} mosaicos</p><h2 id="dialog-title">Campaña completada</h2>
+      <p>${total} puntos en la campaña · ${run.orders.length} encargos cumplidos</p>
+      <div class="dialog-actions"><button class="button primary" data-action="endless">Seguir en modo libre</button>
+      <button class="button" data-action="collection">Ver bolsa y azulejos</button>
+      <button class="button" data-action="title">Volver al inicio</button></div>`);
+    return;
+  }
   const heading = run.turns && run.board.every(Boolean) ? 'Tablero bloqueado' : 'Se acabaron los turnos';
-  const total = run.results.reduce((sum, points) => sum + points, 0) + run.points;
-  showDialog('outcome', `<h2 id="dialog-title">${heading}</h2><p>Mosaico ${run.stage + 1} · ${run.points} de ${run.goal} puntos.</p>
-    <p>${total} puntos en la partida.</p><div class="dialog-actions"><button class="button primary" data-action="restart">Volver a jugar</button>
+  showDialog('outcome', `<h2 id="dialog-title">${heading}</h2><p>Mosaico ${run.stage + 1}${run.endless ? '' : ` de ${campaignLength}`} · ${run.points} de ${run.goal} puntos.</p>
+    <p>${total + run.points} puntos en la partida.</p><div class="dialog-actions"><button class="button primary" data-action="restart">Volver a jugar</button>
+    <button class="button" data-action="collection">Ver bolsa y azulejos</button>
     <button class="button" data-action="title">Volver al inicio</button></div>`);
 }
 
@@ -387,7 +433,12 @@ dialog.addEventListener('click', event => {
   if (!button || button.disabled) return;
   switch (button.dataset.action) {
     case 'back': back(); break;
+    case 'collection': showCollection(); break;
+    case 'close-collection': closeCollection(); break;
     case 'title': title(); break;
+    case 'endless':
+      if (continueEndless(run)) { save(); closeDialog(); showOutcome(); }
+      break;
     case 'help': help(); break;
     case 'fullscreen':
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -399,7 +450,8 @@ dialog.addEventListener('click', event => {
 
 dialog.addEventListener('cancel', event => {
   event.preventDefault();
-  if (modal === 'outcome') title();
+  if (modal === 'collection') closeCollection();
+  else if (modal === 'outcome') title();
   else back();
 });
 
@@ -540,6 +592,8 @@ document.querySelector('[data-help]').addEventListener('click', help);
 $('pause').addEventListener('click', pause);
 $('top').addEventListener('click', () => table.top());
 $('reset-camera').addEventListener('click', () => table.reset());
+$('catalog').addEventListener('click', () => showCollection(true));
+$('collection-button').addEventListener('click', () => showCollection());
 $('recall').addEventListener('click', returnDie);
 $('skip-score').addEventListener('click', () => finishScore());
 activePowers.addEventListener('click', event => {
@@ -581,7 +635,7 @@ try {
   const art = new DiceArt();
   table = new Table(canvas, $('world-labels'), art);
   await table.load();
-  market = new MarketUI(art, workshop, { open: showWorkshop, changed: () => { save(); render(); }, note, advance: nextMosaic, exit: title }, table.porcelain.map);
+  market = new MarketUI(art, workshop, { open: showWorkshop, changed: () => { save(); render(); }, note, advance: nextMosaic, exit: title, collection: () => showCollection() }, table.porcelain.map);
   title();
   requestAnimationFrame(frame);
 } catch (error) {

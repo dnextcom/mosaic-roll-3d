@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { glazes, hasFace, powers, rarities } from './catalogo.js?v=unicos-2';
-import { uniqueDice } from './unicos.js?v=unicos-2';
+import { glazes, hasFace, powers, rarities } from './catalogo.js?v=campana-1';
+import { uniqueDice } from './unicos.js?v=campana-1';
 
 const pips = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const stoneGlaze = { color: '#65737c', light: '#a7adb1', darkPips: true };
@@ -103,7 +103,18 @@ function dieFace(spec, face, stone) {
     ctx.textBaseline = 'middle';
     ctx.fillText('∞', 64, 19);
   }
-  return texture(canvas);
+  return canvas;
+}
+
+const portraits = new WeakMap();
+
+export function diePortrait(spec) {
+  if (!portraits.has(spec)) {
+    const mark = spec.gild | spec.boost | spec.wild;
+    const face = spec.faces.findIndex((_, index) => hasFace(mark, index));
+    portraits.set(spec, dieFace(spec, Math.max(0, face), false).toDataURL());
+  }
+  return portraits.get(spec);
 }
 
 export class DiceArt {
@@ -117,7 +128,7 @@ export class DiceArt {
     const key = JSON.stringify([stone, spec.faces, spec.unique, spec.numberChanged, stone ? 0 : [spec.glaze, spec.second, spec.boost, spec.gild, spec.wild, spec.eternal, spec.rainbow, spec.tint, spec.echo, spec.sealed]]);
     let item = this.cache.get(key);
     if (!item) {
-      const materials = [2, 3, 0, 5, 1, 4].map(face => new THREE.MeshPhysicalMaterial({ map: dieFace(spec, face, stone),
+      const materials = [2, 3, 0, 5, 1, 4].map(face => new THREE.MeshPhysicalMaterial({ map: texture(dieFace(spec, face, stone)),
         roughness: stone ? .66 : .32, clearcoat: stone ? 0 : .27, clearcoatRoughness: .36 }));
       item = { count: 0, materials };
       this.cache.set(key, item);

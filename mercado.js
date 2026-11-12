@@ -1,21 +1,9 @@
-import { glazes, basicColors, rarities, powers, upgrades, diceName, hasFace, dieCount, fuse } from './catalogo.js?v=unicos-2';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit } from './reglas.js?v=unicos-2';
-import { tileArt } from './arte.js?v=unicos-2';
-import { Workshop } from './taller.js?v=unicos-2';
-import { uniqueDice } from './unicos.js?v=unicos-2';
-
-const faceText = (spec, index) => [spec.faces[index], hasFace(spec.boost, index) && '×2', hasFace(spec.gild, index) && 'oro',
-  hasFace(spec.wild, index) && '★'].filter(Boolean).join(' ');
-
-function faces(spec) {
-  return `<span class="face-list" aria-label="Caras del dado">${spec.faces.map((_, index) =>
-    `<span${hasFace(spec.gild, index) ? ' class="gilded"' : ''}>${faceText(spec, index)}</span>`).join('')}</span>`;
-}
-
-function traits(spec) {
-  return [spec.rainbow && 'Multicolor', spec.eternal && 'Eterno', spec.obsidian && 'Obsidiana', spec.gild && 'Oro en caras marcadas',
-    spec.boost && 'Puntos dobles en caras ×2', spec.wild && 'Comodín en caras ★'].filter(Boolean).join(' · ');
-}
+import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=campana-1';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt } from './reglas.js?v=campana-1';
+import { tileArt } from './arte.js?v=campana-1';
+import { Workshop } from './taller.js?v=campana-1';
+import { uniqueDice } from './unicos.js?v=campana-1';
+import { dieFaces, dieTraits } from './coleccion.js?v=campana-1';
 
 export class MarketUI {
   constructor(art, element, callbacks, tileMap) {
@@ -57,9 +45,11 @@ export class MarketUI {
     const run = this.run;
     this.callbacks.open('workshop', `<header class="workshop-header"><div><p class="eyebrow">Mosaico ${run.stage + 1} completado · ${run.points} puntos</p>
       <h2 id="workshop-title" tabindex="-1">${tab === 'dice' ? 'Taller de azulejos' : 'Horno de azulejos'}</h2></div><strong class="purse" id="workshop-gold">${run.gold} de oro</strong></header>
-      ${tab === 'dice' ? `<div class="workshop-tools"><button type="button" class="button" data-market="view" data-key="oven">Abrir horno${run.market.forged ? ' · usado' : ''}</button></div>` : ''}${body}
+      ${tab === 'dice' ? `<div class="workshop-tools"><button type="button" class="button quiet" data-market="collection">Bolsa y azulejos</button>
+        <button type="button" class="button" data-market="view" data-key="oven">Abrir horno${run.market.forged ? ' · usado' : ''}</button></div>` : ''}${body}
       <footer class="workshop-footer"><button type="button" class="button quiet" ${tab === 'dice' ? 'data-market="exit">Guardar y salir' : 'data-market="view" data-key="dice">Volver al taller'}</button>
-      <button type="button" class="button primary" data-market="advance">Mosaico ${run.stage + 2} <span aria-hidden="true">→</span></button></footer>`);
+      <div class="workshop-next"><span>Meta de ${stageAt(run.stage + 1).goal} puntos</span>
+      <button type="button" class="button primary" data-market="advance">Mosaico ${run.stage + 2} <span aria-hidden="true">→</span></button></div></footer>`);
   }
 
   exhibit(action, key, name, caption, color, disabled = false) {
@@ -130,8 +120,9 @@ export class MarketUI {
     const unique = uniqueDice[spec.unique];
     if (this.scene) this.scene.selected = index;
     this.element.querySelectorAll('[data-market="inspect"]').forEach(button => button.setAttribute('aria-pressed', Number(button.dataset.key) === index));
-    area.innerHTML = `<div><strong style="color:${rarity.color}">${rarity.name} · ${diceName(spec)}</strong>${faces(spec)}
-      ${unique ? `<p>${unique.text}</p><small>Comodín de color · Inmodificable</small>` : traits(spec) ? `<small>${traits(spec)}</small>` : ''}</div><button class="button primary" data-market="die" data-key="${index}"${canBuy(this.run, 'die', index) ? '' : ' disabled'}>Comprar · ${rarity.price} oro</button>`;
+    const effects = dieTraits(spec);
+    area.innerHTML = `<div><strong style="color:${rarity.color}">${rarity.name} · ${diceName(spec)}</strong>${dieFaces(spec)}
+      ${unique ? `<p>${unique.text}</p><small>Comodín de color · Inmodificable</small>` : effects ? `<small>${effects}</small>` : ''}</div><button class="button primary" data-market="die" data-key="${index}"${canBuy(this.run, 'die', index) ? '' : ' disabled'}>Comprar · ${rarity.price} oro</button>`;
   }
 
   oven() {
@@ -214,8 +205,8 @@ export class MarketUI {
   showResult(spec) {
     this.mode = 'result';
     this.element.querySelector('#recipe-title').textContent = this.effect === 'fusion' ? 'Quimera forjada' : 'Dado mejorado';
-    this.element.querySelector('#forge-slots').innerHTML = `<strong>${diceName(spec)}</strong>${faces(spec)}`;
-    this.element.querySelector('#forge-status').textContent = traits(spec) || 'El dado está listo para tu siguiente tirada.';
+    this.element.querySelector('#forge-slots').innerHTML = `<strong>${diceName(spec)}</strong>${dieFaces(spec)}`;
+    this.element.querySelector('#forge-status').textContent = dieTraits(spec) || 'El dado está listo para tu siguiente tirada.';
     this.element.querySelector('.forge-candidates').hidden = true;
     this.element.querySelector('.dye-label')?.setAttribute('hidden', '');
     this.element.querySelector('.shop-foot').innerHTML = '<button type="button" class="button" data-market="view" data-key="oven">Volver al horno</button>';
@@ -242,6 +233,7 @@ export class MarketUI {
     else if (market === 'candidate') this.pickForge(Number(key));
     else if (market === 'remove') this.pickForge(this.slots[Number(key)]);
     else if (market === 'forge') this.apply();
+    else if (market === 'collection') this.callbacks.collection();
     else if (market === 'exit') this.callbacks.exit();
     else if (market === 'advance') this.callbacks.advance();
   }

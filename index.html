@@ -7,9 +7,9 @@
   <meta name="description" content="Juega a Mosaic Roll 3D. Combina dados de cerámica, compra azulejos y forja quimeras entre mosaicos.">
   <title>Mosaic Roll 3D</title>
   <link rel="icon" type="image/jpeg" href="azulejo.jpg">
-  <link rel="stylesheet" href="estilo.css?v=unicos-2">
+  <link rel="stylesheet" href="estilo.css?v=campana-1">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=unicos-2"></script>
+  <script type="module" src="juego.js?v=campana-1"></script>
 </head>
 <body>
   <main class="start" id="start">
@@ -22,6 +22,7 @@
           <button class="button primary" type="button" id="play" disabled>Cargando partida… <span aria-hidden="true">→</span></button>
           <button class="button" type="button" id="new" hidden>Nueva partida</button>
           <button class="button" type="button" data-help>Cómo jugar</button>
+          <button class="button" type="button" id="catalog">Catálogo</button>
         </div>
         <p class="boot" id="boot" role="status" hidden></p>
         <a class="download" href="Mosaic-Roll-3D.zip?v=taller-2" download>Descargar edición Windows</a>
@@ -38,6 +39,7 @@
     <div class="mobile-stats" aria-live="polite" id="mobile-stats"></div>
     <div class="layout" id="play-layout">
       <section class="play-area" aria-label="Mesa 3D">
+        <div class="order" id="order" hidden><span class="eyebrow">Encargo</span><strong id="order-label"></strong><span id="order-reward"></span></div>
         <div class="equipped-rail" id="equipped-rail" hidden>
           <span class="eyebrow" id="equipped-label">Azulejos equipados</span>
           <div class="active-powers" id="active-powers" role="group" aria-labelledby="equipped-label"></div>
@@ -57,6 +59,7 @@
           <button class="button quiet" type="button" id="recall" hidden>Retirar dado</button>
           <button class="button quiet" type="button" id="top">Vista cenital</button>
           <button class="button quiet" type="button" id="reset-camera">Centrar</button>
+          <button class="button quiet" type="button" id="collection-button">Bolsa y azulejos</button>
         </div>
         <p class="key-tip">Botón derecho para girar · Rueda para acercar · 1–4 para elegir · Espacio para puntuar</p>
         <div class="mobile-actions">
