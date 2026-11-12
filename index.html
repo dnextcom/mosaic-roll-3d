@@ -7,9 +7,9 @@
   <meta name="description" content="Juega a Mosaic Roll 3D. Combina dados de cerámica, compra azulejos y forja quimeras entre mosaicos.">
   <title>Mosaic Roll 3D</title>
   <link rel="icon" type="image/jpeg" href="azulejo.jpg">
-  <link rel="stylesheet" href="estilo.css?v=patio-1">
+  <link rel="stylesheet" href="estilo.css?v=unicos-1">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=patio-1"></script>
+  <script type="module" src="juego.js?v=unicos-1"></script>
 </head>
 <body>
   <main class="start" id="start">
@@ -46,6 +46,7 @@
           <canvas id="canvas" tabindex="0" aria-label="Tablero de dados 3D" aria-describedby="hint"></canvas>
           <div class="world-labels" id="world-labels" aria-hidden="true"></div>
           <div class="power-tooltip" id="power-tooltip" role="tooltip" hidden></div>
+          <div class="power-tooltip unique-tooltip" id="die-tooltip" role="tooltip" hidden></div>
           <div class="score-sequence" id="sequence" hidden>
             <div><span class="eyebrow" id="sequence-phase"></span><strong id="sequence-value"></strong><small id="sequence-detail"></small></div>
             <button class="button quiet" id="skip-score" type="button">Saltar</button>

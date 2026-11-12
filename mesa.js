@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt } from './arte.js?v=patio-1';
+import { DiceArt, tileArt } from './arte.js?v=unicos-1';
+import { projectBoard } from './unicos.js?v=unicos-1';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -12,6 +13,8 @@ const zAxis = new THREE.Vector3(0, 0, 1);
 const rollAxis = new THREE.Vector3(1, .57, .66).normalize();
 const angle = THREE.MathUtils.degToRad;
 const clamp = THREE.MathUtils.clamp;
+const twinSize = .55;
+const twinGap = .52;
 const orientations = [null, new THREE.Quaternion(), new THREE.Quaternion().setFromAxisAngle(xAxis, -Math.PI / 2),
   new THREE.Quaternion().setFromAxisAngle(zAxis, Math.PI / 2), new THREE.Quaternion().setFromAxisAngle(zAxis, -Math.PI / 2),
   new THREE.Quaternion().setFromAxisAngle(xAxis, Math.PI / 2), new THREE.Quaternion().setFromAxisAngle(xAxis, Math.PI)];
@@ -23,6 +26,16 @@ function mesh(geometry, material, x, y, z, shadow = true) {
   result.receiveShadow = true;
   return result;
 }
+
+function appearance(spec, die) {
+  if (!die.numberChanged && die.tint == null && !die.echo && !die.sealed) return spec;
+  const faces = [...spec.faces];
+  faces[die.face] = die.value;
+  return { ...spec, faces, numberChanged: die.numberChanged, tint: die.tint, echo: die.echo, sealed: die.sealed };
+}
+
+const appearanceKey = die => [die.value, die.stone, die.numberChanged, die.tint, die.echo, die.sealed].join('/');
+const rotationFor = die => new THREE.Quaternion().setFromAxisAngle(yAxis, angle((die.slot - 1.5) * 5)).multiply(orientations[die.face + 1]);
 
 export class Table {
   constructor(canvas, labels, art = new DiceArt()) {
@@ -48,6 +61,7 @@ export class Table {
     this.highlight = new THREE.Group();
     this.lit = new Set();
     this.models = new Map();
+    this.extras = new Map();
     this.tray = [];
     this.cells = [];
     this.tags = [];
@@ -199,8 +213,14 @@ export class Table {
 
   powerAnchor(index) {
     const piece = this.powerMeshes[index];
-    if (!piece || !this.width) return null;
-    const screen = piece.position.clone().project(this.camera);
+    return piece ? this.anchor(piece.position) : null;
+  }
+
+  dieAnchor(id) { return this.anchor(this.destination(id)); }
+
+  anchor(position) {
+    if (!this.width) return null;
+    const screen = position.clone().project(this.camera);
     return { x: (screen.x + 1) / 2 * this.width, y: (1 - screen.y) / 2 * this.height };
   }
 
@@ -259,6 +279,10 @@ export class Table {
     const now = performance.now();
     const targets = [...this.models.values()].filter(piece => !piece.dragged && !piece.removing &&
       now >= piece.start + piece.duration && (!boardOnly || piece.id < HAND)).map(piece => piece.mesh);
+    for (const [id, extra] of this.extras) {
+      if (boardOnly && id >= HAND) continue;
+      if (!extra.source || targets.includes(extra.source.mesh)) targets.push(extra.mesh);
+    }
     targets.push(...this.cells);
     if (!boardOnly) targets.push(...this.tray, ...this.powerMeshes);
     const hit = this.ray.intersectObjects(targets, false)[0];
@@ -305,9 +329,12 @@ export class Table {
     const { rows, cols } = state;
     if (rows !== this.rows || cols !== this.cols) this.configure(rows, cols);
     this.mount(state.powers);
+    const { board } = projectBoard(state);
     const live = new Map();
+    const extraDice = new Map();
     state.board.forEach((die, id) => { if (die) live.set(die, id); });
     state.hand.forEach((die, slot) => { if (die) live.set(die, HAND + slot); });
+    board.forEach((die, id) => { if (die?.echo) extraDice.set(id, { die, spec: state.bag[die.id] }); });
     for (const [die, piece] of this.models) {
       if (live.has(die) || piece.removing) continue;
       if (dissolve && piece.id < HAND) {
@@ -319,38 +346,62 @@ export class Table {
       } else this.remove(die, piece);
     }
     for (const [die, id] of live) {
+      const seen = id < HAND ? board[id] : die;
+      const spec = state.bag[die.id];
+      const extraValue = id >= HAND && spec.unique === 'twin' ? die.value + 1 : seen.extra;
+      const paired = extraValue != null;
+      const size = paired ? twinSize : 1;
+      const variant = appearanceKey(seen);
+      const to = this.destination(id);
+      if (paired) { to.x -= twinGap / 2; to.y -= .43 * (1 - size); }
       const existing = this.models.get(die);
       if (existing) {
-        if (existing.stone !== die.stone || existing.spec !== state.bag[die.id]) {
-          const spec = state.bag[die.id];
-          const next = this.art.create(spec, die.stone);
+        if (existing.variant !== variant || existing.spec !== spec) {
+          const next = this.art.create(appearance(spec, seen), seen.stone);
           this.art.release(existing.mesh);
           existing.mesh.material = next.material;
+          existing.mesh.geometry = next.geometry;
           existing.mesh.userData.art = next.userData.art;
           existing.spec = spec;
-          existing.stone = die.stone;
+          existing.variant = variant;
         }
-        if (existing.id !== id || existing.dragged) {
+        if (existing.id !== id || existing.dragged || existing.size !== size) {
           existing.from.copy(existing.mesh.position);
-          existing.to.copy(this.destination(id));
+          existing.to.copy(to);
+          existing.size = size;
+          existing.mesh.scale.setScalar(size);
           existing.id = existing.mesh.userData.id = id;
           existing.start = now;
           existing.duration = 260;
           existing.rolling = existing.dragged = false;
         }
-        continue;
+      } else {
+        const model = this.art.create(appearance(spec, seen), seen.stone);
+        model.position.copy(to);
+        model.scale.setScalar(size);
+        model.userData.id = id;
+        const rotation = rotationFor(die);
+        model.quaternion.copy(rotation);
+        const rolling = id >= HAND && (roll === true || roll instanceof Set && roll.has(die.id));
+        const piece = { mesh: model, id, spec, variant, size, to, from: to.clone(), rotation,
+          rolling, start: now + die.slot * 54, duration: rolling ? 680 : 0 };
+        this.models.set(die, piece);
+        this.scene.add(model);
       }
-      const to = this.destination(id);
-      const spec = state.bag[die.id];
-      const model = this.art.create(spec, die.stone);
-      model.position.copy(to);
+      if (paired) extraDice.set(id, { die: { ...seen, value: extraValue, numberChanged: true }, spec, source: this.models.get(die) });
+    }
+    for (const [id, extra] of this.extras) if (!extraDice.has(id)) this.removeExtra(id, extra);
+    for (const [id, { die, spec, source }] of extraDice) {
+      const existing = this.extras.get(id);
+      const variant = appearanceKey(die);
+      if (existing && existing.variant === variant && existing.spec === spec && existing.source === source) continue;
+      if (existing) this.removeExtra(id, existing);
+      const model = this.art.create(appearance(spec, die), die.stone);
       model.userData.id = id;
-      const rotation = new THREE.Quaternion().setFromAxisAngle(yAxis, angle((die.slot - 1.5) * 5)).multiply(orientations[die.face + 1]);
-      model.quaternion.copy(rotation);
-      const rolling = id >= HAND && (roll === true || roll instanceof Set && roll.has(die.id));
-      const piece = { mesh: model, id, spec, stone: die.stone, to, from: to.clone(), rotation,
-        rolling, start: now + die.slot * 54, duration: rolling ? 680 : 0 };
-      this.models.set(die, piece);
+      model.position.copy(this.destination(id));
+      model.scale.setScalar(source ? twinSize : .77);
+      model.quaternion.copy(rotationFor(die));
+      this.extras.set(id, { mesh: model, variant, spec, source });
       this.scene.add(model);
     }
     this.dirty = true;
@@ -358,14 +409,17 @@ export class Table {
 
   remove(die, piece) { this.scene.remove(piece.mesh); this.art.release(piece.mesh); this.models.delete(die); }
 
+  removeExtra(id, piece) { this.scene.remove(piece.mesh); this.art.release(piece.mesh); this.extras.delete(id); }
+
   clear() {
     for (const [die, piece] of this.models) this.remove(die, piece);
+    for (const [id, piece] of this.extras) this.removeExtra(id, piece);
     this.marks([]);
     this.lightCells([]);
     this.dirty = true;
   }
 
-  marks(matches) {
+  marks(matches, powers = []) {
     for (const object of this.effects.children) object.geometry.dispose();
     this.effects.clear();
     this.labels.replaceChildren();
@@ -390,6 +444,15 @@ export class Table {
       if (match.column) first.z -= .79;
       else first.x -= .77;
       this.tags.push({ tag, anchor: first, column: match.column });
+    }
+    for (const power of powers) {
+      const tag = document.createElement('span');
+      tag.className = 'match unique-mark';
+      tag.textContent = `${power.name} · +${(power.points ?? power.add / 100).toLocaleString('es-ES')}${power.add ? '×' : ''}`;
+      const anchor = this.cell(power.cells[0]);
+      anchor.y = 1.31;
+      this.labels.append(tag);
+      this.tags.push({ tag, anchor, column: true });
     }
     this.dirty = true;
   }
@@ -421,7 +484,7 @@ export class Table {
       if (piece.removing) {
         at.copy(piece.from);
         at.y += t * .8;
-        piece.mesh.scale.setScalar(1 - t);
+        piece.mesh.scale.setScalar(piece.size * (1 - t));
         piece.mesh.quaternion.setFromAxisAngle(rollAxis, t * 2.4).multiply(piece.rotation);
       } else if (piece.rolling && t < 1) {
         at.x += (1 - t) * (die.slot - 1.5) * .19;
@@ -434,10 +497,19 @@ export class Table {
       } else {
         piece.mesh.quaternion.copy(piece.rotation);
         if (piece.id === this.selected) at.y += .16;
-        piece.mesh.scale.setScalar(this.lit.has(piece.id) ? 1.095 : 1);
+        piece.mesh.scale.setScalar(piece.size * (this.lit.has(piece.id) ? 1.095 : 1));
       }
       if (t < 1 || !at.equals(old)) moving = true;
       old.copy(at);
+    }
+    for (const [id, piece] of this.extras) {
+      if (piece.source) {
+        const base = piece.source.mesh;
+        piece.mesh.position.copy(base.position);
+        piece.mesh.position.x += twinGap;
+        piece.mesh.quaternion.copy(base.quaternion);
+        piece.mesh.scale.copy(base.scale);
+      } else piece.mesh.scale.setScalar(this.lit.has(id) ? .84 : .77);
     }
     if (moving || this.dirty) {
       this.renderer.render(this.scene, this.camera);

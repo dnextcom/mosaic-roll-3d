@@ -160,15 +160,13 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
 .workshop-header h2 { margin-top: 4px; font: 400 clamp(29px, 5.4vw, 54px)/.97 var(--serif); letter-spacing: -.055em; }
 .workshop-header h2:focus { outline: none; }
 .purse { padding: 7px 11px; border: 1px solid #aa8352; border-radius: 5px; color: #5c381d; background: #fff3d9; font: 700 clamp(.83rem, 2.8vw, 1.13rem)/1.2 var(--serif); white-space: nowrap; box-shadow: inset 0 0 0 2px #d8ae765e; }
-.workshop-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 10px 0 9px; }
-.workshop-nav .button { justify-content: center; border-color: #6685a2; color: #234e70; background: #fff7e5; box-shadow: inset 0 0 0 2px #b8cad3; }
-.workshop-nav .button[aria-pressed="true"] { background: var(--glaze); color: var(--ivory); box-shadow: inset 0 0 0 2px #d1e6f166; }
-.workshop-nav .button:disabled { opacity: .65; }
-.workshop-nav small { font-size: .68rem; }
+.workshop-tools { display: flex; justify-content: flex-end; margin-block: 8px; }
+.workshop-tools .button { min-height: 35px; }
 .workshop-view button:focus-visible { outline-color: #b75439; }
 .workshop-stage { position: relative; height: clamp(294px, 44svh, 415px); overflow: hidden; border: 2px solid #2c6281; border-radius: 7px 7px 0 0; background: #172d3f; }
 .workshop-stage canvas { display: block; width: 100%; height: 100%; }
 .workshop-stage.forge-scene { height: clamp(213px, 34svh, 330px); border-radius: 7px; }
+.workshop-stage.kiln-display { margin-top: 10px; }
 .forge-scene canvas { touch-action: none; }
 .exhibits { position: absolute; inset: 0; pointer-events: none; }
 .exhibit {
@@ -180,17 +178,7 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
 .exhibit > span { position: absolute; inset: auto 4px 0; padding: 4px 3px; border-radius: 4px; color: #fbefdb; background: #122634ee; }
 .exhibit strong { display: block; font: 700 clamp(.68rem, 1.55vw, .94rem)/1.12 var(--serif); }
 .exhibit small { display: block; margin-top: 2px; color: var(--rarity); font-size: .69rem; font-weight: 650; }
-.exhibit-image { display: none; }
 .exhibit.inspect { height: clamp(95px, 16vw, 205px); transform: translate(-50%, -56%); }
-.tile-inspect { height: clamp(72px, 12vw, 132px); transform: translate(-50%, -41%); }
-.owned-inspect { width: 16.5%; height: clamp(61px, 10vw, 115px); transform: translate(-50%, -43%); }
-.owned-inspect small { display: none; }
-.compact-exhibits .tile-inspect { width: 27%; height: 58px; transform: translate(-50%, -44%); }
-.compact-exhibits .tile-inspect > span { padding: 2px 3px; }
-.compact-exhibits .tile-inspect small { margin: 0; }
-.compact-exhibits .tile-inspect strong { display: none; }
-.compact-exhibits .owned-inspect { width: 26%; height: 44px; transform: translate(-50%, -49%); }
-.compact-exhibits .owned-inspect > span { opacity: 0; }
 .effect-inspect { width: 31%; height: clamp(53px, 9vw, 92px); transform: translate(-50%, -48%); }
 .effect-inspect > span { inset: 2px; display: grid; align-content: center; padding: 4px 2px; border-radius: 4px; color: #1e4764; background: #f5e5cce3; }
 .effect-inspect small { color: #713d27; }
@@ -198,8 +186,6 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
 .scene-unavailable .exhibits { position: static; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 8px; }
 .scene-unavailable .exhibit { position: static; width: auto; height: auto; min-height: 44px; transform: none; background: #264863; }
 .scene-unavailable .exhibit > span { position: static; opacity: 1; }
-.scene-unavailable .tile-inspect strong { display: block; }
-.scene-unavailable .exhibit-image { display: block; width: 33px; margin: 4px auto; }
 .die-inspect {
   display: flex; align-items: center; justify-content: space-between; min-height: 79px; gap: 10px; padding: 10px 14px;
   border: 1px solid #346a8a; border-top: 0; border-radius: 0 0 7px 7px; color: var(--ivory); background: #143148;
@@ -210,6 +196,19 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
 .die-inspect .button { flex: none; font-size: .75rem; }
 .tile-inspection { display: flex; align-items: center; gap: 9px; }
 .tile-inspection img { width: 43px; height: 43px; border-radius: 4px; }
+.shop-tiles { margin-top: 11px; }
+.tile-racks { display: grid; grid-template-columns: 2fr 3fr; gap: 6px; }
+.tile-racks > div { min-width: 0; padding: 8px 9px; border-radius: 5px 5px 0 0; background: #d6c6aa; }
+.tile-racks h3 { margin-bottom: 6px; font: 700 .9rem/1.15 var(--serif); }
+.tile-rack { display: flex; flex-wrap: wrap; align-items: start; gap: 5px; }
+.shop-tile { display: grid; width: clamp(46px, 12vw, 62px); align-content: start; gap: 3px; padding: 3px; border: 1px solid #9b835e; border-radius: 5px; color: #fff3e2; background: #17374f; }
+.shop-tile:is(:hover, [aria-pressed="true"]) { border-color: #a14c31; box-shadow: 0 0 0 2px #a14c31; }
+.shop-tile img { display: block; width: 100%; aspect-ratio: 1; border: 1px solid var(--rarity); border-radius: 2px; }
+.shop-tile small { font-size: .62rem; white-space: nowrap; }
+.empty-rack { font-size: .78rem; }
+.tile-details { border-radius: 0 0 5px 5px; min-height: 62px; }
+.tile-feedback { margin-top: 5px; padding: 6px 8px; border-left: 2px solid #377760; color: #254e44; font-size: .8rem; }
+.unique-tooltip, .match.unique-mark { color: #f4dcff; border-color: #bd9cda; }
 .face-list { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
 .face-list > span { min-width: 22px; padding: 2px 5px; border: 1px solid #547087; border-radius: 4px; background: #233b52; color: #f6ecd7; text-align: center; font-size: .72rem; font-variant-numeric: tabular-nums; }
 .face-list .gilded { border-color: #997540; background: #563f27; color: #ffe4a1; }
@@ -264,17 +263,20 @@ dialog p { margin-top: 12px; color: var(--muted); line-height: 1.45; font-size: 
   .workshop-view { padding: 9px; }
   .workshop-header { padding: 10px 5px 12px; }
   .workshop-header .eyebrow { font-size: .53rem; letter-spacing: .075em; }
-  .workshop-nav .button, .workshop-footer .button { min-height: 40px; gap: 5px; padding-inline: 7px; font-size: .74rem; }
-  .workshop-stage { height: clamp(252px, 38svh, 344px); }
-  .workshop-stage.tile-display { height: clamp(230px, 34svh, 304px); }
+  .workshop-tools .button, .workshop-footer .button { min-height: 38px; gap: 5px; padding-inline: 7px; font-size: .74rem; }
+  .workshop-stage { height: clamp(148px, 25svh, 235px); }
   .workshop-stage.forge-scene { height: clamp(172px, 29svh, 260px); }
   .exhibit { height: 79px; }
   .exhibit.inspect { height: 87px; }
+  .exhibit.inspect > span { bottom: -17px; }
   .exhibit strong { font-size: .65rem; }
   .exhibit small { font-size: .59rem; }
   .effect-inspect { height: 52px; }
-  .die-inspect { align-items: flex-start; flex-direction: column; gap: 7px; min-height: 83px; padding: 8px 9px; }
+  .die-inspect { align-items: flex-start; flex-direction: column; gap: 7px; min-height: 56px; padding: 8px 9px; }
   .die-inspect .button { min-height: 37px; padding: 5px 9px; }
+  .tile-racks { grid-template-columns: minmax(0, 1fr); }
+  .tile-racks > div { padding: 6px 7px; }
+  .tile-details { min-height: 56px; }
   .forge-candidates .button { min-height: 38px; }
 }
 

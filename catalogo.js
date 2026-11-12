@@ -1,3 +1,5 @@
+import { uniqueDice } from './unicos.js?v=unicos-1';
+
 export const glazes = [
   { name: 'Cobalto', color: '#1e40af', light: '#72a9db' },
   { name: 'Amarillo azafrán', color: '#d97706', light: '#f2c772' },
@@ -22,6 +24,7 @@ export const rarities = [
   { name: 'Raro', color: '#78c8ff', ink: '#1d5c9b', price: 7 },
   { name: 'Épico', color: '#d4a2ff', ink: '#723ca3', price: 10 },
   { name: 'Legendario', color: '#ffd779', ink: '#a16a24', price: 13 },
+  { name: 'Único', color: '#f3e2ff', ink: '#694486', price: 12 },
 ];
 
 export const powers = {
@@ -53,7 +56,7 @@ export const upgrades = {
 };
 
 export const hasFace = (mask, face) => Boolean(mask & (1 << face));
-export const diceName = spec => spec.rainbow ? 'Dado multicolor' : spec.second == null ? glazes[spec.glaze].name : `Quimera de ${glazes[spec.glaze].name.toLowerCase()} y ${glazes[spec.second].name.toLowerCase()}`;
+export const diceName = spec => spec.unique ? uniqueDice[spec.unique].name : spec.rainbow ? 'Dado multicolor' : spec.second == null ? glazes[spec.glaze].name : `Quimera de ${glazes[spec.glaze].name.toLowerCase()} y ${glazes[spec.second].name.toLowerCase()}`;
 export const dieCount = run => run.bag.filter(Boolean).length;
 const indices = [0, 1, 2, 3, 4, 5];
 
@@ -62,6 +65,7 @@ export function plainDie(glaze, faces = [1, 2, 3, 4, 5, 6]) {
 }
 
 export const colorDie = glaze => plainDie(glaze, colorFaces[glaze]);
+export const uniqueDie = key => ({ ...plainDie(0, uniqueDice[key].faces), unique: key, rarity: 5, rainbow: true });
 
 function pick(items, random) { return items[Math.floor(random() * items.length)]; }
 
@@ -96,13 +100,18 @@ export function stockDie(rarity, random, glaze = pick(basicColors, random)) {
   return die;
 }
 
-export function market(stage, owned, random) {
+export function market(stage, owned, random, bag = []) {
   const rarity = () => {
     const roll = random() + Math.min(stage, 20) * .005;
     return roll < .44 ? 0 : roll < .69 ? 1 : roll < .89 ? 2 : roll < .977 ? 3 : 4;
   };
   const colors = choose(basicColors, 3, random);
-  const dice = colors.map((color, index) => stockDie(index === 2 ? Math.max(2, rarity()) : rarity(), random, color));
+  const acquired = new Set(bag.map(spec => spec?.unique));
+  const availableUniques = Object.keys(uniqueDice).filter(key => !acquired.has(key));
+  const dice = colors.map((color, index) => {
+    if (availableUniques.length && random() < .05) return uniqueDie(availableUniques.splice(Math.floor(random() * availableUniques.length), 1)[0]);
+    return stockDie(index === 2 ? Math.max(2, rarity()) : rarity(), random, color);
+  });
   const available = Object.keys(powers).filter(key => !owned.includes(key));
   const tiles = [];
   for (const minimum of [0, 1, 2]) {
@@ -115,7 +124,7 @@ export function market(stage, owned, random) {
 }
 
 export function canEnchant(spec, key, color) {
-  if (!spec || !Object.hasOwn(upgrades, key)) return false;
+  if (!spec || spec.unique || !Object.hasOwn(upgrades, key)) return false;
   switch (key) {
     case 'raise': return spec.faces.some(value => value < 6);
     case 'dye': return basicColors.includes(color) && spec.glaze !== color && !spec.rainbow;
@@ -149,6 +158,7 @@ export function enchant(spec, key, color, random) {
 }
 
 export function fuse(first, second) {
+  if (first.unique || second.unique) return null;
   const colors = [...new Set([first.glaze, second.glaze, first.second, second.second].filter(color => color != null))];
   const [glaze, other] = colors;
   const rainbow = first.rainbow || second.rainbow || colors.length > 2;

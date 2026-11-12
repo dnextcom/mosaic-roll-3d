@@ -1,4 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, market, ovenOffers, hasFace, choose, dieCount, canEnchant, enchant, fuse } from './catalogo.js?v=patio-1';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, market, ovenOffers, hasFace, choose, dieCount, canEnchant, enchant, fuse } from './catalogo.js?v=unicos-1';
+import { projectBoard, uniqueDice } from './unicos.js?v=unicos-1';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 export const handSize = 4;
@@ -98,7 +99,8 @@ export function chip(state, cell, random = Math.random) {
   return !state.hand.some(Boolean) && !state.board.some(isFresh) ? replenish(state, random) : [];
 }
 
-function colors(spec) {
+function colors(spec, die) {
+  if (die.tint != null) return [die.tint];
   return spec.rainbow ? glazes.map((_, color) => color) : spec.second == null ? [spec.glaze] : [spec.glaze, spec.second];
 }
 
@@ -113,26 +115,38 @@ function distinct(options, at = 0, used = new Set()) {
   return false;
 }
 
-function numericPatterns(state, cells, column) {
+function numericPatterns(state, board, cells, column) {
   const candidates = [];
   const colonnade = column && state.powers.includes('colonnade') ? 3 : 0;
   const acanthus = state.powers.includes('acanthus') ? 5 : 0;
-  for (let length = cells.length; length >= 2; length--) {
+    for (let length = cells.length; length >= 1; length--) {
     for (let index = 0; index + length <= cells.length; index++) {
       const segment = cells.slice(index, index + length);
-      const dice = segment.map(cell => state.board[cell]);
+      const dice = segment.map(cell => board[cell]);
       if (dice.some(die => !die) || !dice.some(isFresh)) continue;
-      const values = dice.map(die => !die.stone && hasFace(state.bag[die.id].wild, die.face) ? null : die.value);
-      const concrete = values.filter(value => value != null);
-      if (concrete.every(value => value === concrete[0])) {
-        const [name, points] = length === 4 ? ['Cuarteto', comboPoints.quartet] : length === 3 ? ['Trío', comboPoints.trio] : ['Pareja', comboPoints.pair];
+      let variants = [[]];
+      for (const die of dice) {
+        const value = !die.stone && !die.numberChanged && hasFace(state.bag[die.id].wild, die.face) ? null : die.value;
+        const choices = die.extra == null ? [[value]] : [[value], [die.extra], [value, die.extra], [die.extra, value]];
+        variants = variants.flatMap(prefix => choices.map(choice => [...prefix, ...choice]));
+      }
+      let repetitions = 0, straight = 0;
+      for (const values of variants) {
+        const count = values.length;
+        if (count < 2 || count > 4) continue;
+        const concrete = values.filter(value => value != null);
+        if (concrete.every(value => value === concrete[0])) repetitions = Math.max(repetitions, count);
+        if (count >= 3 && [1, -1].some(direction => [1, 2, 3, 4, 5, 6].some(start => {
+          const last = start + (count - 1) * direction;
+          return last >= 1 && last <= 6 && values.every((value, offset) => value == null || value === start + offset * direction);
+        }))) straight = Math.max(straight, count);
+      }
+      if (repetitions) {
+        const [name, points] = repetitions === 4 ? ['Cuarteto', comboPoints.quartet] : repetitions === 3 ? ['Trío', comboPoints.trio] : ['Pareja', comboPoints.pair];
         candidates.push({ name, points: points + colonnade, cells: segment });
       }
-      if (length >= 3 && [1, -1].some(direction => [1, 2, 3, 4, 5, 6].some(start => {
-        const last = start + (length - 1) * direction;
-        return last >= 1 && last <= 6 && values.every((value, offset) => value == null || value === start + offset * direction);
-      }))) candidates.push({ name: length === 4 ? 'Escalera larga' : 'Escalera',
-        points: (length === 4 ? comboPoints.longStraight : comboPoints.straight) + colonnade + acanthus, cells: segment });
+      if (straight) candidates.push({ name: straight === 4 ? 'Escalera larga' : 'Escalera',
+        points: (straight === 4 ? comboPoints.longStraight : comboPoints.straight) + colonnade + acanthus, cells: segment });
     }
   }
   const taken = new Set();
@@ -143,18 +157,21 @@ function numericPatterns(state, cells, column) {
   });
 }
 
-function evaluateLine(state, cells, column, axis, score, stones) {
-  const dice = cells.map(cell => state.board[cell]);
+function evaluateLine(state, board, cells, column, axis, score, stones) {
+  const dice = cells.map(cell => board[cell]);
   if (!dice.some(isFresh)) return;
-  const numeric = numericPatterns(state, cells, column);
+  const numeric = numericPatterns(state, board, cells, column);
   const full = dice.every(Boolean);
   const numbers = full ? [{ name: 'Línea llena', points: comboPoints.line, cells }, ...numeric] : numeric;
   const highlighted = new Set(numbers.flatMap(item => item.cells));
-  numeric.flatMap(item => item.cells).filter(cell => state.board[cell].stone).forEach(cell => stones.add(cell));
+  numeric.flatMap(item => item.cells).filter(cell => board[cell].stone).forEach(cell => stones.add(cell));
   score.numberSteps.push(...numbers);
   let color;
   if (full && dice.every(die => !die.stone)) {
-    const options = dice.map(die => colors(state.bag[die.id]));
+    const options = dice.flatMap(die => {
+      const choices = colors(state.bag[die.id], die);
+      return die.extra == null ? [choices] : [choices, choices];
+    });
     if (options[0].some(shade => options.every(list => list.includes(shade)))) {
       color = { name: 'Monocolor', add: 40 + (state.powers.includes('frieze') ? 25 : 0), cells };
     } else if (distinct(options)) {
@@ -168,39 +185,46 @@ function evaluateLine(state, cells, column, axis, score, stones) {
 }
 
 export function preview(state) {
-  const score = { count: 0, base: 0, multiplier: 1, total: 0, gold: 0, matches: [], dieSteps: [], numberSteps: [], colorSteps: [] };
+  const score = { count: 0, base: 0, multiplier: 1, total: 0, gold: 0, matches: [], powerMarks: [], dieSteps: [], numberSteps: [], colorSteps: [] };
   const fresh = state.board.filter(isFresh);
   score.count = fresh.length;
   if (!score.count) return score;
   const { cols, rows } = state;
+  const { board, numberSteps, colorSteps } = projectBoard(state);
   const stones = new Set();
-  for (let row = 0; row < rows; row++) evaluateLine(state, Array.from({ length: cols }, (_, col) => row * cols + col), false, row, score, stones);
-  for (let col = 0; col < cols; col++) evaluateLine(state, Array.from({ length: rows }, (_, row) => row * cols + col), true, col, score, stones);
-  if (state.powers.includes('mortar')) for (const cell of stones) score.numberSteps.push({ name: 'Mortero Kintsugi', points: state.board[cell].value, cells: [cell] });
+  for (let row = 0; row < rows; row++) evaluateLine(state, board, Array.from({ length: cols }, (_, col) => row * cols + col), false, row, score, stones);
+  for (let col = 0; col < cols; col++) evaluateLine(state, board, Array.from({ length: rows }, (_, row) => row * cols + col), true, col, score, stones);
+  score.numberSteps.push(...numberSteps);
+  score.colorSteps.push(...colorSteps);
+  score.powerMarks = [...numberSteps, ...colorSteps];
+  if (state.powers.includes('mortar')) for (const cell of stones) score.numberSteps.push({ name: 'Mortero Kintsugi', points: board[cell].value, cells: [cell] });
 
   const basalt = [], cobalt = [];
-  state.board.forEach((die, cell) => {
+  board.forEach((die, cell) => {
     if (!die) return;
     if (die.stone) { basalt.push(cell); return; }
     const spec = state.bag[die.id];
-    const twice = hasFace(spec.boost, die.face);
-    const points = die.value * (twice ? 2 : 1);
-    score.dieSteps.push({ name: twice ? `${die.value} × 2` : `Dado ${die.value}`, points, cells: [cell] });
+    const factor = (hasFace(spec.boost, die.face) ? 2 : 1) * (die.sealed ? 2 : 1);
+    const values = die.extra == null ? [die.value] : [die.value, die.extra];
+    for (const value of values) {
+      const label = die.echo ? 'Copia' : spec.unique ? uniqueDice[spec.unique].name : 'Dado';
+      score.dieSteps.push({ name: factor > 1 ? `${label} ${value} × ${factor}` : `${label} ${value}`, points: value * factor, cells: [cell] });
+      if (value === 1 && state.powers.includes('aces')) score.numberSteps.push({ name: 'Ases de artesano', points: 5, cells: [cell] });
+    }
     if (isFresh(die) && hasFace(spec.gild, die.face)) score.gold += 3;
-    if (die.value === 1 && state.powers.includes('aces')) score.numberSteps.push({ name: 'Ases de artesano', points: 5, cells: [cell] });
-    if (colors(spec).includes(0)) cobalt.push(cell);
+    if (colors(spec, die).includes(0)) cobalt.push(...values.map(() => cell));
     const row = Math.floor(cell / cols), col = cell % cols;
     const adjacent = [col > 0 ? cell - 1 : -1, col < cols - 1 ? cell + 1 : -1,
       row > 0 ? cell - cols : -1, row < rows - 1 ? cell + cols : -1].filter(index => {
-      const neighbor = state.board[index];
+      const neighbor = board[index];
       return neighbor?.stone && state.bag[neighbor.id].obsidian;
     });
-    if (adjacent.length) score.numberSteps.push({ name: 'Obsidiana', points: adjacent.length * 4, cells: [cell, ...adjacent] });
+    if (adjacent.length) score.numberSteps.push({ name: 'Obsidiana', points: adjacent.length * 4 * values.length, cells: [cell, ...adjacent] });
   });
   if (basalt.length && state.powers.includes('basalt')) score.colorSteps.push({ name: 'Campanas de basalto', add: basalt.length * 8, cells: basalt });
-  if (cobalt.length && state.powers.includes('cobalt')) score.colorSteps.push({ name: 'Resonancia cobalto', add: cobalt.length * 15, cells: cobalt });
-  if (state.board.every(Boolean)) {
-    const cells = state.board.map((_, index) => index);
+  if (cobalt.length && state.powers.includes('cobalt')) score.colorSteps.push({ name: 'Resonancia cobalto', add: cobalt.length * 15, cells: [...new Set(cobalt)] });
+  if (board.every(Boolean)) {
+    const cells = board.map((_, index) => index);
     score.numberSteps.push({ name: 'Panel completo', points: comboPoints.panel, cells });
     if (state.powers.includes('alhambra')) score.colorSteps.push({ name: 'Gran Alhambra', factor: 1.35, cells });
   }
@@ -213,9 +237,9 @@ export function preview(state) {
 function openShop(state, random) {
   state.phase = 'shop';
   state.gold += 10 + Math.min(6, Math.floor(state.stage / 4)) + state.turns * (state.powers.includes('patience') ? 2 : 1);
-  state.market = market(state.stage, state.powers, random);
-  const held = state.hand.filter(Boolean).map(die => die.id);
-  const rest = state.bag.flatMap((spec, id) => spec && !held.includes(id) ? [id] : []);
+  state.market = market(state.stage, state.powers, random, state.bag);
+  const held = state.hand.filter(die => die && !state.bag[die.id].unique).map(die => die.id);
+  const rest = state.bag.flatMap((spec, id) => spec && !spec.unique && !held.includes(id) ? [id] : []);
   state.forgeHand = choose([...held, ...choose(rest, handSize - held.length, random)], handSize, random);
 }
 
@@ -243,7 +267,8 @@ export function canBuy(state, kind, key) {
   if (kind === 'tile') return state.market.tiles.includes(key) && !state.powers.includes(key) &&
     state.powers.length < tileLimit && state.gold >= powers[key].price;
   const die = state.market.dice[key];
-  return kind === 'die' && Boolean(die) && !state.market.purchased.includes(key) && state.gold >= rarities[die.rarity].price;
+  return kind === 'die' && Boolean(die) && !state.market.purchased.includes(key) && state.gold >= rarities[die.rarity].price &&
+    (!die.unique || !state.bag.some(spec => spec?.unique === die.unique));
 }
 
 export function buy(state, kind, key) {
@@ -271,7 +296,7 @@ export function sellTile(state, key) {
 export function canForge(state, key, ids, color) {
   const upgrade = upgrades[key];
   return state.phase === 'shop' && !state.market.forged && state.market.oven.includes(key) && state.gold >= upgrade.price && ids.length === upgrade.slots &&
-    new Set(ids).size === ids.length && ids.every(id => state.forgeHand.includes(id) && state.bag[id]) &&
+    new Set(ids).size === ids.length && ids.every(id => state.forgeHand.includes(id) && state.bag[id] && !state.bag[id].unique) &&
     (key === 'fusion' ? dieCount(state) > handSize : canEnchant(state.bag[ids[0]], key, color));
 }
 
@@ -299,7 +324,11 @@ export function advance(state, random = Math.random) {
 }
 
 function validSpec(spec) {
+  if (spec?.unique != null) return Object.hasOwn(uniqueDice, spec.unique) && spec.rarity === 5 && spec.rainbow === true && spec.glaze === 0 &&
+    spec.second == null && !spec.eternal && !spec.obsidian && spec.gild === 0 && spec.boost === 0 && spec.wild === 0 &&
+    Array.isArray(spec.faces) && spec.faces.length === 6 && spec.faces.every((value, face) => value === uniqueDice[spec.unique].faces[face]);
   return Boolean(glazes[spec?.glaze] && (spec.second == null || glazes[spec.second]) && rarities[spec.rarity] &&
+    spec.rarity !== 5 &&
     Array.isArray(spec.faces) && spec.faces.length === 6 && spec.faces.every(value => Number.isInteger(value) && value >= 1 && value <= 6) &&
     [spec.gild, spec.boost, spec.wild].every(mask => Number.isInteger(mask) && mask >= 0 && mask <= 63));
 }

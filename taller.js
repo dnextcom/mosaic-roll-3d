@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { powers, rarities } from './catalogo.js?v=patio-1';
-import { tileArt } from './arte.js?v=patio-1';
+import { rarities } from './catalogo.js?v=unicos-1';
 
 export class Workshop {
   constructor(art, tileMap) {
@@ -19,11 +18,10 @@ export class Workshop {
     this.ray = new THREE.Raycaster();
     this.plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -.86);
     this.platforms = new THREE.Group();
-    this.fragments = new THREE.Group();
     this.models = new Map();
     this.exhibits = new Map();
     this.sockets = [];
-    this.scene.add(this.platforms, this.fragments, new THREE.HemisphereLight(0xf6e6cf, 0x627fa6, 1.7));
+    this.scene.add(this.platforms, new THREE.HemisphereLight(0xf6e6cf, 0x627fa6, 1.7));
     const lamp = new THREE.DirectionalLight(0xffe3bf, 2.5);
     lamp.position.set(-3, 6, 5);
     this.sparkLight = new THREE.PointLight(0xffbb63, 0, 8);
@@ -60,7 +58,6 @@ export class Workshop {
     }
     this.platforms.clear();
     this.exhibits.clear();
-    this.clearFragments();
     this.sockets = [];
     this.width = this.height = 0;
     this.canvas.remove();
@@ -119,38 +116,6 @@ export class Workshop {
     }
   }
 
-  tiles(stock, owned, narrow) {
-    this.clear();
-    this.mode = 'tiles';
-    this.narrowTiles = narrow;
-    this.camera.lookAt(0, .45, narrow ? .21 : .28);
-    this.counter();
-    if (narrow) {
-      this.platform(new RoundedBoxGeometry(5.66, .52, 1.31, 2, .07), this.baseMaterial, 0, .38, -1.56);
-      stock.forEach((key, index) => this.tile('tile-inspect', key, (index - (stock.length - 1) / 2) * 1.85, .74, -1.56, 1.42));
-      for (let start = 0; start < owned.length; start += 3) {
-        const row = owned.slice(start, start + 3);
-        const y = start === 0 ? .30 : .14;
-        const z = start === 0 ? .27 : 1.98;
-        this.platform(new RoundedBoxGeometry(5.66, .15, 1.24, 2, .065), this.clay, 0, y - .16, z);
-        row.forEach((key, index) => this.tile('owned-inspect', key, (index - (row.length - 1) / 2) * 1.85, y, z, 1.42));
-      }
-      return;
-    }
-    this.platform(new RoundedBoxGeometry(6.05, .49, 1.22, 2, .07), this.baseMaterial, 0, .22, -.69);
-    this.platform(new RoundedBoxGeometry(6.05, .16, 1.04, 2, .063), this.clay, 0, .08, 1.14);
-    stock.forEach((key, index) => this.tile('tile-inspect', key, (index - (stock.length - 1) / 2) * 2.12, .56, -.69, 1.10));
-    owned.forEach((key, index) => this.tile('owned-inspect', key, (index - (owned.length - 1) / 2) * 1.18, .26, 1.14, .87));
-  }
-
-  tile(action, key, x, y, z, size) {
-    const face = new THREE.MeshStandardMaterial({ map: tileArt(key).map, roughness: .38 });
-    const rim = new THREE.MeshStandardMaterial({ color: rarities[powers[key].rarity].ink, roughness: .48 });
-    const piece = this.platform(new RoundedBoxGeometry(size, .13, size, 2, .046), [rim, rim, face, rim, rim, rim], x, y, z);
-    piece.rotation.x = .26;
-    this.exhibits.set(`${action}/${key}`, piece.position.clone());
-  }
-
   recipes(keys, used) {
     this.clear();
     this.mode = 'oven';
@@ -184,24 +149,6 @@ export class Workshop {
       button.style.left = `${(screen.x + 1) * 50}%`;
       button.style.top = `${(1 - screen.y) * 50}%`;
     }
-  }
-
-  shatter(origin, now) {
-    if (!origin) return;
-    this.clearFragments();
-    this.brokenAt = now;
-    for (let index = 0; index < 8; index++) {
-      const angle = index * Math.PI / 4;
-      const shard = new THREE.Mesh(new THREE.BoxGeometry(.13, .07, .22), index % 2 ? this.cream : this.brass);
-      shard.position.copy(origin);
-      shard.userData = { origin, vx: Math.cos(angle) * 1.75, vz: Math.sin(angle) * 1.75 };
-      this.fragments.add(shard);
-    }
-  }
-
-  clearFragments() {
-    for (const shard of this.fragments.children) shard.geometry.dispose();
-    this.fragments.clear();
   }
 
   altar(ids, bag, count, onSelect, onDrop) {
@@ -293,7 +240,7 @@ export class Workshop {
       this.width = width;
       this.height = height;
       this.renderer.setSize(width, height, false);
-      const halfHeight = Math.max(1.62, (this.mode === 'tiles' && this.narrowTiles ? 3.13 : 3.45) * height / width);
+      const halfHeight = Math.max(1.62, 3.45 * height / width);
       const halfWidth = halfHeight * width / height;
       this.camera.top = halfHeight;
       this.camera.bottom = -halfHeight;
@@ -301,21 +248,11 @@ export class Workshop {
       this.camera.right = halfWidth;
       this.camera.updateProjectionMatrix();
     }
-    if (this.fragments.children.length) {
-      const elapsed = (now - this.brokenAt) / 1000;
-      if (elapsed > .6) this.clearFragments();
-      else for (const shard of this.fragments.children) {
-        const { origin, vx, vz } = shard.userData;
-        shard.position.set(origin.x + elapsed * vx, origin.y + elapsed * (4 - 6 * elapsed), origin.z + elapsed * vz);
-        shard.rotation.set(elapsed * 8, elapsed * vx * 5, elapsed * vz * 3);
-        shard.scale.setScalar(1 - elapsed);
-      }
-    }
     if (this.mode === 'gallery') for (const [id, item] of this.models) {
       const t = now / 1000;
       item.mesh.position.y = item.home.y + Math.sin(t * 2.15 + id * 1.4) * .13 + (this.selected === id ? .10 : 0);
       item.mesh.rotation.set(.33 + Math.sin(t + id) * .19, t * (.66 + id * .09) + id * .9, .16 + Math.cos(t + id) * .12);
-      item.mesh.scale.setScalar(this.selected === id ? 1.08 : 1);
+      item.mesh.scale.setScalar((width < 520 ? 1.2 : 1) * (this.selected === id ? 1.08 : 1));
     }
     if (this.mode === 'forge') for (const [id, item] of this.models) {
       if (this.pointer?.moving && this.pointer.id === id) continue;

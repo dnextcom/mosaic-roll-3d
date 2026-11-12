@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { glazes, hasFace, powers, rarities } from './catalogo.js?v=patio-1';
+import { glazes, hasFace, powers, rarities } from './catalogo.js?v=unicos-1';
+import { uniqueDice } from './unicos.js?v=unicos-1';
 
 const pips = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const stoneGlaze = { color: '#65737c', light: '#a7adb1', darkPips: true };
 const rainbow = ['#ef8a76', '#f1c563', '#a0cf9d', '#69a7db', '#9874c1', '#de8aaf'];
+const uniqueGlaze = { color: '#242137', light: '#635376' };
 
 function texture(canvas) {
   const map = new THREE.CanvasTexture(canvas);
@@ -17,13 +19,14 @@ function dieFace(spec, face, stone) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 128;
   const ctx = canvas.getContext('2d');
-  const gilded = !stone && hasFace(spec.gild, face);
-  const glaze = stone ? stoneGlaze : gilded ? glazes[6] : glazes[spec.glaze];
+  const tinted = !stone && spec.tint != null;
+  const gilded = !stone && !tinted && hasFace(spec.gild, face);
+  const glaze = stone ? stoneGlaze : tinted ? glazes[spec.tint] : spec.unique ? uniqueGlaze : gilded ? glazes[6] : glazes[spec.glaze];
   const wash = ctx.createLinearGradient(5, 7, 124, 115);
-  if (spec.rainbow && !stone && !gilded) rainbow.forEach((color, i) => wash.addColorStop(i / (rainbow.length - 1), color));
+  if (spec.rainbow && !spec.unique && !tinted && !stone && !gilded) rainbow.forEach((color, i) => wash.addColorStop(i / (rainbow.length - 1), color));
   else {
     wash.addColorStop(0, glaze.light);
-    if (spec.second != null && !stone && !gilded) {
+    if (spec.second != null && !stone && !gilded && !tinted) {
       wash.addColorStop(.49, glaze.color);
       wash.addColorStop(.51, glazes[spec.second].light);
       wash.addColorStop(1, glazes[spec.second].color);
@@ -31,7 +34,7 @@ function dieFace(spec, face, stone) {
   }
   ctx.fillStyle = wash;
   ctx.fillRect(0, 0, 128, 128);
-  ctx.strokeStyle = stone ? '#d0d0cba0' : spec.eternal ? '#15171e' : gilded ? '#ffe392' : '#f6e7c7b9';
+  ctx.strokeStyle = spec.echo ? '#c4fded' : spec.unique || spec.numberChanged || spec.sealed ? '#efc9ff' : stone ? '#d0d0cba0' : spec.eternal ? '#15171e' : gilded ? '#ffe392' : '#f6e7c7b9';
   ctx.lineWidth = spec.eternal && !stone ? 3 : 1.8;
   ctx.beginPath();
   ctx.roundRect(11, 11, 106, 106, 11);
@@ -45,9 +48,18 @@ function dieFace(spec, face, stone) {
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
   }
-  const dark = glaze.darkPips || spec.rainbow;
-  const ink = stone || dark ? '#212f3e' : '#fff1d4';
-  if (!stone && hasFace(spec.wild, face)) {
+  const dark = glaze.darkPips || spec.rainbow && !spec.unique && !tinted;
+  const ink = stone || dark ? '#212f3e' : spec.unique ? '#f8e7ff' : '#fff1d4';
+  if (spec.unique) {
+    ctx.font = 'bold 59px Georgia';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = ink;
+    ctx.fillText(spec.faces[face], 64, 67);
+    ctx.font = 'bold 25px Segoe UI Symbol';
+    ctx.fillStyle = stone ? '#344254' : spec.echo ? '#c4fded' : '#efc9ff';
+    ctx.fillText(uniqueDice[spec.unique].mark, 64, 24);
+  } else if (!stone && hasFace(spec.wild, face) && !spec.numberChanged) {
     ctx.font = '54px Georgia';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -66,7 +78,7 @@ function dieFace(spec, face, stone) {
     ctx.fillStyle = ink;
     ctx.fill();
   }
-  if (!stone && hasFace(spec.boost, face)) {
+  if (!stone && (hasFace(spec.boost, face) || spec.sealed)) {
     ctx.fillStyle = '#182433';
     ctx.beginPath();
     ctx.roundRect(75, 90, 35, 20, 5);
@@ -75,7 +87,7 @@ function dieFace(spec, face, stone) {
     ctx.font = 'bold 15px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('×2', 92, 100);
+    ctx.fillText(hasFace(spec.boost, face) && spec.sealed ? '×4' : '×2', 92, 100);
   }
   if (!stone && spec.eternal) {
     ctx.fillStyle = '#10121a';
@@ -97,11 +109,12 @@ function dieFace(spec, face, stone) {
 export class DiceArt {
   constructor() {
     this.geometry = new RoundedBoxGeometry(.86, .86, .86, 3, .106);
+    this.uniqueGeometry = new RoundedBoxGeometry(.86, .86, .86, 3, .195);
     this.cache = new Map();
   }
 
   create(spec, stone = false) {
-    const key = JSON.stringify([stone, spec.faces, stone ? 0 : [spec.glaze, spec.second, spec.boost, spec.gild, spec.wild, spec.eternal, spec.rainbow]]);
+    const key = JSON.stringify([stone, spec.faces, spec.unique, spec.numberChanged, stone ? 0 : [spec.glaze, spec.second, spec.boost, spec.gild, spec.wild, spec.eternal, spec.rainbow, spec.tint, spec.echo, spec.sealed]]);
     let item = this.cache.get(key);
     if (!item) {
       const materials = [2, 3, 0, 5, 1, 4].map(face => new THREE.MeshPhysicalMaterial({ map: dieFace(spec, face, stone),
@@ -110,7 +123,7 @@ export class DiceArt {
       this.cache.set(key, item);
     }
     item.count++;
-    const mesh = new THREE.Mesh(this.geometry, item.materials);
+    const mesh = new THREE.Mesh(spec.unique ? this.uniqueGeometry : this.geometry, item.materials);
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.userData.art = key;
     return mesh;

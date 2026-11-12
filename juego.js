@@ -1,8 +1,9 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=patio-1';
-import { DiceArt, tileArt } from './arte.js?v=patio-1';
-import { MarketUI } from './mercado.js?v=patio-1';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=patio-1';
-import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=patio-1';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=unicos-1';
+import { DiceArt, tileArt } from './arte.js?v=unicos-1';
+import { MarketUI } from './mercado.js?v=unicos-1';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=unicos-1';
+import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=unicos-1';
+import { uniqueDice } from './unicos.js?v=unicos-1';
 
 const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';
@@ -99,6 +100,7 @@ function clearSelection() {
   selected = focused = hovered = -1;
   table.focus(-1, -1);
   showPower(-1);
+  showUnique();
 }
 
 function enter(roll = []) {
@@ -168,8 +170,9 @@ function render() {
   $('recall').hidden = !ready() || selected < 0 || selected >= HAND || !isFresh(run.board[selected]);
   $('hint').textContent = hint(score.count);
   table.mount(run.powers);
-  table.marks(score.matches);
+  table.marks(score.matches, score.powerMarks);
   updateFocus();
+  showUnique();
 }
 
 function hint(count) {
@@ -248,8 +251,23 @@ function showPower(index, pin = false) {
 }
 
 function positionPower() {
-  if (tooltip < 0) return;
-  const element = $('power-tooltip'), anchor = table.powerAnchor(tooltip);
+  if (tooltip >= 0) positionTooltip($('power-tooltip'), table.powerAnchor(tooltip));
+  if (!$('die-tooltip').hidden) positionTooltip($('die-tooltip'), table.dieAnchor(selected));
+}
+
+function showUnique() {
+  const element = $('die-tooltip');
+  const die = selected >= 0 ? at(selected) : null;
+  const power = die && uniqueDice[run.bag[die.id].unique];
+  element.hidden = !power;
+  canvas.setAttribute('aria-describedby', power ? 'hint die-tooltip' : 'hint');
+  if (power) {
+    element.innerHTML = `<strong>${power.name}</strong><small>${power.text}</small>`;
+    positionPower();
+  }
+}
+
+function positionTooltip(element, anchor) {
   if (!anchor) return;
   const x = Math.max(5, Math.min(table.width - element.offsetWidth - 5, anchor.x - element.offsetWidth / 2));
   const above = anchor.y - element.offsetHeight - 17;
@@ -332,6 +350,7 @@ function help() {
       <li><strong>Puntúa.</strong> Los números aportan puntos base y los colores añaden multiplicador. Completar el panel suma ${comboPoints.panel} puntos base. Las líneas se marcan sobre la mesa.</li>
       <li><strong>Libera espacio.</strong> Toca una piedra para cincelarla. Su número sirve para combos mientras siga en la mesa.</li>
       <li><strong>Mejora la bolsa.</strong> Recibes un dado al pasar de mosaico. En el taller puedes comprar dados, equipar hasta cinco azulejos y usar el horno una vez.</li>
+      <li><strong>Dados únicos.</strong> Selecciónalos para leer su poder. Cuentan como cualquier color y sus efectos duran hasta puntuar. Si los mueves, el poder sigue a la nueva casilla.</li>
     </ol>
     <p>Teclado: 1–4 elige dado, flechas e Intro colocan, Espacio puntúa y Retroceso retira el dado seleccionado.</p>
     <div class="dialog-actions"><button class="button primary" data-action="back">Volver</button></div>`);
