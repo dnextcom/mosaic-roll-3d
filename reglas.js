@@ -1,4 +1,4 @@
-import { glazes, rarities, powers, upgrades, plainDie, market, ovenOffers, hasFace, choose, dieCount, canEnchant, enchant, fuse } from './catalogo.js?v=azulejos-1';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, market, ovenOffers, hasFace, choose, dieCount, canEnchant, enchant, fuse } from './catalogo.js?v=patio-1';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 export const handSize = 4;
@@ -10,9 +10,13 @@ export function stageAt(index) {
   const group = Math.floor(index / 3);
   const cols = group < 2 ? 3 : 4;
   const rows = group === 0 ? 2 : group < 3 ? 3 : 4;
-  const goal = index < 9 ? [46, 56, 66, 77, 87, 97, 110, 122, 133][index]
-    : 144 + Math.round(103 * (1 - Math.exp(-(index - 9) / 22)));
+  const goal = index < 9 ? [46, 59, 73, 88, 104, 121, 138, 156, 175][index] : 195 + (index - 9) * 20;
   return { name: names[index % names.length], cols, rows, goal, turns: index < 6 ? 4 : 5 };
+}
+
+function stockBag(state, gift, random) {
+  const count = Math.max(gift ? 1 : 0, state.rows * state.cols + handSize - dieCount(state));
+  for (let index = 0; index < count; index++) state.bag.push(colorDie(basicColors[Math.floor(random() * basicColors.length)]));
 }
 
 function replenish(state, random) {
@@ -34,19 +38,21 @@ function startStage(state, random) {
   state.phase = 'play';
   state.cols = stage.cols;
   state.rows = stage.rows;
+  state.goal = stage.goal;
   state.points = state.lastScore = 0;
   state.turns = state.maxTurns = stage.turns;
   state.chisels = state.powers.includes('chisel') ? 3 : 2;
   state.board = Array(state.rows * state.cols).fill(null);
   state.market = null;
   state.forgeHand = [];
+  stockBag(state, state.stage > 0, random);
   return replenish(state, random);
 }
 
 export function newRun(random = Math.random) {
-  const bag = [0, 1, 2, 3, 0, 3, 0, 3, 1, 2, 4, 4].map(color => plainDie(color));
-  const hand = [[0, 2], [1, 3], [4, 4], [2, 5]].map(([id, value], slot) => ({ id, slot, face: value - 1, value, stone: false, fixed: false }));
-  const state = { version: 3, stage: 0, gold: 0, powers: [], results: [], bag, hand };
+  const bag = [0, 1, 2, 3, 0, 3, 0, 3, 1, 2, 1, 2].map(colorDie);
+  const hand = [[0, 2], [1, 3], [4, 4], [2, 5]].map(([id, value], slot) => ({ id, slot, face: bag[id].faces.indexOf(value), value, stone: false, fixed: false }));
+  const state = { version: 4, stage: 0, gold: 0, powers: [], results: [], bag, hand };
   startStage(state, random);
   return state;
 }
@@ -226,7 +232,7 @@ export function commit(state, random = Math.random) {
     die.stone = !state.bag[die.id].eternal;
   }
   const blocked = state.board.every(Boolean) && (!state.chisels || !state.board.some(die => die.stone));
-  if (state.points >= stageAt(state.stage).goal) { state.results.push(state.points); openShop(state, random); }
+  if (state.points >= state.goal) { state.results.push(state.points); openShop(state, random); }
   else if (!state.turns || blocked) state.phase = 'lost';
   score.drawn = state.phase === 'play' ? replenish(state, random) : [];
   return score;
@@ -264,7 +270,7 @@ export function sellTile(state, key) {
 
 export function canForge(state, key, ids, color) {
   const upgrade = upgrades[key];
-  return state.phase === 'shop' && state.market.oven.includes(key) && state.gold >= upgrade.price && ids.length === upgrade.slots &&
+  return state.phase === 'shop' && !state.market.forged && state.market.oven.includes(key) && state.gold >= upgrade.price && ids.length === upgrade.slots &&
     new Set(ids).size === ids.length && ids.every(id => state.forgeHand.includes(id) && state.bag[id]) &&
     (key === 'fusion' ? dieCount(state) > handSize : canEnchant(state.bag[ids[0]], key, color));
 }
@@ -274,6 +280,7 @@ export function forge(state, key, ids, color, random = Math.random) {
   const [first, second] = ids;
   const spec = key === 'fusion' ? fuse(state.bag[first], state.bag[second]) : enchant(state.bag[first], key, color, random);
   state.gold -= upgrades[key].price;
+  state.market.forged = true;
   state.bag[first] = spec;
   if (key === 'fusion') {
     state.bag[second] = null;
@@ -298,7 +305,7 @@ function validSpec(spec) {
 }
 
 export function validSave(state) {
-  if (state?.version !== 3 || !['play', 'shop', 'lost'].includes(state.phase) ||
+  if (state?.version !== 4 || !['play', 'shop', 'lost'].includes(state.phase) || !Number.isSafeInteger(state.goal) || state.goal < 1 ||
       ![state.stage, state.points, state.turns, state.maxTurns, state.gold, state.chisels].every(value => Number.isSafeInteger(value) && value >= 0) ||
       ![3, 4].includes(state.cols) || ![2, 3, 4].includes(state.rows) || !Array.isArray(state.board) || state.board.length !== state.rows * state.cols ||
       !Array.isArray(state.hand) || state.hand.length !== handSize || !Array.isArray(state.bag) || !Array.isArray(state.powers) ||
@@ -309,15 +316,25 @@ export function validSave(state) {
     active.every(die => Number.isInteger(die.slot) && die.slot >= 0 && die.slot < handSize && state.bag[die.id]?.faces[die.face] === die.value) &&
     (state.phase !== 'shop' || (Array.isArray(state.market?.dice) && state.market.dice.every(validSpec) && Array.isArray(state.market.tiles) &&
       state.market.tiles.every(key => Object.hasOwn(powers, key)) && Array.isArray(state.market.purchased) && state.forgeHand.every(id => state.bag[id]) &&
-      Array.isArray(state.market.oven) && state.market.oven[0] === 'fusion' && state.market.oven.length === 4 &&
-      new Set(state.market.oven).size === 4 && state.market.oven.every(key => Object.hasOwn(upgrades, key))));
+      typeof state.market.forged === 'boolean' && Array.isArray(state.market.oven) && state.market.oven.length === 2 &&
+      new Set(state.market.oven).size === 2 && state.market.oven.every(key => Object.hasOwn(upgrades, key))));
 }
 
 export function restoreRun(old, random = Math.random) {
-  if (old?.version === 3 && old.phase === 'shop' && old.market && !Object.hasOwn(old.market, 'oven')) {
-    old = { ...old, market: { ...old.market, oven: ovenOffers(random) } };
-  }
   if (validSave(old)) return old;
+  if (old?.version === 3) {
+    const index = old.stage;
+    const goal = index < 9 ? [46, 56, 66, 77, 87, 97, 110, 122, 133][index]
+      : 144 + Math.round(103 * (1 - Math.exp(-(index - 9) / 22)));
+    const state = { ...old, version: 4, goal, bag: Array.isArray(old.bag) ? [...old.bag] : old.bag, hand: Array.isArray(old.hand) ? [...old.hand] : old.hand };
+    if (state.phase === 'shop' && state.market) state.market = { ...state.market, oven: ovenOffers(random), forged: false };
+    if (!validSave(state)) return null;
+    if (state.phase === 'play') {
+      stockBag(state, false, random);
+      if (!state.board.some(isFresh)) replenish(state, random);
+    }
+    return state;
+  }
   if (old?.version !== 2 || ![0, 1, 2].includes(old.stage) || !Array.isArray(old.bag) || !Array.isArray(old.board) ||
       !Array.isArray(old.hand) || !Array.isArray(old.results) || !Array.isArray(old.powers)) return null;
   const state = { ...old, version: 3, cols: 3, rows: old.board.length / 3, maxTurns: 4,
@@ -331,5 +348,5 @@ export function restoreRun(old, random = Math.random) {
     openShop(state, random);
     if (old.phase === 'shop') state.gold = oldGold;
   }
-  return validSave(state) ? state : null;
+  return restoreRun(state, random);
 }

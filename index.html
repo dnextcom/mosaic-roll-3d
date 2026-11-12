@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101a28">
   <meta name="description" content="Juega a Mosaic Roll 3D. Combina dados de cerámica, compra azulejos y forja quimeras entre mosaicos.">
   <title>Mosaic Roll 3D</title>
-  <link rel="stylesheet" href="estilo.css?v=azulejos-1">
+  <link rel="stylesheet" href="estilo.css?v=patio-1">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=azulejos-1"></script>
+  <script type="module" src="juego.js?v=patio-1"></script>
 </head>
 <body>
   <main class="start" id="start">
@@ -35,7 +35,7 @@
       <button class="button quiet sound-button" type="button" id="sound" aria-label="Sonido" aria-pressed="true"><span aria-hidden="true">♪</span><span>Sonido</span></button>
     </header>
     <div class="mobile-stats" aria-live="polite" id="mobile-stats"></div>
-    <div class="layout">
+    <div class="layout" id="play-layout">
       <section class="play-area" aria-label="Mesa 3D">
         <div class="equipped-rail" id="equipped-rail" hidden>
           <span class="eyebrow" id="equipped-label">Azulejos equipados</span>
@@ -84,6 +84,7 @@
         <p class="inventory" id="inventory"></p>
       </aside>
     </div>
+    <section class="workshop-view" id="workshop" aria-labelledby="workshop-title" hidden></section>
   </main>
 
   <dialog id="dialog" aria-labelledby="dialog-title"></dialog>

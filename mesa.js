@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt } from './arte.js?v=azulejos-1';
+import { DiceArt, tileArt } from './arte.js?v=patio-1';
 
 export const HAND = 32;
 export const POWER = 48;

@@ -8,6 +8,14 @@ export const glazes = [
   { name: 'Oro Kintsugi', color: '#dba52b', light: '#fff0a1', darkPips: true },
 ];
 
+const colorFaces = [
+  [1, 2, 2, 4, 6, 6], // Cobalto
+  [1, 2, 3, 3, 6, 6], // Azafrán
+  [1, 1, 4, 4, 5, 6], // Esmeralda
+  [2, 2, 3, 4, 5, 5], // Terracota
+];
+export const basicColors = colorFaces.map((_, id) => id);
+
 export const rarities = [
   { name: 'Común', color: '#abc2d0', ink: '#244c78', price: 3 },
   { name: 'Poco común', color: '#7bd9b8', ink: '#1a6b58', price: 5 },
@@ -32,7 +40,7 @@ export const powers = {
 };
 
 export const upgrades = {
-  fusion: { name: 'Fusión alquímica', price: 10, slots: 2, text: 'Funde dos dados. La quimera toma el valor mayor en cada cara y hereda sus efectos.' },
+  fusion: { name: 'Fusión alquímica', price: 10, slots: 2, text: 'Conserva el valor mayor de cada cara y hereda los efectos. Con tres colores distintos, la quimera se vuelve multicolor.' },
   raise: { name: 'Talla +1', price: 5, slots: 1, text: 'Sube en uno todas las caras que estén por debajo de 6.' },
   dye: { name: 'Cambiar esmalte', price: 4, slots: 1, text: 'Cambia el color principal del dado.' },
   gild: { name: 'Caras doradas', price: 6, slots: 1, text: 'Dora hasta dos caras al azar. Cada cara dorada jugada da 3 de oro.' },
@@ -40,18 +48,20 @@ export const upgrades = {
   eternal: { name: 'Esmalte eterno', price: 8, slots: 1, text: 'El dado conserva el color y sigue puntuando en cada jugada.' },
   uniform: { name: 'Talla armónica', price: 6, slots: 1, text: 'Copia a todas las caras un valor elegido al azar de este dado.' },
   wild: { name: 'Cara comodín', price: 7, slots: 1, text: 'Graba una estrella en una cara al azar. Se adapta al número del combo.' },
-  rainbow: { name: 'Prisma multicolor', price: 9, slots: 1, text: 'El dado puede representar cualquiera de los siete colores.' },
+  rainbow: { name: 'Prisma multicolor', price: 9, slots: 1, text: 'El dado se adapta al color que necesite la línea.' },
   obsidian: { name: 'Temple de obsidiana', price: 6, slots: 1, text: 'Como piedra, aporta +4 base a cada dado activo junto a ella.' },
 };
 
 export const hasFace = (mask, face) => Boolean(mask & (1 << face));
-export const diceName = spec => spec.second == null ? glazes[spec.glaze].name : `Quimera de ${glazes[spec.glaze].name.toLowerCase()} y ${glazes[spec.second].name.toLowerCase()}`;
+export const diceName = spec => spec.rainbow ? 'Dado multicolor' : spec.second == null ? glazes[spec.glaze].name : `Quimera de ${glazes[spec.glaze].name.toLowerCase()} y ${glazes[spec.second].name.toLowerCase()}`;
 export const dieCount = run => run.bag.filter(Boolean).length;
 const indices = [0, 1, 2, 3, 4, 5];
 
 export function plainDie(glaze, faces = [1, 2, 3, 4, 5, 6]) {
   return { glaze, faces: [...faces], rarity: 0, boost: 0, gild: 0, wild: 0, eternal: false, rainbow: false, obsidian: false };
 }
+
+export const colorDie = glaze => plainDie(glaze, colorFaces[glaze]);
 
 function pick(items, random) { return items[Math.floor(random() * items.length)]; }
 
@@ -62,14 +72,12 @@ export function choose(items, count, random) {
   return result;
 }
 
-const permanentUpgrades = Object.keys(upgrades).filter(key => key !== 'fusion');
-export const ovenOffers = random => ['fusion', ...choose(permanentUpgrades, 3, random)];
+export const ovenOffers = random => choose(Object.keys(upgrades), 2, random);
 
-export function stockDie(rarity, random, glaze = Math.floor(random() * glazes.length)) {
-  const die = plainDie(rarity === 4 ? 6 : glaze);
+export function stockDie(rarity, random, glaze = pick(basicColors, random)) {
+  const die = colorDie(glaze);
   die.rarity = rarity;
-  if (die.glaze === 6) die.gild = 1 << 5;
-  if (rarity === 1) die.faces[Math.floor(random() * 4)] = 6;
+  if (rarity === 1) die.faces[0] = 6;
   if (rarity === 2) {
     const trait = pick(['boost', 'gild', 'wild'], random);
     die[trait] |= 1 << pick(indices, random);
@@ -93,7 +101,7 @@ export function market(stage, owned, random) {
     const roll = random() + Math.min(stage, 20) * .005;
     return roll < .44 ? 0 : roll < .69 ? 1 : roll < .89 ? 2 : roll < .977 ? 3 : 4;
   };
-  const colors = choose(glazes.map((_, id) => id), 3, random);
+  const colors = choose(basicColors, 3, random);
   const dice = colors.map((color, index) => stockDie(index === 2 ? Math.max(2, rarity()) : rarity(), random, color));
   const available = Object.keys(powers).filter(key => !owned.includes(key));
   const tiles = [];
@@ -103,14 +111,14 @@ export function market(stage, owned, random) {
     const possible = pool.filter(key => powers[key].rarity >= minimum && powers[key].rarity <= maximum);
     if (pool.length) tiles.push(pick(possible.length ? possible : pool, random));
   }
-  return { dice, tiles, oven: ovenOffers(random), purchased: [] };
+  return { dice, tiles, oven: ovenOffers(random), forged: false, purchased: [] };
 }
 
 export function canEnchant(spec, key, color) {
   if (!spec || !Object.hasOwn(upgrades, key)) return false;
   switch (key) {
     case 'raise': return spec.faces.some(value => value < 6);
-    case 'dye': return Boolean(glazes[color]) && spec.glaze !== color;
+    case 'dye': return basicColors.includes(color) && spec.glaze !== color && !spec.rainbow;
     case 'gild': return spec.gild !== 63;
     case 'double': return spec.boost !== 63;
     case 'wild': return spec.wild !== 63;
@@ -141,10 +149,11 @@ export function enchant(spec, key, color, random) {
 }
 
 export function fuse(first, second) {
-  const colors = [first.glaze, second.glaze, first.second, second.second].filter(color => color != null);
-  const [glaze, other] = [...new Set(colors)];
-  return { glaze, second: other, faces: first.faces.map((value, index) => Math.max(value, second.faces[index])),
+  const colors = [...new Set([first.glaze, second.glaze, first.second, second.second].filter(color => color != null))];
+  const [glaze, other] = colors;
+  const rainbow = first.rainbow || second.rainbow || colors.length > 2;
+  return { glaze, ...(other != null && !rainbow ? { second: other } : {}), faces: first.faces.map((value, index) => Math.max(value, second.faces[index])),
     rarity: Math.max(2, first.rarity, second.rarity), boost: first.boost | second.boost, gild: first.gild | second.gild,
     wild: first.wild | second.wild, eternal: first.eternal || second.eternal,
-    rainbow: first.rainbow || second.rainbow, obsidian: first.obsidian || second.obsidian };
+    rainbow, obsidian: first.obsidian || second.obsidian };
 }

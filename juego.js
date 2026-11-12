@@ -1,8 +1,8 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=azulejos-1';
-import { DiceArt, tileArt } from './arte.js?v=azulejos-1';
-import { MarketUI } from './mercado.js?v=azulejos-1';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=azulejos-1';
-import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=azulejos-1';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=patio-1';
+import { DiceArt, tileArt } from './arte.js?v=patio-1';
+import { MarketUI } from './mercado.js?v=patio-1';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=patio-1';
+import { stageAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, advance } from './reglas.js?v=patio-1';
 
 const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';
@@ -10,6 +10,7 @@ const soundStorage = `${storage}/sound`;
 const dialog = $('dialog');
 const canvas = $('canvas');
 const activePowers = $('active-powers');
+const workshop = $('workshop');
 const decimal = value => value.toLocaleString('es-ES', { maximumFractionDigits: 2 });
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const patterns = [
@@ -73,6 +74,9 @@ function closeDialog() {
   market?.close();
   modal = '';
   if (dialog.open) dialog.close();
+  workshop.hidden = true;
+  $('play-layout').hidden = false;
+  $('game').classList.remove('workshop-open');
 }
 
 function title() {
@@ -135,12 +139,12 @@ function render() {
   $('stage-label').textContent = `Mosaico ${run.stage + 1} · ${dimensions}`;
   $('stage-name').textContent = stage.name;
   $('score').textContent = points;
-  $('goal').textContent = `/ ${stage.goal}`;
-  $('progress').max = stage.goal;
-  $('progress').value = Math.min(stage.goal, points);
+  $('goal').textContent = `/ ${run.goal}`;
+  $('progress').max = run.goal;
+  $('progress').value = Math.min(run.goal, points);
   $('turns').setAttribute('aria-label', `${run.turns} turnos`);
   $('turns').innerHTML = Array.from({ length: run.maxTurns }, (_, index) => `<i class="diamond${index >= run.turns ? ' spent' : ''}" aria-hidden="true"></i>`).join('');
-  $('mobile-stats').innerHTML = `<span>${points} / ${stage.goal} pts</span><span>${run.turns} turnos</span><span>Cincel × ${run.chisels}</span>`;
+  $('mobile-stats').innerHTML = `<span>${points} / ${run.goal} pts</span><span>${run.turns} turnos</span><span>Cincel × ${run.chisels}</span>`;
   $('chisel-count').textContent = `Cincel × ${run.chisels}`;
   $('sound').setAttribute('aria-pressed', !muted);
   const entries = run.cols === 4 ? [...patterns.slice(0, 4), ['Cuarteto', [4, 4, 4, 4], `+${comboPoints.quartet}`],
@@ -306,9 +310,18 @@ function finishScore(now = performance.now()) {
 function showDialog(mode, content) {
   cancelPointer();
   modal = mode;
-  dialog.className = ['shop', 'oven', 'forge'].includes(mode) ? `shop ${mode}` : '';
   dialog.innerHTML = content;
   if (!dialog.open) dialog.showModal();
+}
+
+function showWorkshop(mode, content) {
+  cancelPointer();
+  modal = mode;
+  $('play-layout').hidden = true;
+  $('game').classList.add('workshop-open');
+  workshop.innerHTML = content;
+  workshop.hidden = false;
+  workshop.querySelector('h2').focus({ preventScroll: true });
 }
 
 function help() {
@@ -318,7 +331,7 @@ function help() {
       <li><strong>Coloca y recoloca.</strong> Si pones un dado encima de otro recién colocado, el anterior vuelve a la mano. También puedes arrastrarlo a la bandeja. Los dados sin jugar conservan su tirada.</li>
       <li><strong>Puntúa.</strong> Los números aportan puntos base y los colores añaden multiplicador. Completar el panel suma ${comboPoints.panel} puntos base. Las líneas se marcan sobre la mesa.</li>
       <li><strong>Libera espacio.</strong> Toca una piedra para cincelarla. Su número sirve para combos mientras siga en la mesa.</li>
-      <li><strong>Mejora la bolsa.</strong> Inspecciona los dados flotantes, compra hasta cinco azulejos o lleva dados al horno.</li>
+      <li><strong>Mejora la bolsa.</strong> Recibes un dado al pasar de mosaico. En el taller puedes comprar dados, equipar hasta cinco azulejos y usar el horno una vez.</li>
     </ol>
     <p>Teclado: 1–4 elige dado, flechas e Intro colocan, Espacio puntúa y Retroceso retira el dado seleccionado.</p>
     <div class="dialog-actions"><button class="button primary" data-action="back">Volver</button></div>`);
@@ -334,10 +347,10 @@ function pause() {
 }
 
 function showOutcome() {
-  if (run.phase === 'shop') { market.open(run); return; }
+  if (run.phase === 'shop') { window.scrollTo(0, 0); market.open(run); return; }
   const heading = run.turns && run.board.every(Boolean) ? 'Tablero bloqueado' : 'Se acabaron los turnos';
   const total = run.results.reduce((sum, points) => sum + points, 0) + run.points;
-  showDialog('outcome', `<h2 id="dialog-title">${heading}</h2><p>Mosaico ${run.stage + 1} · ${run.points} de ${stageAt(run.stage).goal} puntos.</p>
+  showDialog('outcome', `<h2 id="dialog-title">${heading}</h2><p>Mosaico ${run.stage + 1} · ${run.points} de ${run.goal} puntos.</p>
     <p>${total} puntos en la partida.</p><div class="dialog-actions"><button class="button primary" data-action="restart">Volver a jugar</button>
     <button class="button" data-action="title">Volver al inicio</button></div>`);
 }
@@ -367,8 +380,7 @@ dialog.addEventListener('click', event => {
 
 dialog.addEventListener('cancel', event => {
   event.preventDefault();
-  if (market?.back()) return;
-  if (modal === 'shop' || modal === 'outcome') title();
+  if (modal === 'outcome') title();
   else back();
 });
 
@@ -454,6 +466,10 @@ canvas.addEventListener('wheel', event => {
 canvas.addEventListener('webglcontextrestored', () => { if (table) table.dirty = true; });
 
 document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && modal === 'workshop') {
+    if (!market.back()) title();
+    return;
+  }
   if (event.key === 'Escape' && playing && !modal) {
     if (resolution) finishScore();
     else if (selected >= 0 || tooltip >= 0) { cancelPointer(); clearSelection(); render(); }
@@ -546,7 +562,7 @@ try {
   const art = new DiceArt();
   table = new Table(canvas, $('world-labels'), art);
   await table.load();
-  market = new MarketUI(art, dialog, { open: showDialog, changed: () => { save(); render(); }, note, advance: nextMosaic });
+  market = new MarketUI(art, workshop, { open: showWorkshop, changed: () => { save(); render(); }, note, advance: nextMosaic, exit: title }, table.porcelain.map);
   title();
   requestAnimationFrame(frame);
 } catch (error) {
