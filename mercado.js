@@ -1,9 +1,9 @@
-import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=arcade-1';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt } from './reglas.js?v=arcade-1';
-import { tileArt } from './arte.js?v=arcade-1';
-import { Workshop } from './taller.js?v=arcade-1';
-import { uniqueDice } from './unicos.js?v=arcade-1';
-import { dieFaces, dieTraits } from './coleccion.js?v=arcade-1';
+import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=ceramica-1';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt } from './reglas.js?v=ceramica-1';
+import { tileArt } from './arte.js?v=ceramica-1';
+import { Workshop } from './taller.js?v=ceramica-1';
+import { uniqueDice } from './unicos.js?v=ceramica-1';
+import { dieFaces, dieTraits } from './coleccion.js?v=ceramica-1';
 
 const coins = value => `${value}<i class="coin" aria-hidden="true"></i>`;
 const purse = gold => `<i class="coin big" aria-hidden="true"></i><strong>${gold}</strong><span class="sr-only"> de oro</span>`;
@@ -65,8 +65,8 @@ export class MarketUI {
       <button type="button" class="button primary big" data-market="advance">Mosaico ${run.stage + 2} <i class="ico i-play" aria-hidden="true"></i></button></div></footer>`);
   }
 
-  exhibit(action, key, name, label, caption, color, disabled = false) {
-    return `<button type="button" class="exhibit ${action}" data-market="${action}" data-key="${key}" aria-label="${name} · ${label}" aria-pressed="false" style="--rarity:${color}"${disabled ? ' disabled' : ''}>
+  exhibit(action, key, name, label, caption, color, disabled = false, ink = '') {
+    return `<button type="button" class="exhibit ${action}" data-market="${action}" data-key="${key}" aria-label="${name} · ${label}" aria-pressed="false" style="--rarity:${color}${ink ? `;--rarity-ink:${ink}` : ''}"${disabled ? ' disabled' : ''}>
       <span><strong>${name}</strong><small>${caption}</small></span></button>`;
   }
 
@@ -79,7 +79,7 @@ export class MarketUI {
         const rarity = rarities[spec.rarity];
         const sold = market.purchased.includes(index);
         return this.exhibit('inspect', index, diceName(spec), sold ? 'Comprado' : `${rarity.name}, ${rarity.price} oro`,
-          sold ? 'Comprado' : `<span class="rarity-name">${rarity.name}</span>${coins(rarity.price)}`, rarity.color, sold);
+          sold ? 'Comprado' : `<span class="rarity-name">${rarity.name}</span>${coins(rarity.price)}`, rarity.color, sold, rarity.ink);
       }).join('')}</div></div>
       <div class="die-inspect" id="die-inspect" aria-live="polite"><p>Toca un dado para ver sus caras. Tócalo otra vez para comprar.</p><small>${dieCount(run)} dados en la bolsa</small></div>
       ${this.tileRack()}`);
@@ -123,7 +123,7 @@ export class MarketUI {
     const buyable = canBuy(this.run, 'tile', key);
     const price = sell ? `Vender · +${coins(Math.floor(tile.price / 2))}` : this.run.powers.includes(key) ? 'Equipado'
       : this.run.powers.length >= tileLimit ? 'Repisa llena' : `Comprar · ${coins(tile.price)}`;
-    area.innerHTML = `<div class="tile-inspection"><img src="${tileArt(key).url}" alt=""><div><strong style="color:${rarity.color}">${tile.name}</strong><p>${tile.text}</p></div></div>
+    area.innerHTML = `<div class="tile-inspection"><img src="${tileArt(key).url}" alt=""><div><strong style="color:${rarity.ink}">${tile.name}</strong><p>${tile.text}</p></div></div>
       <button class="button ${sell ? 'quiet' : 'primary'}" type="button" data-market="${sell ? 'sell' : 'tile'}" data-key="${key}"${sell || buyable ? '' : ' disabled'}>${price}</button>`;
   }
 
@@ -136,7 +136,7 @@ export class MarketUI {
     if (this.scene) this.scene.selected = index;
     this.element.querySelectorAll('[data-market="inspect"]').forEach(button => button.setAttribute('aria-pressed', Number(button.dataset.key) === index));
     const effects = dieTraits(spec);
-    area.innerHTML = `<div><strong style="color:${rarity.color}">${rarity.name} · ${diceName(spec)}</strong>${dieFaces(spec)}
+    area.innerHTML = `<div><strong style="color:${rarity.ink}">${rarity.name} · ${diceName(spec)}</strong>${dieFaces(spec)}
       ${unique ? `<p>${unique.text}</p><small>Comodín de color · Inmodificable</small>` : effects ? `<small>${effects}</small>` : ''}</div><button class="button primary" data-market="die" data-key="${index}"${canBuy(this.run, 'die', index) ? '' : ' disabled'}>Comprar · ${coins(rarity.price)}</button>`;
   }
 

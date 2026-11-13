@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt } from './arte.js?v=arcade-1';
-import { projectBoard } from './unicos.js?v=arcade-1';
+import { DiceArt, tileArt } from './arte.js?v=ceramica-1';
+import { projectBoard } from './unicos.js?v=ceramica-1';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -49,7 +49,7 @@ export class Table {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0c1533);
+    this.scene.background = new THREE.Color(0x22150f);
     this.camera = new THREE.PerspectiveCamera(35, 1, .1, 50);
     this.ray = new THREE.Raycaster();
     this.rayPoint = new THREE.Vector2();

@@ -1,10 +1,10 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=arcade-1';
-import { DiceArt, tileArt } from './arte.js?v=arcade-1';
-import { MarketUI } from './mercado.js?v=arcade-1';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=arcade-1';
-import { stageAt, campaignLength, orderAt, comboPoints, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance } from './reglas.js?v=arcade-1';
-import { uniqueDice } from './unicos.js?v=arcade-1';
-import { collectionMarkup } from './coleccion.js?v=arcade-1';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=ceramica-1';
+import { DiceArt, tileArt } from './arte.js?v=ceramica-1';
+import { MarketUI } from './mercado.js?v=ceramica-1';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=ceramica-1';
+import { stageAt, campaignLength, orderAt, comboPoints, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance } from './reglas.js?v=ceramica-1';
+import { uniqueDice } from './unicos.js?v=ceramica-1';
+import { collectionMarkup } from './coleccion.js?v=ceramica-1';
 
 const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';
@@ -351,7 +351,7 @@ function showPower(index, pin = false) {
   element.hidden = !key;
   if (!key) return;
   const power = powers[key], rarity = rarities[power.rarity];
-  element.innerHTML = `<strong style="color:${rarity.color}">${power.name}</strong><small>${rarity.name} · ${power.text}</small>`;
+  element.innerHTML = `<strong style="color:${rarity.ink}">${power.name}</strong><small>${rarity.name} · ${power.text}</small>`;
   activePowers.children[index]?.setAttribute('aria-describedby', element.id);
   positionPower();
 }
