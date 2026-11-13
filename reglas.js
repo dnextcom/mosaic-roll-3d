@@ -1,5 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, fuse } from './catalogo.js?v=campana-1';
-import { projectBoard, uniqueDice } from './unicos.js?v=campana-1';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, fuse } from './catalogo.js?v=arcade-1';
+import { projectBoard, uniqueDice } from './unicos.js?v=arcade-1';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 const campaignGoals = [48, 76, 94, 112, 128, 138, 168, 190, 212, 237, 270, 300];

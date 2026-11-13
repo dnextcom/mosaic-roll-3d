@@ -3,90 +3,118 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#101a28">
+  <meta name="theme-color" content="#0a1330">
   <meta name="description" content="Juega a Mosaic Roll 3D. Combina dados de cerámica, compra azulejos y forja quimeras entre mosaicos.">
   <title>Mosaic Roll 3D</title>
   <link rel="icon" type="image/jpeg" href="azulejo.jpg">
-  <link rel="stylesheet" href="estilo.css?v=campana-1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="estilo.css?v=arcade-1">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=campana-1"></script>
+  <script type="module" src="juego.js?v=arcade-1"></script>
 </head>
 <body>
   <main class="start" id="start">
-    <div class="start-frame">
-      <div class="start-content">
-        <span class="eyebrow"><i class="diamond"></i> Juego de dados</span>
-        <h1>Mosaic<br><em>Roll 3D</em></h1>
-        <p>Combina dados de cerámica y mejora tu bolsa en el taller.</p>
-        <div class="start-actions">
-          <button class="button primary" type="button" id="play" disabled>Cargando partida… <span aria-hidden="true">→</span></button>
-          <button class="button" type="button" id="new" hidden>Nueva partida</button>
-          <button class="button" type="button" data-help>Cómo jugar</button>
-          <button class="button" type="button" id="catalog">Catálogo</button>
+    <div class="start-bg" aria-hidden="true"><span class="spark s1"></span><span class="spark s2"></span><span class="spark s3"></span><span class="spark s4"></span><span class="spark s5"></span></div>
+    <div class="start-content">
+      <h1 class="logo"><span class="logo-top">Mosaic</span><span class="logo-bottom">Roll 3D</span></h1>
+      <p class="tagline">Combina dados de cerámica y mejora tu bolsa en el taller.</p>
+      <div class="start-actions">
+        <button class="button primary big" type="button" id="play" disabled>Cargando…</button>
+        <button class="button" type="button" id="new" hidden>Nueva partida</button>
+        <div class="start-row">
+          <button class="button quiet" type="button" data-help><i class="ico i-help" aria-hidden="true"></i>Cómo jugar</button>
+          <button class="button quiet" type="button" id="catalog"><i class="ico i-book" aria-hidden="true"></i>Catálogo</button>
         </div>
-        <p class="boot" id="boot" role="status" hidden></p>
-        <a class="download" href="Mosaic-Roll-3D.zip?v=taller-2" download>Descargar edición Windows</a>
       </div>
+      <p class="boot" id="boot" role="status" hidden></p>
+      <a class="download" href="Mosaic-Roll-3D.zip?v=taller-2" download><i class="ico i-download" aria-hidden="true"></i>Descargar edición Windows</a>
     </div>
   </main>
 
   <main class="game" id="game" hidden>
     <header class="game-header">
-      <button class="button quiet pause-button" type="button" id="pause" aria-label="Pausa"><span aria-hidden="true">‹</span> Pausa</button>
-      <div class="stage"><span class="eyebrow" id="stage-label"></span><h1 id="stage-name"></h1></div>
-      <button class="button quiet sound-button" type="button" id="sound" aria-label="Sonido" aria-pressed="true"><span aria-hidden="true">♪</span><span>Sonido</span></button>
+      <button class="button icon-button" type="button" id="pause" aria-label="Pausa"><i class="ico i-pause" aria-hidden="true"></i></button>
+      <div class="ribbon stage"><span class="stage-label" id="stage-label"></span><h1 id="stage-name"></h1></div>
+      <button class="button icon-button sound-button" type="button" id="sound" aria-label="Sonido" aria-pressed="true"><i class="ico i-sound" aria-hidden="true"></i></button>
     </header>
-    <div class="mobile-stats" aria-live="polite" id="mobile-stats"></div>
+
+    <div class="resource-bar" id="resources">
+      <div class="res res-score" id="score-pill">
+        <span class="badge b-star" aria-hidden="true"><i class="ico i-star"></i></span>
+        <div class="res-body">
+          <div class="res-value"><span class="sr-only">Puntuación</span><strong id="score">0</strong><span id="goal"></span></div>
+          <progress id="progress" value="0" aria-label="Objetivo del mosaico"></progress>
+        </div>
+      </div>
+      <div class="res" title="Turnos restantes">
+        <span class="badge b-turns" aria-hidden="true"><i class="ico i-turns"></i></span>
+        <div class="turns" id="turns" role="img"></div>
+      </div>
+      <div class="res" title="Cargas de cincel">
+        <span class="badge b-chisel" aria-hidden="true"><i class="ico i-chisel"></i></span>
+        <span class="sr-only">Cincel</span><strong id="chisel-count"></strong>
+      </div>
+      <div class="res res-gold" title="Oro">
+        <i class="coin big" aria-hidden="true"></i>
+        <span class="sr-only">Oro</span><strong id="gold-count"></strong>
+      </div>
+      <div class="res res-bag" title="Dados en la bolsa">
+        <span class="badge b-dice" aria-hidden="true"><i class="ico i-dice"></i></span>
+        <span class="sr-only">Dados en la bolsa</span><strong id="bag-count"></strong>
+      </div>
+    </div>
+
     <div class="layout" id="play-layout">
       <section class="play-area" aria-label="Mesa 3D">
-        <div class="order" id="order" hidden><span class="eyebrow">Encargo</span><strong id="order-label"></strong><span id="order-reward"></span></div>
-        <div class="equipped-rail" id="equipped-rail" hidden>
-          <span class="eyebrow" id="equipped-label">Azulejos equipados</span>
-          <div class="active-powers" id="active-powers" role="group" aria-labelledby="equipped-label"></div>
-        </div>
         <div class="world" id="world">
           <canvas id="canvas" tabindex="0" aria-label="Tablero de dados 3D" aria-describedby="hint"></canvas>
           <div class="world-labels" id="world-labels" aria-hidden="true"></div>
+          <div class="popups" id="popups" aria-hidden="true"></div>
+          <div class="order" id="order" hidden>
+            <span class="badge b-quest" aria-hidden="true"><i class="ico i-quest"></i></span>
+            <div><span class="order-kicker">Encargo</span><strong id="order-label"></strong></div>
+            <span class="order-reward" id="order-reward"></span>
+          </div>
           <div class="power-tooltip" id="power-tooltip" role="tooltip" hidden></div>
           <div class="power-tooltip unique-tooltip" id="die-tooltip" role="tooltip" hidden></div>
           <div class="score-sequence" id="sequence" hidden>
-            <div><span class="eyebrow" id="sequence-phase"></span><strong id="sequence-value"></strong><small id="sequence-detail"></small></div>
-            <button class="button quiet" id="skip-score" type="button">Saltar</button>
+            <span class="sequence-phase" id="sequence-phase"></span>
+            <div class="sequence-value" id="sequence-value"></div>
+            <small class="sequence-detail" id="sequence-detail"></small>
+            <button class="button quiet small" id="skip-score" type="button">Saltar <i class="ico i-forward" aria-hidden="true"></i></button>
           </div>
         </div>
         <div class="table-controls">
-          <p id="hint" aria-live="polite"></p>
-          <button class="button quiet" type="button" id="recall" hidden>Retirar dado</button>
-          <button class="button quiet" type="button" id="top">Vista cenital</button>
-          <button class="button quiet" type="button" id="reset-camera">Centrar</button>
-          <button class="button quiet" type="button" id="collection-button">Bolsa y azulejos</button>
+          <p class="hint" id="hint" aria-live="polite"></p>
+          <button class="button small" type="button" id="recall" hidden><i class="ico i-undo" aria-hidden="true"></i>Retirar</button>
+          <button class="button icon-button small quiet" type="button" id="top" aria-label="Vista cenital" title="Vista cenital (V)"><i class="ico i-grid" aria-hidden="true"></i></button>
+          <button class="button icon-button small quiet" type="button" id="reset-camera" aria-label="Centrar cámara" title="Centrar cámara (R)"><i class="ico i-target" aria-hidden="true"></i></button>
+          <button class="button icon-button small quiet" type="button" id="collection-button" aria-label="Bolsa y azulejos" title="Bolsa y azulejos"><i class="ico i-bag" aria-hidden="true"></i></button>
         </div>
-        <p class="key-tip">Botón derecho para girar · Rueda para acercar · 1–4 para elegir · Espacio para puntuar</p>
         <div class="mobile-actions">
-          <button class="button primary" type="button" id="mobile-confirm" disabled>Puntuar <strong id="mobile-points">+0</strong></button>
+          <button class="button primary big" type="button" id="mobile-confirm" disabled>Puntuar <strong id="mobile-points">+0</strong></button>
         </div>
       </section>
+
       <aside class="hud" aria-label="Puntuación y combinaciones">
-        <section class="tally">
-          <h2 class="eyebrow">Puntuación</h2>
-          <div class="tally-value"><strong id="score">0</strong><span id="goal"></span></div>
-          <progress id="progress" value="0" aria-label="Objetivo del mosaico"></progress>
-          <div class="turns-and-chisel">
-            <div><span class="eyebrow">Turnos</span><div class="turns" id="turns"></div></div>
-            <span class="chisel-count" id="chisel-count"></span>
-          </div>
+        <section class="panel play-total" aria-live="polite">
+          <h2 class="panel-title">Jugada</h2>
+          <strong class="preview" id="preview">+0</strong>
+          <p class="breakdown" id="breakdown"></p>
+          <p class="placement" id="placed"></p>
+          <button class="button primary big confirm" id="confirm" type="button" disabled>Puntuar <kbd>Espacio</kbd></button>
         </section>
-        <section class="patterns">
-          <h2>Combinaciones</h2>
+        <section class="panel equipped-rail" id="equipped-rail">
+          <h2 class="panel-title" id="equipped-label">Azulejos <span class="panel-count" id="equipped-count"></span></h2>
+          <div class="active-powers" id="active-powers" role="group" aria-labelledby="equipped-label"></div>
+        </section>
+        <section class="panel patterns">
+          <h2 class="panel-title">Combinaciones</h2>
           <ul id="patterns"></ul>
         </section>
-        <section class="play-total" aria-live="polite">
-          <div><h2 class="eyebrow">Jugada actual</h2><strong id="preview">+0</strong></div>
-          <p id="breakdown"></p>
-          <p class="placement" id="placed"></p>
-        </section>
-        <button class="button primary confirm" id="confirm" type="button" disabled>Puntuar jugada <span aria-hidden="true">→</span></button>
-        <p class="inventory" id="inventory"></p>
+        <p class="key-tip"><kbd>Clic der.</kbd> girar · <kbd>Rueda</kbd> zoom · <kbd>1–4</kbd> elegir · <kbd>V</kbd> cenital · <kbd>R</kbd> centrar</p>
       </aside>
     </div>
     <section class="workshop-view" id="workshop" aria-labelledby="workshop-title" hidden></section>

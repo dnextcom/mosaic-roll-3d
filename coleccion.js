@@ -1,7 +1,7 @@
-import { basicColors, colorDie, dieCount, diceName, hasFace, powers, rarities, uniqueDie } from './catalogo.js?v=campana-1';
-import { diePortrait, tileArt } from './arte.js?v=campana-1';
-import { tileLimit } from './reglas.js?v=campana-1';
-import { uniqueDice } from './unicos.js?v=campana-1';
+import { basicColors, colorDie, dieCount, diceName, hasFace, powers, rarities, uniqueDie } from './catalogo.js?v=arcade-1';
+import { diePortrait, tileArt } from './arte.js?v=arcade-1';
+import { tileLimit } from './reglas.js?v=arcade-1';
+import { uniqueDice } from './unicos.js?v=arcade-1';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);
@@ -24,7 +24,7 @@ function diceCard(spec, count = 1) {
   const rarity = rarities[spec.rarity];
   const unique = uniqueDice[spec.unique];
   const effects = dieTraits(spec);
-  return `<li class="collection-card"><img src="${diePortrait(spec)}" alt="" loading="lazy"><div>
+  return `<li class="collection-card" style="--rarity:${rarity.color}"><img src="${diePortrait(spec)}" alt="" loading="lazy"><div>
     <strong>${diceName(spec)}</strong>${count > 1 ? ` <span class="collection-count">×${count}</span>` : ''}
     <small style="color:${rarity.color}">${rarity.name}</small>${dieFaces(spec)}
     ${unique ? `<p>${unique.text}</p><small>Comodín de color · Inmodificable</small>` : effects ? `<p>${effects}</p>` : ''}</div></li>`;
@@ -32,7 +32,7 @@ function diceCard(spec, count = 1) {
 
 function tileCard(key) {
   const tile = powers[key], rarity = rarities[tile.rarity];
-  return `<li class="collection-card"><img src="${tileArt(key).url}" alt="" loading="lazy"><div>
+  return `<li class="collection-card" style="--rarity:${rarity.color}"><img src="${tileArt(key).url}" alt="" loading="lazy"><div>
     <strong>${tile.name}</strong><small style="color:${rarity.color}">${rarity.name}</small><p>${tile.text}</p></div></li>`;
 }
 
@@ -63,7 +63,7 @@ export function collectionMarkup(run) {
       ${run.powers.length ? `<ul class="collection-grid">${run.powers.map(tileCard).join('')}</ul>` : '<p class="collection-empty">Todavía no tienes azulejos equipados.</p>'}</details>
     <details><summary>Historial del taller <span>${run.history.length}</span></summary>${historyMarkup(run.history)}</details>` : '';
   return `<header class="collection-header"><h2 id="dialog-title">${run ? 'Bolsa y azulejos' : 'Catálogo'}</h2>
-      <button class="button" type="button" data-action="close-collection" autofocus>Cerrar</button></header>
+      <button class="button quiet small" type="button" data-action="close-collection" autofocus><i class="ico i-close" aria-hidden="true"></i>Cerrar</button></header>
     <div class="collection-body">${owned}
       ${run ? '<details><summary>Catálogo</summary><div class="catalog-groups">' : ''}
       <details${run ? '' : ' open'}><summary>Dados básicos <span>${basicDice.length}</span></summary><ul class="collection-grid">${basicDice.map(spec => diceCard(spec)).join('')}</ul></details>

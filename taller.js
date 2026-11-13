@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { rarities } from './catalogo.js?v=campana-1';
+import { rarities } from './catalogo.js?v=arcade-1';
 
 export class Workshop {
   constructor(art, tileMap) {
@@ -11,7 +11,7 @@ export class Workshop {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x162b3b);
+    this.scene.background = new THREE.Color(0x101c3f);
     this.camera = new THREE.OrthographicCamera(-3.45, 3.45, 2, -2, .1, 25);
     this.camera.position.set(0, 5, 8);
     this.camera.lookAt(0, .21, .25);

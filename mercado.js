@@ -1,9 +1,13 @@
-import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=campana-1';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt } from './reglas.js?v=campana-1';
-import { tileArt } from './arte.js?v=campana-1';
-import { Workshop } from './taller.js?v=campana-1';
-import { uniqueDice } from './unicos.js?v=campana-1';
-import { dieFaces, dieTraits } from './coleccion.js?v=campana-1';
+import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=arcade-1';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt } from './reglas.js?v=arcade-1';
+import { tileArt } from './arte.js?v=arcade-1';
+import { Workshop } from './taller.js?v=arcade-1';
+import { uniqueDice } from './unicos.js?v=arcade-1';
+import { dieFaces, dieTraits } from './coleccion.js?v=arcade-1';
+
+const coins = value => `${value}<i class="coin" aria-hidden="true"></i>`;
+const purse = gold => `<i class="coin big" aria-hidden="true"></i><strong>${gold}</strong><span class="sr-only"> de oro</span>`;
+const emptySlot = '<span class="slot-empty" aria-hidden="true"></span>';
 
 export class MarketUI {
   constructor(art, element, callbacks, tileMap) {
@@ -43,17 +47,26 @@ export class MarketUI {
 
   display(tab, body) {
     const run = this.run;
-    this.callbacks.open('workshop', `<header class="workshop-header"><div><p class="eyebrow">Mosaico ${run.stage + 1} completado · ${run.points} puntos</p>
-      <h2 id="workshop-title" tabindex="-1">${tab === 'dice' ? 'Taller de azulejos' : 'Horno de azulejos'}</h2></div><strong class="purse" id="workshop-gold">${run.gold} de oro</strong></header>
-      ${tab === 'dice' ? `<div class="workshop-tools"><button type="button" class="button quiet" data-market="collection">Bolsa y azulejos</button>
-        <button type="button" class="button" data-market="view" data-key="oven">Abrir horno${run.market.forged ? ' · usado' : ''}</button></div>` : ''}${body}
-      <footer class="workshop-footer"><button type="button" class="button quiet" ${tab === 'dice' ? 'data-market="exit">Guardar y salir' : 'data-market="view" data-key="dice">Volver al taller'}</button>
-      <div class="workshop-next"><span>Meta de ${stageAt(run.stage + 1).goal} puntos</span>
-      <button type="button" class="button primary" data-market="advance">Mosaico ${run.stage + 2} <span aria-hidden="true">→</span></button></div></footer>`);
+    const tabButton = (key, icon, label, extra = '') => {
+      const current = tab === key;
+      return `<button type="button" class="button small${current ? ' current' : ' quiet'}" data-market="view" data-key="${key}"${current ? ' aria-current="page"' : ''}>
+        <i class="ico ${icon}" aria-hidden="true"></i>${label}${extra}</button>`;
+    };
+    this.callbacks.open('workshop', `<header class="workshop-header">
+        <div class="ribbon workshop-ribbon"><span class="stage-label">Mosaico ${run.stage + 1} completado · ${run.points} puntos</span>
+        <h2 id="workshop-title" tabindex="-1">${tab === 'dice' ? 'Taller' : 'Horno'}</h2></div>
+        <div class="purse" id="workshop-gold">${purse(run.gold)}</div></header>
+      <nav class="workshop-tabs" aria-label="Secciones del taller">
+        ${tabButton('dice', 'i-store', 'Mercado')}${tabButton('oven', 'i-flame', 'Horno', run.market.forged ? ' <span class="tag">usado</span>' : '')}
+        <button type="button" class="button small quiet tab-end" data-market="collection"><i class="ico i-bag" aria-hidden="true"></i>Bolsa</button></nav>
+      ${body}
+      <footer class="workshop-footer"><button type="button" class="button quiet" data-market="exit"><i class="ico i-exit" aria-hidden="true"></i>Guardar y salir</button>
+      <div class="workshop-next"><span class="goal-pill"><i class="ico i-star" aria-hidden="true"></i>Meta ${stageAt(run.stage + 1).goal}</span>
+      <button type="button" class="button primary big" data-market="advance">Mosaico ${run.stage + 2} <i class="ico i-play" aria-hidden="true"></i></button></div></footer>`);
   }
 
-  exhibit(action, key, name, caption, color, disabled = false) {
-    return `<button type="button" class="exhibit ${action}" data-market="${action}" data-key="${key}" aria-label="${name} · ${caption}" aria-pressed="false" style="--rarity:${color}"${disabled ? ' disabled' : ''}>
+  exhibit(action, key, name, label, caption, color, disabled = false) {
+    return `<button type="button" class="exhibit ${action}" data-market="${action}" data-key="${key}" aria-label="${name} · ${label}" aria-pressed="false" style="--rarity:${color}"${disabled ? ' disabled' : ''}>
       <span><strong>${name}</strong><small>${caption}</small></span></button>`;
   }
 
@@ -65,7 +78,8 @@ export class MarketUI {
     this.display('dice', `<div class="workshop-stage" id="draft-scene"><div class="exhibits" aria-label="Dados a la venta">${market.dice.map((spec, index) => {
         const rarity = rarities[spec.rarity];
         const sold = market.purchased.includes(index);
-        return this.exhibit('inspect', index, diceName(spec), sold ? 'Comprado' : `${rarity.price} oro`, rarity.color, sold);
+        return this.exhibit('inspect', index, diceName(spec), sold ? 'Comprado' : `${rarity.name}, ${rarity.price} oro`,
+          sold ? 'Comprado' : `<span class="rarity-name">${rarity.name}</span>${coins(rarity.price)}`, rarity.color, sold);
       }).join('')}</div></div>
       <div class="die-inspect" id="die-inspect" aria-live="polite"><p>Toca un dado para ver sus caras. Tócalo otra vez para comprar.</p><small>${dieCount(run)} dados en la bolsa</small></div>
       ${this.tileRack()}`);
@@ -77,13 +91,14 @@ export class MarketUI {
     const { market, powers: owned } = this.run;
     const tiles = (keys, action) => keys.map(key => {
       const tile = powers[key], rarity = rarities[tile.rarity];
-      const caption = owned.includes(key) ? 'Equipado' : `${tile.price} oro`;
-      return `<button type="button" class="shop-tile" data-market="${action}" data-key="${key}" aria-label="${tile.name} · ${caption}" aria-pressed="false" style="--rarity:${rarity.color}">
-        <img src="${tileArt(key).url}" alt="">${action === 'tile-inspect' ? `<small>${caption}</small>` : ''}</button>`;
+      const equipped = owned.includes(key);
+      return `<button type="button" class="shop-tile" data-market="${action}" data-key="${key}" aria-label="${tile.name} · ${equipped ? 'Equipado' : `${tile.price} oro`}" aria-pressed="false" style="--rarity:${rarity.color}">
+        <img src="${tileArt(key).url}" alt="">${action === 'tile-inspect' ? `<small>${equipped ? 'Equipado' : coins(tile.price)}</small>` : ''}</button>`;
     }).join('');
     return `<section class="shop-tiles" aria-label="Azulejos de poder"><div class="tile-racks">
-      <div><h3>A la venta</h3><div class="tile-rack">${tiles(market.tiles, 'tile-inspect')}</div></div>
-      <div><h3>Equipados · ${owned.length}/${tileLimit}</h3><div class="tile-rack">${owned.length ? tiles(owned, 'owned-inspect') : '<span class="empty-rack">Todavía no tienes azulejos equipados.</span>'}</div></div>
+      <div class="rack"><h3>A la venta</h3><div class="tile-rack">${market.tiles.length ? tiles(market.tiles, 'tile-inspect') : '<span class="empty-rack">Agotado</span>'}</div></div>
+      <div class="rack"><h3>Equipados <span class="panel-count">${owned.length}/${tileLimit}</span></h3><div class="tile-rack">${tiles(owned, 'owned-inspect')}${emptySlot.repeat(Math.max(0, tileLimit - owned.length))}
+        ${owned.length ? '' : '<span class="sr-only">Todavía no tienes azulejos equipados.</span>'}</div></div>
       </div><div class="die-inspect tile-details" id="tile-inspect" aria-live="polite"><p>Selecciona un azulejo para leer su poder. Puedes vender los equipados.</p></div>
       <p class="tile-feedback" id="tile-feedback" role="status" tabindex="-1" hidden></p></section>`;
   }
@@ -100,14 +115,14 @@ export class MarketUI {
       const usable = !this.run.market.forged && this.run.gold >= effect.price;
       const action = usable ? 'Elegir receta' : this.run.market.forged ? 'Horno usado' : 'Falta oro';
       area.innerHTML = `<div><strong>${effect.name}</strong><p>${effect.text}</p></div>
-        <button class="button primary" type="button" data-market="effect" data-key="${key}"${usable ? '' : ' disabled'}>${action} · ${effect.price} oro</button>`;
+        <button class="button primary" type="button" data-market="effect" data-key="${key}"${usable ? '' : ' disabled'}>${action} · ${coins(effect.price)}</button>`;
       return;
     }
     const tile = powers[key], rarity = rarities[tile.rarity];
     const sell = market === 'owned-inspect';
     const buyable = canBuy(this.run, 'tile', key);
-    const price = sell ? `Vender por ${Math.floor(tile.price / 2)} de oro` : this.run.powers.includes(key) ? 'Equipado'
-      : this.run.powers.length >= tileLimit ? 'Repisa llena' : `Comprar · ${tile.price} oro`;
+    const price = sell ? `Vender · +${coins(Math.floor(tile.price / 2))}` : this.run.powers.includes(key) ? 'Equipado'
+      : this.run.powers.length >= tileLimit ? 'Repisa llena' : `Comprar · ${coins(tile.price)}`;
     area.innerHTML = `<div class="tile-inspection"><img src="${tileArt(key).url}" alt=""><div><strong style="color:${rarity.color}">${tile.name}</strong><p>${tile.text}</p></div></div>
       <button class="button ${sell ? 'quiet' : 'primary'}" type="button" data-market="${sell ? 'sell' : 'tile'}" data-key="${key}"${sell || buyable ? '' : ' disabled'}>${price}</button>`;
   }
@@ -122,14 +137,14 @@ export class MarketUI {
     this.element.querySelectorAll('[data-market="inspect"]').forEach(button => button.setAttribute('aria-pressed', Number(button.dataset.key) === index));
     const effects = dieTraits(spec);
     area.innerHTML = `<div><strong style="color:${rarity.color}">${rarity.name} · ${diceName(spec)}</strong>${dieFaces(spec)}
-      ${unique ? `<p>${unique.text}</p><small>Comodín de color · Inmodificable</small>` : effects ? `<small>${effects}</small>` : ''}</div><button class="button primary" data-market="die" data-key="${index}"${canBuy(this.run, 'die', index) ? '' : ' disabled'}>Comprar · ${rarity.price} oro</button>`;
+      ${unique ? `<p>${unique.text}</p><small>Comodín de color · Inmodificable</small>` : effects ? `<small>${effects}</small>` : ''}</div><button class="button primary" data-market="die" data-key="${index}"${canBuy(this.run, 'die', index) ? '' : ' disabled'}>Comprar · ${coins(rarity.price)}</button>`;
   }
 
   oven() {
     this.mode = 'oven';
     const { oven, forged } = this.run.market;
     this.display('oven', `<div class="workshop-stage kiln-display" id="kiln-scene"><div class="exhibits" aria-label="Recetas del horno">
-      ${oven.map(key => this.exhibit('effect-inspect', key, upgrades[key].name, `${upgrades[key].price} oro`, '#ffcf8a')).join('')}</div></div>
+      ${oven.map(key => this.exhibit('effect-inspect', key, upgrades[key].name, `${upgrades[key].price} oro`, coins(upgrades[key].price), '#ffcf8a')).join('')}</div></div>
       <div class="die-inspect" id="die-inspect" aria-live="polite"><p>${forged ? 'El horno ya se usó en este taller. Volverá a encenderse en el próximo mosaico.'
         : 'Elige una de las dos recetas. Puedes usar el horno una vez por taller.'}</p></div>`);
     this.mount('oven', this.element.querySelector('#kiln-scene'));
@@ -152,8 +167,8 @@ export class MarketUI {
       <div class="forge-candidates" aria-label="Dados seleccionados al azar">${this.forgeCandidates.map(id =>
         `<button type="button" class="button small" data-market="candidate" data-key="${id}" aria-pressed="false">${diceName(this.run.bag[id])} <small>${this.run.bag[id].faces.join('·')}</small></button>`).join('')}</div>
       ${key === 'dye' ? `<label class="dye-label">Nuevo esmalte <select id="forge-color">${basicColors.map(id => `<option value="${id}">${glazes[id].name}</option>`).join('')}</select></label>` : ''}
-      <div class="shop-foot"><button class="button" type="button" data-market="view" data-key="oven">Cancelar</button>
-      <button class="button primary" type="button" data-market="forge" disabled>${key === 'fusion' ? 'Fusionar dados' : 'Aplicar efecto'} · ${effect.price} oro</button></div>`);
+      <div class="shop-foot"><button class="button quiet" type="button" data-market="view" data-key="oven">Cancelar</button>
+      <button class="button primary" type="button" data-market="forge" disabled><i class="ico i-flame" aria-hidden="true"></i>${key === 'fusion' ? 'Fusionar dados' : 'Aplicar efecto'} · ${coins(effect.price)}</button></div>`);
     this.mount('forge', this.element.querySelector('#forge-scene'));
     this.refreshForge();
   }
@@ -197,7 +212,7 @@ export class MarketUI {
     this.scene?.celebrate(spec, ids, now);
     this.callbacks.changed();
     this.callbacks.note('forge');
-    this.element.querySelector('#workshop-gold').textContent = `${this.run.gold} de oro`;
+    this.element.querySelector('#workshop-gold').innerHTML = purse(this.run.gold);
     for (const button of this.element.querySelectorAll('button')) button.disabled = true;
     this.element.querySelector('#forge-status').textContent = this.effect === 'fusion' ? 'Fundiendo los dados…' : 'Fijando el esmalte…';
   }
@@ -209,8 +224,8 @@ export class MarketUI {
     this.element.querySelector('#forge-status').textContent = dieTraits(spec) || 'El dado está listo para tu siguiente tirada.';
     this.element.querySelector('.forge-candidates').hidden = true;
     this.element.querySelector('.dye-label')?.setAttribute('hidden', '');
-    this.element.querySelector('.shop-foot').innerHTML = '<button type="button" class="button" data-market="view" data-key="oven">Volver al horno</button>';
-    for (const button of this.element.querySelectorAll('.workshop-footer button')) button.disabled = false;
+    this.element.querySelector('.shop-foot').innerHTML = '<button type="button" class="button primary" data-market="view" data-key="oven"><i class="ico i-flame" aria-hidden="true"></i>Volver al horno</button>';
+    for (const button of this.element.querySelectorAll('.workshop-footer button, .workshop-tabs button')) button.disabled = false;
     this.element.querySelector('.shop-foot button').focus({ preventScroll: true });
   }
 

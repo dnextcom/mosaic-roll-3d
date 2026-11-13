@@ -1,10 +1,10 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=campana-1';
-import { DiceArt, tileArt } from './arte.js?v=campana-1';
-import { MarketUI } from './mercado.js?v=campana-1';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=campana-1';
-import { stageAt, campaignLength, orderAt, comboPoints, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance } from './reglas.js?v=campana-1';
-import { uniqueDice } from './unicos.js?v=campana-1';
-import { collectionMarkup } from './coleccion.js?v=campana-1';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=arcade-1';
+import { DiceArt, tileArt } from './arte.js?v=arcade-1';
+import { MarketUI } from './mercado.js?v=arcade-1';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=arcade-1';
+import { stageAt, campaignLength, orderAt, comboPoints, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance } from './reglas.js?v=arcade-1';
+import { uniqueDice } from './unicos.js?v=arcade-1';
+import { collectionMarkup } from './coleccion.js?v=arcade-1';
 
 const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';
@@ -42,6 +42,72 @@ let muted = read(soundStorage) === 'off';
 let selected = -1, focused = -1, hovered = -1;
 let tooltip = -1, pinned = false;
 let pointer = null, lockUntil = 0;
+// Stone cell waiting for a confirming second tap on touch screens.
+let armed = -1;
+// Time at which the end-of-mosaic screen opens, after the celebration banner.
+let pendingOutcome = 0;
+const counters = new Map();
+// Pointer travel, in pixels, after which a press is no longer treated as a tap.
+const TAP_SLOP = 10;
+
+function bump(element) {
+  if (reducedMotion.matches) return;
+  element.classList.remove('bump');
+  void element.offsetWidth;
+  element.classList.add('bump');
+}
+
+function countTo(element, value) {
+  const shown = Number(element.dataset.value);
+  element.dataset.value = value;
+  if (!Number.isFinite(shown) || shown === value || reducedMotion.matches) {
+    counters.delete(element);
+    element.textContent = value;
+    return;
+  }
+  const from = Number(element.textContent);
+  counters.set(element, { from: Number.isFinite(from) ? from : shown, to: value, start: performance.now() });
+  bump(element);
+}
+
+function tickCounters(now) {
+  for (const [element, counter] of counters) {
+    const t = Math.min(1, (now - counter.start) / 650);
+    element.textContent = Math.round(counter.from + (counter.to - counter.from) * (1 - (1 - t) ** 3));
+    if (t >= 1) counters.delete(element);
+  }
+}
+
+function resetCounters() {
+  counters.clear();
+  for (const id of ['score', 'gold-count']) delete $(id).dataset.value;
+}
+
+function popup(text, cells = [], kind = '') {
+  if (reducedMotion.matches || !table?.width) return;
+  const anchors = cells.map(cell => table.dieAnchor(cell)).filter(Boolean);
+  const x = anchors.length ? anchors.reduce((sum, point) => sum + point.x, 0) / anchors.length : table.width / 2;
+  const y = anchors.length ? anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length : table.height * .42;
+  const element = document.createElement('span');
+  element.className = `popup ${kind}`.trim();
+  element.textContent = text;
+  element.style.left = `${Math.round(x)}px`;
+  element.style.top = `${Math.round(y)}px`;
+  element.addEventListener('animationend', () => element.remove(), { once: true });
+  $('popups').append(element);
+}
+
+function shake() {
+  if (reducedMotion.matches) return;
+  const world = $('world');
+  world.classList.remove('shake');
+  void world.offsetWidth;
+  world.classList.add('shake');
+}
+
+const coins = value => `${value}<i class="coin" aria-hidden="true"></i>`;
+const chips = (base, multiplier, popBase = false, popMulti = false) =>
+  `<span class="chip chip-base${popBase ? ' pop' : ''}">${base}</span><span class="times" aria-label="por">×</span><span class="chip chip-mult${popMulti ? ' pop' : ''}">${decimal(multiplier)}</span>`;
 
 function note(type) {
   if (muted || !window.AudioContext) return;
@@ -89,20 +155,22 @@ function title() {
   cancelPointer();
   playing = false;
   lockUntil = 0;
+  pendingOutcome = 0;
   resolution = null;
   $('sequence').hidden = true;
+  $('popups').replaceChildren();
   $('game').hidden = true;
   $('start').hidden = false;
   const button = $('play');
   button.disabled = !table;
-  const label = !table ? 'Cargando partida…' : run?.phase === 'won' ? 'Ver victoria' : ongoing() ? 'Continuar partida' : 'Jugar';
-  button.innerHTML = `${label} <span aria-hidden="true">→</span>`;
+  const label = !table ? 'Cargando…' : run?.phase === 'won' ? 'Ver victoria' : ongoing() ? 'Continuar' : 'Jugar';
+  button.innerHTML = table ? `<i class="ico i-play" aria-hidden="true"></i>${label}` : label;
   $('new').hidden = !table || !ongoing();
   if (table) button.focus({ preventScroll: true });
 }
 
 function clearSelection() {
-  selected = focused = hovered = -1;
+  selected = focused = hovered = armed = -1;
   table.focus(-1, -1);
   showPower(-1);
   showUnique();
@@ -115,6 +183,7 @@ function enter(roll = []) {
   $('start').hidden = true;
   $('game').hidden = false;
   $('sequence').hidden = true;
+  $('popups').replaceChildren();
   window.scrollTo(0, 0);
   table.clear();
   clearSelection();
@@ -122,7 +191,9 @@ function enter(roll = []) {
   table.reset();
   const now = performance.now();
   lockUntil = roll.length ? now + (reducedMotion.matches ? 100 : ROLL_TIME) : 0;
+  pendingOutcome = 0;
   resolution = null;
+  resetCounters();
   table.sync(run, now, { roll: new Set(reducedMotion.matches ? [] : roll) });
   render();
   table.frame(now);
@@ -143,41 +214,57 @@ function render() {
   const score = resolution?.score ?? preview(run);
   const points = resolution ? run.points - score.total : run.points;
   const dimensions = run.cols === 4 ? `${run.cols} × ${run.rows}` : `${run.rows} × ${run.cols}`;
-  const progress = run.endless ? `Modo libre · Mosaico ${run.stage + 1}` : `Mosaico ${run.stage + 1} de ${campaignLength}`;
+  const progress = run.endless ? `Modo libre · Mosaico ${run.stage + 1}` : `Mosaico ${run.stage + 1}/${campaignLength}`;
   $('stage-label').textContent = `${progress} · ${dimensions}`;
   $('stage-name').textContent = stage.name;
-  $('score').textContent = points;
+  countTo($('score'), points);
   $('goal').textContent = `/ ${run.goal}`;
   $('progress').max = run.goal;
   $('progress').value = Math.min(run.goal, points);
-  $('turns').setAttribute('aria-label', `${run.turns} turnos`);
-  $('turns').innerHTML = Array.from({ length: run.maxTurns }, (_, index) => `<i class="diamond${index >= run.turns ? ' spent' : ''}" aria-hidden="true"></i>`).join('');
-  $('mobile-stats').innerHTML = `<span>${points} / ${run.goal} pts</span><span>${run.turns} turnos</span><span>Cincel × ${run.chisels}</span>`;
-  $('chisel-count').textContent = `Cincel × ${run.chisels}`;
+  $('score-pill').classList.toggle('reached', points >= run.goal);
+  $('turns').setAttribute('aria-label', `${run.turns} de ${run.maxTurns} turnos`);
+  $('turns').innerHTML = Array.from({ length: run.maxTurns }, (_, index) => `<i class="pip${index >= run.turns ? ' spent' : ''}"></i>`).join('');
+  $('chisel-count').textContent = `×${run.chisels}`;
+  // Gold earned by a play is revealed when its scoring sequence ends.
+  countTo($('gold-count'), resolution ? resolution.gold : run.gold);
+  $('bag-count').textContent = dieCount(run);
   $('sound').setAttribute('aria-pressed', !muted);
   const entries = run.cols === 4 ? [...patterns.slice(0, 4), ['Cuarteto', [4, 4, 4, 4], `+${comboPoints.quartet}`],
     ['Escalera larga', [1, 2, 3, 4], `+${comboPoints.longStraight}`], ...patterns.slice(4)] : patterns;
-  $('patterns').innerHTML = entries.map(([name, faces, points, color]) => `<li${color ? ' class="color-pattern"' : ''}>
-    <span class="glyphs ${color || ''}" aria-hidden="true">${faces.map(face => `<i>${face}</i>`).join('')}</span>${name}<strong>${points}</strong></li>`).join('') +
-    `<li><span class="glyphs" aria-hidden="true"><span class="panel-glyph"></span></span>Panel completo<strong>+${comboPoints.panel}</strong></li>`;
-  $('preview').textContent = $('mobile-points').textContent = `+${score.total}`;
-  $('breakdown').textContent = score.count ? `${score.base} base × ${decimal(score.multiplier)}${score.gold ? ` · +${score.gold} oro` : ''}`
-    : run.lastScore ? `Última jugada · +${run.lastScore}` : 'Coloca un dado para ver sus puntos.';
-  $('placed').textContent = `${score.count} de 4 dados colocados`;
-  $('inventory').textContent = `${run.gold} de oro · Bolsa de ${dieCount(run)} dados`;
+  const active = new Map();
+  for (const step of [...score.numberSteps, ...score.colorSteps]) active.set(step.name, (active.get(step.name) ?? 0) + 1);
+  const row = (name, glyphs, value, color = '') => {
+    const count = active.get(name) ?? 0;
+    const classes = [color && 'color-pattern', count && 'active'].filter(Boolean).join(' ');
+    return `<li${classes ? ` class="${classes}"` : ''}><span class="glyphs ${color}" aria-hidden="true">${glyphs}</span>
+      <span>${name}${count > 1 ? ` <em>×${count}</em>` : ''}</span><strong>${value}</strong></li>`;
+  };
+  $('patterns').innerHTML = entries.map(([name, faces, value, color]) => row(name, faces.map(face => `<i>${face}</i>`).join(''), value, color)).join('') +
+    row('Panel completo', '<span class="panel-glyph"></span>', `+${comboPoints.panel}`);
+  const total = `+${score.total}`;
+  if ($('preview').textContent !== total) {
+    $('preview').textContent = total;
+    if (!resolution && score.count) bump($('preview'));
+  }
+  $('mobile-points').textContent = total;
+  $('breakdown').innerHTML = score.count ? `${chips(score.base, score.multiplier)}${score.gold ? `<span class="gold-note">+${coins(score.gold)}</span>` : ''}`
+    : run.lastScore ? `Última jugada: +${run.lastScore}` : 'Coloca un dado para ver sus puntos.';
+  $('placed').textContent = `${score.count}/4 dados colocados`;
   const order = orderAt(run.stage);
   $('order').hidden = !order;
   if (order) {
     const done = run.orders.includes(order.key);
     $('order').classList.toggle('fulfilled', done);
     $('order-label').textContent = order.label;
-    $('order-reward').textContent = `${done ? 'Cumplido · ' : ''}+${order.gold} oro`;
+    $('order-reward').innerHTML = `${done ? '<i class="ico i-check" aria-hidden="true"></i>' : ''}+${coins(order.gold)}<span class="sr-only"> de oro${done ? ', cumplido' : ''}</span>`;
   }
-  $('equipped-rail').hidden = !run.powers.length;
+  $('world').classList.toggle('scoring', Boolean(resolution));
+  $('equipped-count').textContent = `${run.powers.length}/${tileLimit}`;
   const equipped = run.powers.join('/');
   if (activePowers.dataset.equipped !== equipped) {
     activePowers.dataset.equipped = equipped;
-    activePowers.innerHTML = run.powers.map((key, index) => `<button type="button" data-power="${index}" aria-label="${powers[key].name}" style="--tile-edge:${rarities[powers[key].rarity].color}"><img src="${tileArt(key).url}" alt=""></button>`).join('');
+    activePowers.innerHTML = run.powers.map((key, index) => `<button type="button" data-power="${index}" aria-label="${powers[key].name}" style="--tile-edge:${rarities[powers[key].rarity].color}"><img src="${tileArt(key).url}" alt=""></button>`).join('') +
+      '<span class="slot-empty" aria-hidden="true"></span>'.repeat(Math.max(0, tileLimit - run.powers.length));
   }
   $('confirm').disabled = $('mobile-confirm').disabled = !ready() || !score.count;
   $('pause').disabled = Boolean(resolution);
@@ -193,6 +280,7 @@ function render() {
 function hint(count) {
   if (resolution) return 'Sumando la jugada…';
   if (lockUntil && run.phase === 'play') return 'Reponiendo los dados jugados…';
+  if (armed >= 0 && run.board[armed]?.stone) return `Toca otra vez la piedra para cincelarla · ${run.chisels === 1 ? 'queda 1 carga' : `quedan ${run.chisels} cargas`}.`;
   if (movable(selected)) {
     const die = at(selected), spec = run.bag[die.id];
     const value = [die.value, hasFace(spec.boost, die.face) && '×2', hasFace(spec.wild, die.face) && '★'].filter(Boolean).join(' ');
@@ -216,6 +304,7 @@ function updateFocus() {
 
 function select(id, force = false) {
   if (!ready() || !movable(id)) return;
+  armed = -1;
   selected = selected === id && !force ? -1 : id;
   note('pick');
   render();
@@ -224,10 +313,12 @@ function select(id, force = false) {
 function applyCell(cell, direct = true) {
   if (!ready() || cell < 0 || cell >= run.board.length) return false;
   const now = performance.now();
+  armed = -1;
   if (direct && run.board[cell]?.stone) {
     const drawn = chip(run, cell);
     if (!drawn) return false;
     note('chip');
+    popup('¡Crac!', [cell], 'mult');
     if (drawn.length && !reducedMotion.matches) lockUntil = now + ROLL_TIME;
     table.sync(run, now, { roll: new Set(reducedMotion.matches ? [] : drawn), dissolve: true });
   } else {
@@ -292,11 +383,12 @@ function positionTooltip(element, anchor) {
 
 function scoreTurn() {
   if (!ready()) return;
+  const gold = run.gold;
   const score = commit(run);
   if (!score) return;
   clearSelection();
   save();
-  resolution = { score, at: 0, next: performance.now(), base: 0, multi: 1, steps: [
+  resolution = { score, gold, at: 0, next: performance.now(), base: 0, multi: 1, steps: [
     ...score.dieSteps.map(step => ({ ...step, phase: 'Dados', time: 330 })),
     ...score.numberSteps.map(step => ({ ...step, phase: 'Combos numéricos', time: 550 })),
     ...score.colorSteps.map(step => ({ ...step, phase: 'Multiplicador', time: 550 })),
@@ -305,7 +397,7 @@ function scoreTurn() {
   ] };
   $('sequence').hidden = false;
   $('sequence-phase').textContent = 'Dados';
-  $('sequence-value').textContent = '0';
+  $('sequence-value').innerHTML = chips(0, 1);
   $('sequence-detail').textContent = '';
   render();
 }
@@ -318,11 +410,18 @@ function scoringFrame(now) {
   if (step.add) resolution.multi += step.add / 100;
   if (step.factor) resolution.multi *= step.factor;
   $('sequence-phase').textContent = step.phase;
-  $('sequence-value').textContent = step.reward ? `+${step.reward} oro` : step.phase === 'Total' ? `+${resolution.score.total}` :
-    step.phase === 'Multiplicador' ? `${resolution.base} × ${decimal(resolution.multi)}` : `${resolution.base}`;
+  $('sequence-value').innerHTML = step.reward ? `<span class="sequence-total gold">+${coins(step.reward)}</span>`
+    : step.phase === 'Total' ? `<span class="sequence-total">+${resolution.score.total}</span>`
+    : chips(resolution.base, resolution.multi, Boolean(step.points), Boolean(step.add || step.factor));
   const bonus = step.points ? ` · +${step.points}` : step.add ? ` · +${decimal(step.add / 100)}×` : step.factor ? ` · ×${decimal(step.factor)}` : '';
-  $('sequence-detail').textContent = step.phase === 'Total' ? `${resolution.score.base} base × ${decimal(resolution.score.multiplier)}` : `${step.name}${bonus}`;
+  $('sequence-detail').textContent = step.phase === 'Total' ? `${resolution.score.base} × ${decimal(resolution.score.multiplier)}`
+    : step.reward ? step.name : `${step.name}${bonus}`;
   table.lightCells(step.cells);
+  if (step.points) popup(`+${step.points}`, step.cells);
+  else if (step.add) popup(`+${decimal(step.add / 100)}×`, step.cells, 'mult');
+  else if (step.factor) popup(`×${decimal(step.factor)}`, step.cells, 'mult');
+  else if (step.reward) popup(`+${step.reward} oro`, [], 'gold');
+  else if (step.phase === 'Total') { popup(`+${resolution.score.total}`, [], 'total'); shake(); }
   if (!reducedMotion.matches || step.phase === 'Total') note(step.phase === 'Total' ? 'score' : step.phase === 'Multiplicador' ? 'color' : 'count');
   resolution.next = now + step.time;
 }
@@ -338,12 +437,17 @@ function finishScore(now = performance.now()) {
   table.sync(run, now, { roll: new Set(animate ? rolled : []) });
   if (animate) note('roll');
   render();
-  if (run.phase !== 'play') showOutcome();
+  if (run.phase === 'play') return;
+  // Let the final board and the banner breathe before opening the next screen.
+  if (run.phase === 'lost') popup(run.board.every(Boolean) && run.turns ? '¡Tablero bloqueado!' : '¡Sin turnos!', [], 'banner defeat');
+  else popup(run.phase === 'won' ? '¡Campaña completada!' : '¡Mosaico completado!', [], 'banner');
+  pendingOutcome = now + (reducedMotion.matches ? 300 : 1500);
 }
 
-function showDialog(mode, content) {
+function showDialog(mode, content, tone = '') {
   cancelPointer();
   modal = mode;
+  dialog.dataset.tone = tone;
   dialog.classList.toggle('collection-dialog', mode === 'collection');
   dialog.innerHTML = content;
   if (!dialog.open) dialog.showModal();
@@ -389,41 +493,44 @@ function help() {
       <li><strong>Mejora la bolsa.</strong> Recibes un dado al pasar de mosaico. En el taller puedes comprar dados, equipar hasta cinco azulejos y usar el horno una vez.</li>
       <li><strong>Dados únicos.</strong> Selecciónalos para leer su poder. Cuentan como cualquier color y sus efectos duran hasta puntuar. Si los mueves, el poder sigue a la nueva casilla.</li>
     </ol>
-    <p>Teclado: 1–4 elige dado, flechas e Intro colocan, Espacio puntúa y Retroceso retira el dado seleccionado.</p>
-    <div class="dialog-actions"><button class="button primary" data-action="back">Volver</button></div>`);
+    <p>Teclado: 1–4 elige dado, flechas e Intro colocan, Espacio puntúa, Retroceso retira el dado seleccionado, V da la vista cenital y R centra la cámara.</p>
+    <div class="dialog-actions"><button class="button primary" data-action="back">¡Entendido!</button></div>`);
 }
 
 function pause() {
-  if (!playing || modal || resolution) return;
-  showDialog('pause', `<h2 id="dialog-title">En pausa</h2><p>Mosaico ${run.stage + 1} · ${stageAt(run.stage).name}</p>
-    <div class="dialog-actions"><button class="button primary" data-action="back">Continuar</button>
-    <button class="button" data-action="help">Cómo jugar</button>
-    ${document.fullscreenEnabled ? '<button class="button" data-action="fullscreen">Pantalla completa</button>' : ''}
-    <button class="button" data-action="title">Volver al inicio</button></div>`);
+  if (!playing || modal || resolution || pendingOutcome) return;
+  showDialog('pause', `<h2 id="dialog-title">Pausa</h2><p class="eyebrow">Mosaico ${run.stage + 1} · ${stageAt(run.stage).name}</p>
+    <div class="dialog-actions"><button class="button primary big" data-action="back"><i class="ico i-play" aria-hidden="true"></i>Continuar</button>
+    <button class="button quiet" data-action="help"><i class="ico i-help" aria-hidden="true"></i>Cómo jugar</button>
+    ${document.fullscreenEnabled ? '<button class="button quiet" data-action="fullscreen"><i class="ico i-expand" aria-hidden="true"></i>Pantalla completa</button>' : ''}
+    <button class="button quiet" data-action="title"><i class="ico i-home" aria-hidden="true"></i>Volver al inicio</button></div>`);
 }
 
 function showOutcome() {
+  pendingOutcome = 0;
   if (run.phase === 'shop') { window.scrollTo(0, 0); market.open(run); return; }
   const total = run.results.reduce((sum, points) => sum + points, 0);
+  const stat = (value, label) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`;
   if (run.phase === 'won') {
-    showDialog('outcome', `<p class="eyebrow">${campaignLength} de ${campaignLength} mosaicos</p><h2 id="dialog-title">Campaña completada</h2>
-      <p>${total} puntos en la campaña · ${run.orders.length} encargos cumplidos</p>
-      <div class="dialog-actions"><button class="button primary" data-action="endless">Seguir en modo libre</button>
-      <button class="button" data-action="collection">Ver bolsa y azulejos</button>
-      <button class="button" data-action="title">Volver al inicio</button></div>`);
+    showDialog('outcome', `<h2 id="dialog-title">¡Campaña completada!</h2><p class="eyebrow">${campaignLength} de ${campaignLength} mosaicos</p>
+      <div class="stat-row">${stat(total, 'Puntos')}${stat(run.orders.length, 'Encargos')}</div>
+      <div class="dialog-actions"><button class="button primary big" data-action="endless"><i class="ico i-play" aria-hidden="true"></i>Modo libre</button>
+      <button class="button quiet" data-action="collection"><i class="ico i-bag" aria-hidden="true"></i>Ver bolsa y azulejos</button>
+      <button class="button quiet" data-action="title"><i class="ico i-home" aria-hidden="true"></i>Volver al inicio</button></div>`, 'victory');
     return;
   }
-  const heading = run.turns && run.board.every(Boolean) ? 'Tablero bloqueado' : 'Se acabaron los turnos';
-  showDialog('outcome', `<h2 id="dialog-title">${heading}</h2><p>Mosaico ${run.stage + 1}${run.endless ? '' : ` de ${campaignLength}`} · ${run.points} de ${run.goal} puntos.</p>
-    <p>${total + run.points} puntos en la partida.</p><div class="dialog-actions"><button class="button primary" data-action="restart">Volver a jugar</button>
-    <button class="button" data-action="collection">Ver bolsa y azulejos</button>
-    <button class="button" data-action="title">Volver al inicio</button></div>`);
+  const heading = run.turns && run.board.every(Boolean) ? 'Tablero bloqueado' : 'Sin turnos';
+  showDialog('outcome', `<h2 id="dialog-title">${heading}</h2><p class="eyebrow">Mosaico ${run.stage + 1}${run.endless ? '' : ` de ${campaignLength}`} · ${stageAt(run.stage).name}</p>
+    <div class="stat-row">${stat(`${run.points}/${run.goal}`, 'Este mosaico')}${stat(total + run.points, 'Total partida')}</div>
+    <div class="dialog-actions"><button class="button primary big" data-action="restart"><i class="ico i-refresh" aria-hidden="true"></i>Volver a jugar</button>
+    <button class="button quiet" data-action="collection"><i class="ico i-bag" aria-hidden="true"></i>Ver bolsa y azulejos</button>
+    <button class="button quiet" data-action="title"><i class="ico i-home" aria-hidden="true"></i>Volver al inicio</button></div>`, 'defeat');
 }
 
 function back() {
   closeDialog();
   if (playing) {
-    if (!lockUntil && run.phase !== 'play') showOutcome();
+    if (!lockUntil && !pendingOutcome && run.phase !== 'play') showOutcome();
     else { render(); canvas.focus({ preventScroll: true }); }
   }
 }
@@ -470,12 +577,14 @@ canvas.addEventListener('pointerdown', event => {
   const target = table.pick(event.clientX, event.clientY);
   if (target >= POWER && event.button === 0) { showPower(target - POWER, true); return; }
   showPower(-1);
-  const orbit = event.button === 2 || event.pointerType === 'touch' && target < 0;
+  const touch = event.pointerType !== 'mouse';
+  const orbit = event.button === 2 || touch && target < 0;
+  if (armed >= 0 && target !== armed) { armed = -1; render(); }
   if (!orbit && (!ready() || target < 0)) return;
   canvas.focus({ preventScroll: true });
   focused = -1;
   hovered = target;
-  pointer = { id: event.pointerId, orbit, target, movable: !orbit && movable(target), x: event.clientX, y: event.clientY, drag: false };
+  pointer = { id: event.pointerId, orbit, touch, target, movable: !orbit && movable(target), x: event.clientX, y: event.clientY, drag: false, moved: false };
   canvas.setPointerCapture(event.pointerId);
   if (orbit) canvas.style.cursor = 'grabbing';
   updateFocus();
@@ -494,6 +603,18 @@ canvas.addEventListener('pointermove', event => {
     if (pointer.movable && (pointer.drag || Math.hypot(dx, dy) > 6) && ready()) {
       if (!pointer.drag) { pointer.drag = true; select(pointer.target, true); }
       table.drag(at(pointer.target), event.clientX, event.clientY);
+    } else if (!pointer.movable && Math.hypot(dx, dy) > TAP_SLOP) {
+      // A slide that starts on a stone or an empty cell is never a tap, so it can't spend a chisel charge.
+      pointer.moved = true;
+      if (pointer.touch) {
+        // On touch screens the slide rotates the camera instead.
+        pointer.orbit = true;
+        pointer.x = event.clientX;
+        pointer.y = event.clientY;
+        armed = -1;
+        updateFocus();
+        return;
+      }
     }
   }
   focused = -1;
@@ -510,11 +631,25 @@ canvas.addEventListener('pointerup', event => {
   const gesture = pointer;
   pointer = null;
   if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-  if (!gesture.orbit && ready()) {
+  if (!gesture.orbit && !gesture.moved && ready()) {
+    const stone = gesture.target >= 0 && gesture.target < HAND && Boolean(run.board[gesture.target]?.stone);
+    const wasArmed = armed;
+    const confirmed = wasArmed === gesture.target;
+    armed = -1;
+    if (wasArmed >= 0 && !confirmed) render();
     if (gesture.drag) {
       const target = table.pick(event.clientX, event.clientY, selected >= HAND);
       const accepted = target >= HAND && target < POWER ? returnDie() : applyCell(target, false);
       if (!accepted) table.sync(run, performance.now());
+    } else if (stone && gesture.touch && !confirmed) {
+      // Touch screens have no hover preview, so the first tap only arms the stone.
+      selected = -1;
+      if (run.chisels) {
+        armed = focused = gesture.target;
+        note('pick');
+      }
+      render();
+      if (!run.chisels) $('hint').textContent = 'Has agotado las cargas del cincel.';
     } else if (gesture.target >= HAND && !gesture.movable && selected < HAND) {
       returnDie();
     } else if (gesture.target < HAND && selected >= HAND && canTarget(gesture.target)) {
@@ -543,7 +678,8 @@ document.addEventListener('keydown', event => {
   }
   if (event.key === 'Escape' && playing && !modal) {
     if (resolution) finishScore();
-    else if (selected >= 0 || tooltip >= 0) { cancelPointer(); clearSelection(); render(); }
+    else if (pendingOutcome) pendingOutcome = 1;
+    else if (selected >= 0 || tooltip >= 0 || armed >= 0) { cancelPointer(); clearSelection(); render(); }
     else pause();
     return;
   }
@@ -586,8 +722,8 @@ $('play').addEventListener('click', () => {
   if (ongoing()) { save(); enter(); } else startRun();
 });
 $('new').addEventListener('click', () => showDialog('restart', `<h2 id="dialog-title">¿Empezar de nuevo?</h2>
-  <p>La partida volverá al primer mosaico.</p><div class="dialog-actions"><button class="button primary" data-action="restart">Nueva partida</button>
-  <button class="button" data-action="back">Cancelar</button></div>`));
+  <p>La partida actual se perderá y volverás al primer mosaico.</p><div class="dialog-actions"><button class="button danger big" data-action="restart"><i class="ico i-refresh" aria-hidden="true"></i>Nueva partida</button>
+  <button class="button quiet" data-action="back">Cancelar</button></div>`, 'defeat'));
 document.querySelector('[data-help]').addEventListener('click', help);
 $('pause').addEventListener('click', pause);
 $('top').addEventListener('click', () => table.top());
@@ -621,10 +757,16 @@ $('sound').addEventListener('click', () => {
   render();
 });
 
+$('world').addEventListener('animationend', event => {
+  if (event.target === event.currentTarget) event.currentTarget.classList.remove('shake');
+});
+
 function frame(now) {
+  if (counters.size) tickCounters(now);
   if (playing) {
     if (resolution) scoringFrame(now);
     if (lockUntil && now >= lockUntil) { lockUntil = 0; render(); }
+    if (pendingOutcome && now >= pendingOutcome && !modal) showOutcome();
     if (!modal) { table.frame(now); positionPower(); }
     else market?.frame(now);
   }
