@@ -1654,28 +1654,21 @@ dialog .eyebrow {
 
 /* ==========================================================================
    Workshop (El Taller / Horno)
-   Mediterranean Artisan Bottega
+   Mediterranean Artisan Bottega & Altar
    ========================================================================== */
 
 .workshop-open {
-  height: 100%;
-  height: 100dvh;
-  max-height: 100dvh;
-  overflow: hidden;
+  height: auto;
+  min-height: 100svh;
 }
 .workshop-open .game-header, .workshop-open .resource-bar { display: none !important; }
 
 .workshop-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  height: 100dvh;
-  max-height: 100dvh;
-  overflow: hidden;
-  gap: 10px;
+  display: grid;
+  gap: 6px;
   width: min(100%, 1060px);
   margin-inline: auto;
-  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  padding-bottom: 8px;
   color: var(--ink);
 }
 
@@ -1684,8 +1677,7 @@ dialog .eyebrow {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  flex: 0 0 auto;
-  padding: 6px 9px;
+  padding: 4px 8px;
 }
 .workshop-ribbon { margin-left: 0; }
 .workshop-header h2:focus { outline: none; }
@@ -1694,7 +1686,7 @@ dialog .eyebrow {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 14px 5px 7px;
+  padding: 4px 12px 4px 6px;
   border: 1.5px solid var(--sand-400);
   border-radius: 9px;
   background: var(--tile-bg);
@@ -1713,169 +1705,425 @@ dialog .eyebrow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 7px;
-  flex: 0 0 auto;
+  gap: 8px;
 }
 .workshop-tabs .tab-end { margin-left: auto; }
 .tag {
   padding: 2px 6px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.16);
-  font: 800 9.5px/1.2 var(--ui);
+  font: 800 10px/1.2 var(--ui);
   letter-spacing: .08em;
   text-transform: uppercase;
 }
 
+/* 3D Workshop Showroom Altar */
 .workshop-stage {
   position: relative;
-  flex: 1 1 0;
-  min-height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 6px solid var(--sand-100);
-  border-radius: 12px;
+  height: clamp(165px, 23svh, 230px);
+  overflow: hidden;
+  border: 5px solid var(--sand-100);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
   background:
-    radial-gradient(circle at 50% 40%, rgba(255, 220, 160, 0.08), transparent 60%),
-    linear-gradient(#963d1a, #6e2508);
+    radial-gradient(circle at 50% 35%, rgba(255, 220, 160, 0.1), transparent 65%),
+    linear-gradient(180deg, #963d1a 0%, #6e2508 100%);
   box-shadow:
-    0 0 0 1.5px var(--sand-400),
-    0 3px 0 var(--sand-edge),
-    0 16px 30px -8px rgba(40, 14, 3, 0.75);
+    0 0 0 1.5px var(--gold-base),
+    0 0 0 3px var(--sand-edge),
+    0 16px 32px -8px rgba(35, 12, 2, 0.8);
+}
+.workshop-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .workshop-stage::after {
   content: '';
   position: absolute;
+  z-index: 1;
   inset: 0;
-  border-radius: 6px;
+  border-radius: 8px 8px 0 0;
   pointer-events: none;
   box-shadow:
-    inset 0 0 0 1.5px var(--cobalt-base),
-    inset 0 0 0 3px var(--gold-bright),
-    inset 0 0 28px rgba(10, 4, 0, 0.45);
+    inset 0 0 0 2px var(--cobalt-base),
+    inset 0 0 0 4px var(--gold-bright),
+    inset 0 0 0 6px var(--sand-100),
+    inset 0 0 40px rgba(25, 8, 2, 0.55);
 }
 
+.workshop-stage.forge-scene {
+  height: clamp(160px, 22svh, 220px);
+  border-bottom: 5px solid var(--sand-100);
+  border-radius: 14px;
+}
+.workshop-stage.forge-scene::after {
+  border-radius: 8px;
+}
+.forge-scene canvas { touch-action: none; }
+
+/* 3D Exhibit Buttons (Projected by taller.js anchors) */
 .exhibits {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: clamp(10px, 3vw, 24px);
-  width: 100%;
-  padding-inline: 12px;
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
 }
 .exhibit {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  height: 94px;
-  min-width: 68px;
-  cursor: pointer;
+  position: absolute;
+  width: clamp(86px, 24%, 130px);
+  height: clamp(90px, 13vw, 150px);
+  transform: translate(-50%, -49%);
   border: 0;
+  border-radius: 12px;
   background: transparent;
-  color: #fff9ed;
-  transition: transform .12s ease;
+  color: var(--ink);
+  text-align: center;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transition: box-shadow .15s ease, background .15s ease;
 }
-.exhibit:hover { transform: translateY(-3px); }
-.exhibit:focus-visible { outline: 3px solid var(--gold-bright); border-radius: 6px; }
+.exhibit:not(:disabled):is(:hover, [aria-pressed="true"]) {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--rarity) 28%, transparent), transparent);
+  box-shadow: 0 0 0 2px var(--rarity), 0 0 28px color-mix(in srgb, var(--rarity) 60%, transparent);
+}
+.exhibit:disabled { cursor: default; opacity: .7; }
 .exhibit > span {
   position: absolute;
-  inset: auto 0 -6px;
-  padding: 5px 4px 6px;
-  border-radius: 6px;
-  background: var(--glaze-btn), linear-gradient(176deg, #2b70d4, #1752b0 60%, #0b347b);
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max(100%, 102px);
+  max-width: 140px;
+  display: grid;
+  gap: 2px;
+  padding: 5px 6px;
+  border: 1.5px solid var(--sand-400);
+  border-radius: 7px;
+  background: var(--tile-bg);
   box-shadow:
-    inset 0 0 0 1px var(--cobalt-light),
-    0 2px 0 var(--cobalt-deep),
-    0 6px 12px rgba(0, 0, 0, 0.5);
-  font: 700 12.5px/1 var(--ui);
-  text-align: center;
+    inset 0 0 0 2px var(--sand-100),
+    inset 0 0 0 3.5px var(--rarity, var(--cobalt-soft)),
+    0 2px 0 var(--sand-edge),
+    0 8px 16px -6px rgba(10, 4, 0, 0.7);
+}
+.exhibit strong {
+  display: block;
+  overflow: hidden;
+  color: var(--cobalt-deep);
+  font: italic 600 clamp(11.5px, 1.25vw, 15px)/1.15 var(--display);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .exhibit small {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  color: var(--gold-shimmer);
-  font-weight: 800;
-  font-size: 11.5px;
+  gap: 6px;
+  color: var(--gold-dark);
+  font: 700 clamp(12px, 1.2vw, 15px)/1 var(--display);
+}
+.exhibit small .rarity-name {
+  color: var(--rarity-ink, var(--ink-soft));
+  font: 800 9.5px/1 var(--ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.exhibit.inspect {
+  height: clamp(100px, 17vw, 200px);
+  transform: translate(-50%, -56%);
 }
 
-.exhibit.inspect { height: 128px; }
 .effect-inspect {
-  height: 64px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--tile-bg);
-  box-shadow:
-    inset 0 0 0 2px var(--sand-100),
-    inset 0 0 0 3.5px var(--cobalt-soft),
-    0 2px 0 var(--sand-edge);
+  width: clamp(100px, 28%, 160px);
+  height: clamp(54px, 8.5vw, 84px);
+  transform: translate(-50%, -48%);
+}
+.effect-inspect > span {
+  inset: 4px;
+  align-content: center;
 }
 
+.scene-unavailable { height: auto; min-height: 60px; }
+.scene-unavailable .exhibits {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+}
+.scene-unavailable .exhibit {
+  position: static;
+  width: auto;
+  height: auto;
+  min-width: 140px;
+  min-height: 64px;
+  transform: none;
+}
+.scene-unavailable .exhibit > span { position: static; }
+
+/* Die Inspection Plaque (Attached directly under .workshop-stage) */
 .die-inspect {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 52px;
   gap: 12px;
-  padding: 8px 14px;
-  border-radius: 8px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--sand-400);
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
   background: var(--tile-bg);
   box-shadow:
-    inset 0 0 0 2px var(--sand-100),
-    inset 0 0 0 3.5px var(--cobalt-soft),
-    0 2px 0 var(--sand-edge);
+    inset 0 0 0 3px var(--sand-100),
+    inset 0 0 0 4.5px var(--cobalt-soft),
+    0 3px 0 var(--sand-edge),
+    0 12px 24px -6px rgba(45, 16, 5, 0.65);
+}
+.die-inspect p {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.3;
+  margin: 0;
+}
+.die-inspect strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--cobalt-deep);
+  font: italic 600 18px/1.1 var(--display);
+}
+.die-inspect small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.die-inspect .button {
+  flex: none;
+  min-height: 40px;
+  padding-inline: 18px;
+  font-size: 17px;
+}
+.die-inspect .face-list { margin-top: 3px; }
+
+/* Tile Inspection Area (Attached under .tile-racks) */
+.tile-details {
+  min-height: 52px;
+  padding: 8px 16px;
+}
+.tile-inspection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tile-inspection img {
+  width: 46px;
+  height: 46px;
+  border-radius: 6px;
+  box-shadow: 0 2px 0 var(--sand-edge);
+  flex: none;
+}
+.tile-inspection strong {
+  display: block;
+  font: italic 600 18px/1.1 var(--display);
+}
+.tile-inspection p {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.25;
 }
 
-.tile-racks {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  flex: 0 0 auto;
-}
-.tile-rack {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1.5px solid var(--sand-400);
-  border-radius: 10px;
-  background: var(--corners), var(--tile-bg);
-  box-shadow:
-    inset 0 0 0 2px var(--sand-100),
-    inset 0 0 0 3.5px var(--cobalt-soft),
-    0 2px 0 var(--sand-edge);
-}
+/* Azulejo Power Tiles Section */
 .shop-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 0;
+  margin-top: 2px;
+}
+.tile-racks {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
   gap: 8px;
 }
-.shop-tile {
-  aspect-ratio: 1;
-  border: 0;
-  border-radius: 7px;
-  padding: 0;
-  overflow: hidden;
-  background: var(--sand-200);
+.rack {
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1.5px solid var(--sand-400);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--tile-bg);
   box-shadow:
-    0 0 0 2px var(--rarity, var(--cobalt-soft)),
-    0 2px 0 var(--sand-edge),
-    0 6px 10px -3px rgba(45, 16, 5, 0.5);
+    inset 0 0 0 3px var(--sand-100),
+    inset 0 0 0 4.5px var(--cobalt-soft),
+    0 1px 0 var(--sand-300);
+}
+.rack h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--cobalt-base);
+  font: italic 600 18px/1.1 var(--display);
+}
+.rack h3 .panel-count {
+  font-size: 13px;
+  font-style: normal;
+}
+.tile-rack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 8px;
+  min-height: 52px;
+}
+.shop-tile, .tile-rack .slot-empty {
+  width: clamp(50px, 7.5vw, 64px);
+}
+.shop-tile {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gold-dark);
   cursor: pointer;
   transition: transform .12s ease;
 }
-.shop-tile:hover { transform: translateY(-2px); }
-.shop-tile img { display: block; width: 100%; height: 100%; }
-
-.workshop-footer {
+.shop-tile:is(:hover, [aria-pressed="true"]) { transform: translateY(-3px); }
+.shop-tile img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--rarity, var(--cobalt-soft)), 0 2px 0 var(--sand-edge), 0 6px 10px -4px rgba(45, 16, 4, .6);
+}
+.shop-tile[aria-pressed="true"] img {
+  box-shadow: 0 0 0 2.5px var(--sand-100), 0 0 0 4.5px var(--cobalt-vivid), 0 8px 16px -4px rgba(17, 72, 150, .7);
+}
+.shop-tile small {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 14.5px/1 var(--display);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.empty-rack {
+  color: var(--ink-soft);
+  font: italic 500 15px var(--ui);
+}
+}
+.tile-feedback {
+  margin-top: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--tile-bg);
+  color: #2e5917;
+  font-weight: 700;
+  box-shadow: inset 4px 0 0 #528020, 0 2px 0 var(--sand-edge);
+}
+
+/* Horno / Kiln Recipes & Altar */
+.recipe-heading {
+  display: grid;
+  gap: 5px;
+  padding: 4px 4px 0;
+  text-align: center;
+}
+.recipe-heading h3 {
+  color: #fffdf5;
+  font: italic 600 clamp(26px, 3vw, 34px)/1.05 var(--display);
+  text-shadow: 0 2px 8px rgba(40, 12, 2, .85);
+}
+.recipe-heading p {
+  color: var(--sand-100);
+  font: italic 500 16px/1.4 var(--ui);
+  text-shadow: 0 1px 4px rgba(40, 12, 2, .8);
+}
+.forge-candidates, .forge-slots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.forge-slots { align-items: center; }
+.forge-slots > strong {
+  color: #fffdf5;
+  font: italic 600 22px/1 var(--display);
+  text-shadow: 0 2px 6px rgba(40, 12, 2, .7);
+}
+.forge-slots .face-list { margin-top: 0; }
+.forge-candidates small { opacity: .85; font: 600 13px var(--ui); }
+.forge-hint {
+  min-height: 24px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--sand-400);
+  border-radius: 8px;
+  background: var(--tile-bg);
+  color: var(--ink);
+  font: italic 500 16px/1.35 var(--ui);
+  text-align: center;
+  box-shadow:
+    inset 0 0 0 3px var(--sand-100),
+    inset 0 0 0 4px var(--cobalt-soft),
+    0 2px 0 var(--sand-edge);
+}
+.dye-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fffdf5;
+  font: italic 600 18px/1 var(--display);
+  text-shadow: 0 1px 4px rgba(40, 12, 2, .8);
+}
+.dye-label select {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--sand-400);
+  border-radius: 7px;
+  background: var(--sand-100);
+  color: var(--cobalt-deep);
+  font: 700 15px var(--ui);
+}
+
+/* Workshop Footer */
+.shop-foot, .workshop-footer {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(110, 88, 67, 0.4);
+}
+.workshop-next {
+  display: flex;
   align-items: center;
   gap: 12px;
-  flex: 0 0 auto;
+}
+.goal-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: var(--tile-bg);
+  color: var(--cobalt-base);
+  font: italic 600 18px/1 var(--display);
+  white-space: nowrap;
+  box-shadow:
+    inset 0 0 0 2.5px var(--sand-100),
+    inset 0 0 0 3.5px var(--cobalt-soft),
+    0 2px 0 var(--sand-edge);
+}
+.goal-pill .ico {
+  color: var(--gold-bright);
+  width: 18px;
+  height: 18px;
 }
 
 /* ==========================================================================
@@ -2222,46 +2470,111 @@ dialog .eyebrow {
     transform: translateY(0);
   }
 
-  /* Workshop on Mobile: strictly 100dvh */
+  /* Workshop on Mobile: strictly 100dvh zero scroll */
+  .workshop-open {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+  }
   .workshop-view {
-    height: 100dvh;
-    max-height: 100dvh;
-    padding: 6px 8px max(8px, env(safe-area-inset-bottom));
-    gap: 6px;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+    gap: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
   .workshop-header {
-    padding: 4px 6px;
+    padding: 3px 6px;
     background-size: 46px 46px, auto;
+    flex: 0 0 auto;
   }
   .purse { padding: 3px 10px 3px 5px; }
   .purse strong { font-size: 20px; }
-  .workshop-tabs .button { flex: 1; padding-inline: 6px; font-size: 14px; min-height: 36px; }
+  .workshop-tabs { flex: 0 0 auto; gap: 6px; }
+  .workshop-tabs .button { flex: 1; padding-inline: 6px; font-size: 13.5px; min-height: 34px; }
   .workshop-tabs .tab-end { flex: 0 0 auto; margin-left: 0; }
   .workshop-stage {
-    min-height: 130px;
-    max-height: 24svh;
+    flex: 0 0 auto;
+    height: clamp(135px, 21svh, 175px);
     border-width: 4px;
+    border-bottom: 0;
   }
   .workshop-stage.forge-scene {
-    min-height: 140px;
-    max-height: 25svh;
+    height: clamp(140px, 22svh, 180px);
+    border-bottom: 4px solid var(--sand-100);
   }
-  .exhibit { height: 76px; }
-  .exhibit.inspect { height: 104px; }
-  .exhibit > span { inset: auto 0 -4px; padding: 4px 3px 5px; }
+  .exhibit { height: 74px; width: clamp(86px, 26%, 110px); }
+  .exhibit.inspect { height: 102px; }
+  .exhibit > span {
+    inset: auto auto -4px 50%;
+    transform: translateX(-50%);
+    width: max(100%, 94px);
+    max-width: 108px;
+    padding: 3px 4px 4px;
+  }
+  .exhibit strong { font-size: 12px; line-height: 1.1; }
+  .exhibit small { font-size: 12px; }
   .exhibit small .rarity-name { display: none; }
-  .effect-inspect { height: 50px; }
+  .effect-inspect { height: 48px; width: clamp(92px, 30%, 120px); }
   .die-inspect {
+    flex: 0 0 auto;
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
-    min-height: 54px;
-    padding: 8px 12px;
+    gap: 6px;
+    min-height: 48px;
+    padding: 6px 10px;
+    border-top: 0;
   }
-  .tile-racks { grid-template-columns: minmax(0, 1fr); max-height: 170px; }
-  .workshop-footer { flex-wrap: wrap; gap: 8px; }
-  .workshop-next { flex: 1 1 100%; justify-content: space-between; order: -1; }
-  .workshop-next .button { flex: 1; }
+  .die-inspect strong { font-size: 16px; }
+  .die-inspect p { font-size: 13.5px; }
+  .die-inspect .button { min-height: 36px; font-size: 15px; }
+  .shop-tiles {
+    flex: 0 0 auto;
+  }
+  .tile-racks {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+  .rack {
+    padding: 6px 8px;
+    border-radius: 8px 8px 0 0;
+  }
+  .rack h3 {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .shop-tile, .tile-rack .slot-empty {
+    width: clamp(38px, 10vw, 48px);
+  }
+  .tile-details {
+    min-height: 46px;
+    padding: 6px 10px;
+    border-radius: 0 0 8px 8px;
+  }
+  .tile-inspection img {
+    width: 36px;
+    height: 36px;
+  }
+  .tile-inspection strong { font-size: 15px; }
+  .tile-inspection p { font-size: 13px; }
+  .tile-details .button { min-height: 36px; font-size: 15px; }
+  .workshop-footer {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding-top: 6px;
+    margin-top: 2px;
+  }
+  .workshop-next {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    order: -1;
+  }
+  .workshop-next .button { flex: 1; min-height: 40px; font-size: 17px; }
+  .workshop-footer > .button { flex: 1; min-height: 36px; font-size: 14px; }
   .workshop-footer > .button { flex: 1; }
 
   dialog { padding: 24px 16px 20px; }
