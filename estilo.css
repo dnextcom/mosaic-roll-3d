@@ -1035,16 +1035,16 @@ progress::-moz-progress-bar {
   z-index: 99999;
   pointer-events: none;
   width: max-content;
-  max-width: min(290px, calc(100vw - 20px));
-  padding: 8px 12px 9px;
+  max-width: min(320px, calc(100vw - 20px));
+  padding: 10px 13px 11px;
   border: 1.5px solid var(--sand-400);
-  border-radius: 9px;
+  border-radius: 11px;
   background: var(--tile-bg);
   box-shadow:
     inset 0 0 0 2px var(--sand-100),
     inset 0 0 0 3.5px var(--cobalt-soft),
     0 3px 0 var(--sand-edge),
-    0 12px 28px -4px rgba(25, 8, 2, 0.75);
+    0 14px 30px -4px rgba(25, 8, 2, 0.75);
   color: var(--ink);
   opacity: 0;
   transform: translateY(4px);
@@ -1054,18 +1054,110 @@ progress::-moz-progress-bar {
   opacity: 1;
   transform: translateY(0);
 }
+.float-tooltip.is-interactive {
+  pointer-events: auto;
+}
 .float-tooltip-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   color: var(--cobalt-deep);
   font: italic 600 16px/1.2 var(--display);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+}
+.float-tooltip-body {
+  font: 500 13px/1.35 var(--ui);
+  color: var(--ink);
 }
 .float-tooltip-desc {
   font: 500 13px/1.35 var(--ui);
   color: var(--ink);
   margin: 0;
+}
+.tip-rarity-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font: 700 11px/1.35 var(--ui);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--tag-bg, var(--sand-300));
+  color: var(--tag-ink, var(--cobalt-deep));
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+}
+.tip-die-faces {
+  margin: 6px 0 4px;
+}
+.tip-die-faces .face-list {
+  display: flex;
+  gap: 3.5px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+.tip-die-faces .face-list > span {
+  min-width: 23px;
+  padding: 3px 5px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+.tip-subtext {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.tip-extra {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.tip-tile-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 5px 0 2px;
+}
+.tip-tile-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  flex: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  border: 1.5px solid var(--sand-400);
+}
+.tip-tile-desc {
+  margin: 0;
+  font: 500 13px/1.35 var(--ui);
+  color: var(--ink);
+}
+.float-tooltip-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px dashed rgba(110, 88, 67, 0.35);
+}
+.tip-action-btn {
+  min-height: 33px;
+  padding: 4px 14px;
+  font-size: 14.5px;
+  font-weight: 700;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tip-status-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font: 700 12px/1 var(--ui);
+  background: var(--sand-300);
+  color: var(--ink-soft);
 }
 .float-tooltip-arrow {
   position: absolute;
@@ -1784,8 +1876,7 @@ dialog .eyebrow {
   height: clamp(165px, 23svh, 230px);
   overflow: hidden;
   border: 5px solid var(--sand-100);
-  border-bottom: 0;
-  border-radius: 14px 14px 0 0;
+  border-radius: 14px;
   background:
     radial-gradient(circle at 50% 35%, rgba(255, 220, 160, 0.1), transparent 65%),
     linear-gradient(180deg, #963d1a 0%, #6e2508 100%);
@@ -1804,7 +1895,7 @@ dialog .eyebrow {
   position: absolute;
   z-index: 1;
   inset: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
   pointer-events: none;
   box-shadow:
     inset 0 0 0 2px var(--cobalt-base),
@@ -1924,84 +2015,17 @@ dialog .eyebrow {
 }
 .scene-unavailable .exhibit > span { position: static; }
 
-/* Die Inspection Plaque (Attached directly under .workshop-stage) */
-.die-inspect {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 52px;
-  gap: 12px;
-  padding: 8px 16px;
-  border: 1.5px solid var(--sand-400);
-  border-top: 0;
-  border-radius: 0 0 14px 14px;
-  background: var(--tile-bg);
-  box-shadow:
-    inset 0 0 0 3px var(--sand-100),
-    inset 0 0 0 4.5px var(--cobalt-soft),
-    0 3px 0 var(--sand-edge),
-    0 12px 24px -6px rgba(45, 16, 5, 0.65);
-}
-.die-inspect p {
-  color: var(--ink);
-  font-size: 15px;
-  line-height: 1.3;
-  margin: 0;
-}
-.die-inspect strong {
-  display: block;
-  margin-bottom: 2px;
-  color: var(--cobalt-deep);
-  font: italic 600 18px/1.1 var(--display);
-}
-.die-inspect small {
-  display: block;
-  margin-top: 4px;
-  color: var(--ink-soft);
-  font-size: 13.5px;
-  font-weight: 700;
-}
-.die-inspect .button {
-  flex: none;
-  min-height: 40px;
-  padding-inline: 18px;
-  font-size: 17px;
-}
-.die-inspect .face-list { margin-top: 3px; }
-
-/* Tile Inspection Area (Attached under .tile-racks) */
+/* Die & Tile Outside Inspection Plaques are moved into the floating tooltip */
+.die-inspect,
 .tile-details {
-  min-height: 52px;
-  padding: 8px 16px;
-}
-.tile-inspection {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.tile-inspection img {
-  width: 46px;
-  height: 46px;
-  border-radius: 6px;
-  box-shadow: 0 2px 0 var(--sand-edge);
-  flex: none;
-}
-.tile-inspection strong {
-  display: block;
-  font: italic 600 18px/1.1 var(--display);
-}
-.tile-inspection p {
-  margin: 2px 0 0;
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.25;
+  display: none !important;
 }
 
 /* Azulejo Power Tiles Section */
 .shop-tiles {
   display: grid;
   gap: 0;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 .tile-racks {
   display: grid;
@@ -2012,13 +2036,12 @@ dialog .eyebrow {
   min-width: 0;
   padding: 10px 14px;
   border: 1.5px solid var(--sand-400);
-  border-bottom: 0;
-  border-radius: 12px 12px 0 0;
+  border-radius: 12px;
   background: var(--tile-bg);
   box-shadow:
     inset 0 0 0 3px var(--sand-100),
     inset 0 0 0 4.5px var(--cobalt-soft),
-    0 1px 0 var(--sand-300);
+    0 2px 0 var(--sand-edge);
 }
 .rack h3 {
   display: flex;
@@ -2602,9 +2625,9 @@ dialog .eyebrow {
   .workshop-tabs .tab-end { flex: 0 0 auto; margin-left: 0; }
   .workshop-stage {
     flex: 0 0 auto;
-    height: clamp(135px, 21svh, 175px);
+    height: clamp(140px, 22svh, 185px);
     border-width: 4px;
-    border-bottom: 0;
+    border-radius: 12px;
   }
   .workshop-stage.forge-scene {
     height: clamp(140px, 22svh, 180px);
@@ -2623,48 +2646,25 @@ dialog .eyebrow {
   .exhibit small { font-size: 12px; }
   .exhibit small .rarity-name { display: none; }
   .effect-inspect { height: 48px; width: clamp(92px, 30%, 120px); }
-  .die-inspect {
-    flex: 0 0 auto;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    min-height: 48px;
-    padding: 6px 10px;
-    border-top: 0;
-  }
-  .die-inspect strong { font-size: 16px; }
-  .die-inspect p { font-size: 13.5px; }
-  .die-inspect .button { min-height: 36px; font-size: 15px; }
   .shop-tiles {
     flex: 0 0 auto;
+    margin-top: 2px;
   }
   .tile-racks {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 6px;
   }
   .rack {
-    padding: 6px 8px;
-    border-radius: 8px 8px 0 0;
+    padding: 8px 10px;
+    border-radius: 10px;
   }
   .rack h3 {
-    font-size: 13px;
-    margin-bottom: 4px;
+    font-size: 13.5px;
+    margin-bottom: 5px;
   }
   .shop-tile, .tile-rack .slot-empty {
     width: clamp(38px, 10vw, 48px);
   }
-  .tile-details {
-    min-height: 46px;
-    padding: 6px 10px;
-    border-radius: 0 0 8px 8px;
-  }
-  .tile-inspection img {
-    width: 36px;
-    height: 36px;
-  }
-  .tile-inspection strong { font-size: 15px; }
-  .tile-inspection p { font-size: 13px; }
-  .tile-details .button { min-height: 36px; font-size: 15px; }
   .workshop-footer {
     flex: 0 0 auto;
     flex-wrap: wrap;

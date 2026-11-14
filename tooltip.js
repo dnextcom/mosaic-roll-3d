@@ -1,17 +1,31 @@
-import { powers, rarities, upgrades } from './catalogo.js?v=ceramica-1';
+import { powers, rarities, upgrades, diceName } from './catalogo.js?v=ceramica-1';
+import { canBuy, tileLimit } from './reglas.js?v=ceramica-1';
+import { dieFaces, dieTraits } from './coleccion.js?v=ceramica-1';
+import { tileArt } from './arte.js?v=ceramica-1';
+import { uniqueDice } from './unicos.js?v=ceramica-1';
 
-// Universal Floating Mediterranean Tooltip Engine
+const coins = value => `${value}<i class="coin" aria-hidden="true"></i>`;
+
+// Universal Floating Mediterranean Tooltip Engine with Integrated Details & Actions
 class FloatingTooltipManager {
   constructor() {
     this.tip = document.createElement('div');
     this.tip.className = 'float-tooltip';
     this.tip.setAttribute('role', 'tooltip');
     this.tip.setAttribute('aria-hidden', 'true');
-    this.tip.innerHTML = '<div class="float-tooltip-content"><div class="float-tooltip-title"></div><p class="float-tooltip-desc"></p></div><span class="float-tooltip-arrow"></span>';
+    this.tip.innerHTML = `
+      <div class="float-tooltip-content">
+        <div class="float-tooltip-title"></div>
+        <div class="float-tooltip-body"></div>
+        <div class="float-tooltip-actions" style="display:none"></div>
+      </div>
+      <span class="float-tooltip-arrow"></span>
+    `;
     document.body.appendChild(this.tip);
 
     this.titleEl = this.tip.querySelector('.float-tooltip-title');
-    this.descEl = this.tip.querySelector('.float-tooltip-desc');
+    this.bodyEl = this.tip.querySelector('.float-tooltip-body');
+    this.actionsEl = this.tip.querySelector('.float-tooltip-actions');
     this.arrowEl = this.tip.querySelector('.float-tooltip-arrow');
     this.currentTarget = null;
     this.touchTimer = null;
@@ -31,7 +45,24 @@ class FloatingTooltipManager {
 
     document.addEventListener('pointerout', event => {
       if (event.pointerType === 'touch') return;
+      if (this.currentTarget && !this.currentTarget.contains(event.relatedTarget) && !this.tip.contains(event.relatedTarget)) {
+        this.hide();
+      }
+    });
+
+    this.tip.addEventListener('pointerleave', event => {
+      if (event.pointerType === 'touch') return;
       if (this.currentTarget && !this.currentTarget.contains(event.relatedTarget)) {
+        this.hide();
+      }
+    });
+
+    // Delegate clicks inside the tooltip (Buy, Sell, Choose Recipe buttons)
+    this.tip.addEventListener('click', event => {
+      const button = event.target.closest('[data-market]');
+      if (!button || button.disabled) return;
+      if (window.marketUI) {
+        window.marketUI.click(button);
         this.hide();
       }
     });
@@ -41,12 +72,15 @@ class FloatingTooltipManager {
       if (event.pointerType !== 'touch') return;
       const target = this.findTarget(event.target);
       if (target) {
-        if (this.currentTarget === target) {
+        if (this.currentTarget === target && !this.tip.classList.contains('is-interactive')) {
           this.hide();
         } else {
           this.show(target);
           clearTimeout(this.touchTimer);
-          this.touchTimer = setTimeout(() => this.hide(), 4000);
+          // Only auto-dismiss non-interactive tooltips
+          if (!this.tip.classList.contains('is-interactive')) {
+            this.touchTimer = setTimeout(() => this.hide(), 4000);
+          }
         }
       } else if (!event.target.closest('.float-tooltip')) {
         this.hide();
@@ -59,9 +93,13 @@ class FloatingTooltipManager {
       if (target) this.show(target);
     });
 
-    document.addEventListener('focusout', () => this.hide());
+    document.addEventListener('focusout', event => {
+      if (!this.tip.contains(event.relatedTarget)) {
+        this.hide();
+      }
+    });
 
-    // Window scroll or resize dismisses/repositions
+    // Window scroll or resize reposition
     window.addEventListener('scroll', () => { if (this.currentTarget) this.reposition(); }, { passive: true });
     window.addEventListener('resize', () => { if (this.currentTarget) this.reposition(); }, { passive: true });
   }
@@ -95,6 +133,8 @@ class FloatingTooltipManager {
   }
 
   getInfo(target) {
+    const run = window.marketUI?.run || window.run;
+
     // 1. Explicit data-tooltip
     if (target.dataset.tooltip) {
       return {
@@ -104,11 +144,115 @@ class FloatingTooltipManager {
       };
     }
 
-    // 2. Equipped Azulejos in #active-powers or [data-power]
+    // 2. Dice in the workshop gallery with face details and Buy Button
+    if (target.matches('.exhibit[data-market="inspect"]')) {
+      const index = Number(target.dataset.key);
+      const spec = run?.market?.dice?.[index];
+      if (spec) {
+        const rarity = rarities[spec.rarity];
+        const unique = uniqueDice[spec.unique];
+        const traits = dieTraits(spec);
+        const sold = run.market.purchased.includes(index);
+        const buyable = canBuy(run, 'die', index);
+
+        let actionHtml = '';
+        if (sold) {
+          actionHtml = `<span class="tip-status-tag sold">Comprado</span>`;
+        } else if (buyable) {
+          actionHtml = `<button type="button" class="button primary small tip-action-btn" data-market="die" data-key="${index}">Comprar · ${coins(rarity.price)}</button>`;
+        } else {
+          const reason = run.gold < rarity.price ? 'Falta oro' : 'Bolsa llena';
+          actionHtml = `<button type="button" class="button primary small tip-action-btn" data-market="die" data-key="${index}" disabled>${reason} · ${coins(rarity.price)}</button>`;
+        }
+
+        return {
+          title: `<span class="tip-rarity-pill" style="--tag-bg:${rarity.color};--tag-ink:${rarity.ink}">${rarity.name}</span> <span>${diceName(spec)}</span>`,
+          bodyHtml: `
+            <div class="tip-die-faces">${dieFaces(spec)}</div>
+            ${unique ? `<p class="tip-subtext">${unique.text}</p><small class="tip-extra">Comodín de color · Inmodificable</small>` : traits ? `<p class="tip-subtext">${traits}</p>` : ''}
+          `,
+          actionHtml,
+          ink: rarity.ink,
+          interactive: !sold
+        };
+      }
+    }
+
+    // 3. Shop tiles in workshop with tile image, power details and Buy/Sell Button
+    if (target.matches('.shop-tile')) {
+      const key = target.dataset.key;
+      const p = powers[key];
+      if (p) {
+        const r = rarities[p.rarity];
+        const isOwned = target.dataset.market === 'owned-inspect';
+        const equipped = run?.powers?.includes(key);
+
+        let actionHtml = '';
+        if (isOwned) {
+          const refund = Math.floor(p.price / 2);
+          actionHtml = `<button type="button" class="button quiet small tip-action-btn" data-market="sell" data-key="${key}">Vender · +${coins(refund)}</button>`;
+        } else {
+          const buyable = run ? canBuy(run, 'tile', key) : false;
+          if (equipped) {
+            actionHtml = `<button type="button" class="button small tip-action-btn" disabled>Equipado</button>`;
+          } else if (run && run.powers.length >= tileLimit) {
+            actionHtml = `<button type="button" class="button small tip-action-btn" disabled>Repisa llena (${tileLimit}/${tileLimit})</button>`;
+          } else if (buyable) {
+            actionHtml = `<button type="button" class="button primary small tip-action-btn" data-market="tile" data-key="${key}">Comprar · ${coins(p.price)}</button>`;
+          } else {
+            actionHtml = `<button type="button" class="button primary small tip-action-btn" data-market="tile" data-key="${key}" disabled>Falta oro · ${coins(p.price)}</button>`;
+          }
+        }
+
+        return {
+          title: `<span class="tip-rarity-pill" style="--tag-bg:${r.color};--tag-ink:${r.ink}">${r.name}</span> <span>${p.name}</span>`,
+          bodyHtml: `
+            <div class="tip-tile-preview">
+              <img class="tip-tile-thumb" src="${tileArt(key).url}" alt="">
+              <p class="tip-tile-desc">${p.text}</p>
+            </div>
+          `,
+          actionHtml,
+          ink: r.ink,
+          interactive: true
+        };
+      }
+    }
+
+    // 4. Exhibits in kiln (Horno) with recipe details and Choose Recipe Button
+    if (target.matches('.exhibit[data-market="effect-inspect"]')) {
+      const key = target.dataset.key;
+      const effect = upgrades[key];
+      if (effect) {
+        const usable = run && !run.market.forged && run.gold >= effect.price;
+        const forged = run?.market?.forged;
+
+        let actionHtml = '';
+        if (forged) {
+          actionHtml = `<button type="button" class="button small tip-action-btn" disabled>Horno ya usado</button>`;
+        } else if (usable) {
+          actionHtml = `<button type="button" class="button primary small tip-action-btn" data-market="effect" data-key="${key}">Elegir receta · ${coins(effect.price)}</button>`;
+        } else {
+          actionHtml = `<button type="button" class="button primary small tip-action-btn" data-market="effect" data-key="${key}" disabled>Falta oro · ${coins(effect.price)}</button>`;
+        }
+
+        return {
+          title: `<span>${effect.name}</span>`,
+          bodyHtml: `
+            <p class="tip-tile-desc">${effect.text}</p>
+            <small class="tip-extra">${effect.slots} ${effect.slots === 1 ? 'ranura requerida' : 'ranuras requeridas'}</small>
+          `,
+          actionHtml,
+          interactive: !forged
+        };
+      }
+    }
+
+    // 5. Equipped Azulejos in gameplay [data-power]
     if (target.matches('[data-power]')) {
       const index = Number(target.dataset.power);
       let p = null;
-      const key = window.run?.powers?.[index];
+      const key = run?.powers?.[index];
       if (key && powers[key]) {
         p = powers[key];
       } else {
@@ -118,9 +262,8 @@ class FloatingTooltipManager {
       if (p) {
         const r = rarities[p.rarity];
         return {
-          title: p.name,
-          desc: `${r.name} · ${p.text}`,
-          color: r.color,
+          title: `<span class="tip-rarity-pill" style="--tag-bg:${r.color};--tag-ink:${r.ink}">${r.name}</span> <span>${p.name}</span>`,
+          bodyHtml: `<p class="tip-tile-desc">${p.text}</p>`,
           ink: r.ink
         };
       }
@@ -128,38 +271,8 @@ class FloatingTooltipManager {
       if (label) return { title: label, desc: 'Azulejo de poder equipado.' };
     }
 
-    // 3. Shop tiles in workshop
-    if (target.matches('.shop-tile')) {
-      const key = target.dataset.key;
-      let p = powers[key];
-      if (!p) {
-        const label = target.getAttribute('aria-label') || '';
-        const namePart = label.split('·')[0].trim();
-        p = Object.values(powers).find(item => item.name === namePart);
-      }
-      if (p) {
-        const r = rarities[p.rarity];
-        const isOwned = target.dataset.market === 'owned-inspect';
-        const priceInfo = isOwned ? `(Equipado · Venta por ${Math.floor(p.price / 2)} oro)` : `(${p.price} monedas de oro)`;
-        return {
-          title: p.name,
-          desc: `${r.name} · ${p.text} ${priceInfo}`,
-          color: r.color,
-          ink: r.ink
-        };
-      }
-    }
-
-    // 4. Exhibits in workshop (dice or furnace recipes)
+    // 6. Generic exhibits fallback
     if (target.matches('.exhibit')) {
-      const key = target.dataset.key;
-      if (target.dataset.market === 'effect-inspect' && upgrades[key]) {
-        const up = upgrades[key];
-        return {
-          title: up.name,
-          desc: `${up.text} (${up.price} monedas de oro)`
-        };
-      }
       const label = target.getAttribute('aria-label');
       if (label) {
         const parts = label.split('·').map(s => s.trim());
@@ -170,7 +283,7 @@ class FloatingTooltipManager {
       }
     }
 
-    // 5. Resource bar items
+    // 7. Resource bar items
     if (target.matches('#score-pill, .res-score')) {
       return {
         title: 'Puntuación y objetivo',
@@ -206,7 +319,7 @@ class FloatingTooltipManager {
       };
     }
 
-    // 6. Action buttons
+    // 8. Action buttons
     if (target.id === 'pause') {
       return { title: 'Pausa', desc: 'Abre el menú con opciones de partida y ayuda.' };
     }
@@ -232,7 +345,7 @@ class FloatingTooltipManager {
       };
     }
 
-    // 7. Title screen & workshop navigation buttons
+    // 9. Title screen & workshop navigation buttons
     if (target.id === 'new') {
       return { title: 'Nueva partida', desc: 'Comienza una nueva travesía artesanal desde el primer mosaico.' };
     }
@@ -264,11 +377,11 @@ class FloatingTooltipManager {
       return { title: 'Fundir en el horno', desc: 'Aplica el efecto alquímico a los dados preparados.' };
     }
 
-    // 8. Generic title attribute fallback
+    // 10. Generic title attribute fallback
     if (target.title) {
       const titleText = target.title;
       target.dataset.tooltip = titleText;
-      target.removeAttribute('title'); // Prevent native browser tooltip overlap
+      target.removeAttribute('title');
       return { title: '', desc: titleText };
     }
 
@@ -277,7 +390,7 @@ class FloatingTooltipManager {
 
   show(target) {
     const info = this.getInfo(target);
-    if (!info || (!info.title && !info.desc)) {
+    if (!info || (!info.title && !info.bodyHtml && !info.desc)) {
       this.hide();
       return;
     }
@@ -291,7 +404,7 @@ class FloatingTooltipManager {
     }
 
     if (info.title) {
-      this.titleEl.textContent = info.title;
+      this.titleEl.innerHTML = info.title;
       this.titleEl.style.display = 'flex';
       if (info.ink) this.titleEl.style.color = info.ink;
       else if (info.color) this.titleEl.style.color = info.color;
@@ -300,7 +413,30 @@ class FloatingTooltipManager {
       this.titleEl.style.display = 'none';
     }
 
-    this.descEl.textContent = info.desc;
+    if (info.bodyHtml) {
+      this.bodyEl.innerHTML = info.bodyHtml;
+      this.bodyEl.style.display = 'block';
+    } else if (info.desc) {
+      this.bodyEl.innerHTML = `<p class="float-tooltip-desc">${info.desc}</p>`;
+      this.bodyEl.style.display = 'block';
+    } else {
+      this.bodyEl.style.display = 'none';
+    }
+
+    if (info.actionHtml) {
+      this.actionsEl.innerHTML = info.actionHtml;
+      this.actionsEl.style.display = 'flex';
+    } else {
+      this.actionsEl.innerHTML = '';
+      this.actionsEl.style.display = 'none';
+    }
+
+    if (info.interactive) {
+      this.tip.classList.add('is-interactive');
+    } else {
+      this.tip.classList.remove('is-interactive');
+    }
+
     this.tip.setAttribute('aria-hidden', 'false');
     this.tip.classList.add('visible');
 
@@ -318,9 +454,8 @@ class FloatingTooltipManager {
     const tipWidth = this.tip.offsetWidth;
     const tipHeight = this.tip.offsetHeight;
 
-    // Horizontal centering
+    // Horizontal centering with clamp
     let left = rect.left + (rect.width - tipWidth) / 2;
-    // Boundary clamp
     left = Math.max(8, Math.min(window.innerWidth - tipWidth - 8, left));
 
     // Vertical positioning: prefer above target, fallback to below
@@ -330,7 +465,6 @@ class FloatingTooltipManager {
       top = rect.bottom + 9;
       placement = 'bottom';
       if (top + tipHeight > window.innerHeight - 10) {
-        // Fallback inside target if both fail
         top = Math.max(10, (window.innerHeight - tipHeight) / 2);
       }
     }
@@ -341,7 +475,7 @@ class FloatingTooltipManager {
 
     // Position arrow relative to target center
     const targetCenterX = rect.left + rect.width / 2;
-    const arrowX = Math.max(12, Math.min(tipWidth - 12, targetCenterX - left));
+    const arrowX = Math.max(14, Math.min(tipWidth - 14, targetCenterX - left));
     this.arrowEl.style.left = `${Math.round(arrowX)}px`;
   }
 
@@ -354,6 +488,7 @@ class FloatingTooltipManager {
     }
     clearTimeout(this.touchTimer);
     this.tip.classList.remove('visible');
+    this.tip.classList.remove('is-interactive');
     this.tip.setAttribute('aria-hidden', 'true');
   }
 }
