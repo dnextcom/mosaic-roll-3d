@@ -2243,38 +2243,75 @@ dialog .eyebrow {
     letter-spacing: .12em;
   }
 
-  /* Resource bar: compact single-row */
+  /* Resource bar: Spacious 2-tier architectural layout */
   .resource-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 4px;
     margin: 0;
-    overflow-x: hidden;
   }
   .res {
-    min-height: 38px;
-    padding: 2px 7px 2px 4px;
-    gap: 4px;
+    min-height: 35px;
+    padding: 3px 5px;
+    gap: 5px;
     border-radius: 7px;
-    flex: 0 1 auto;
+    justify-content: center;
     min-width: 0;
+    flex: unset;
   }
   .res-score {
-    flex: 1 1 auto;
-    min-width: 100px;
+    grid-column: 1 / -1;
+    min-height: 38px;
+    padding: 4px 10px;
+    justify-content: flex-start;
+    gap: 8px;
   }
-  .res strong { font-size: 17px; }
-  .res-value span { font-size: 13px; }
+  .res-score .res-body {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+  .res-score .res-value {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .res-score progress {
+    flex: 1 1 auto;
+    height: 10px;
+    min-width: 60px;
+    margin: 0;
+  }
+  .res strong { font-size: 17.5px; }
+  .res-value strong { font-size: 19px; }
+  .res-value span { font-size: 14px; }
   .badge {
-    width: 25px;
-    height: 25px;
+    width: 24px;
+    height: 24px;
     border-radius: 5px;
+    flex: 0 0 24px;
   }
   .badge .ico { width: 13px; height: 13px; }
-  .coin.big { width: 22px; height: 22px; }
-  .turns { gap: 2.5px; }
-  .turns .pip { width: 11px; height: 11px; }
+  .coin.big { width: 22px; height: 22px; flex: 0 0 22px; }
+  .turns { gap: 3px; align-items: center; }
+  .turns .pip {
+    width: 10px;
+    height: 12px;
+    border-radius: 3px;
+    background: var(--glaze-btn), linear-gradient(145deg, #1e88e5, #1565c0);
+    box-shadow:
+      inset 0 0 0 1px var(--cobalt-deep),
+      inset 0 0 0 1.5px rgba(255, 255, 255, 0.4),
+      0 1px 0 rgba(0, 0, 0, 0.2);
+  }
+  .turns .pip.spent {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--sand-400);
+  }
 
   /* Layout and Play Area: Flex vertically to fill 100% of remaining space */
   .layout {
