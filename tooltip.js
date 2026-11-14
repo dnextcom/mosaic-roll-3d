@@ -29,36 +29,22 @@ class FloatingTooltipManager {
     this.arrowEl = this.tip.querySelector('.float-tooltip-arrow');
     this.currentTarget = null;
     this.touchTimer = null;
+    this.hoverTimer = null;
 
     this.initEvents();
   }
 
   initEvents() {
-    // Intercept mouse hover
-    document.addEventListener('pointerover', event => {
-      if (event.pointerType === 'touch') return;
-      const target = this.findTarget(event.target);
-      if (target && target !== this.currentTarget) {
-        this.show(target);
-      }
-    });
-
-    document.addEventListener('pointerout', event => {
-      if (event.pointerType === 'touch') return;
-      if (this.currentTarget && !this.currentTarget.contains(event.relatedTarget) && !this.tip.contains(event.relatedTarget)) {
-        this.hide();
-      }
-    });
-
-    this.tip.addEventListener('pointerleave', event => {
-      if (event.pointerType === 'touch') return;
-      if (this.currentTarget && !this.currentTarget.contains(event.relatedTarget)) {
-        this.hide();
-      }
-    });
+    // Prevent any pointer or touch events inside the tooltip from bubbling to document
+    const stopProp = event => event.stopPropagation();
+    this.tip.addEventListener('pointerdown', stopProp);
+    this.tip.addEventListener('touchstart', stopProp, { passive: true });
+    this.tip.addEventListener('pointerover', stopProp);
+    this.tip.addEventListener('pointerout', stopProp);
 
     // Delegate clicks inside the tooltip (Buy, Sell, Choose Recipe buttons)
     this.tip.addEventListener('click', event => {
+      event.stopPropagation();
       const button = event.target.closest('[data-market]');
       if (!button || button.disabled) return;
       if (window.marketUI) {
@@ -67,36 +53,75 @@ class FloatingTooltipManager {
       }
     });
 
-    // Touch support: tap to show floating tooltip
-    document.addEventListener('pointerdown', event => {
-      if (event.pointerType !== 'touch') return;
+    // Intercept mouse hover on desktop with safe-zone grace timer
+    document.addEventListener('pointerover', event => {
+      if (event.pointerType === 'touch') return;
+      if (event.target.closest('.float-tooltip')) {
+        clearTimeout(this.hoverTimer);
+        return;
+      }
       const target = this.findTarget(event.target);
       if (target) {
-        if (this.currentTarget === target && !this.tip.classList.contains('is-interactive')) {
-          this.hide();
-        } else {
+        clearTimeout(this.hoverTimer);
+        if (target !== this.currentTarget) {
           this.show(target);
-          clearTimeout(this.touchTimer);
-          // Only auto-dismiss non-interactive tooltips
-          if (!this.tip.classList.contains('is-interactive')) {
-            this.touchTimer = setTimeout(() => this.hide(), 4000);
-          }
         }
-      } else if (!event.target.closest('.float-tooltip')) {
-        this.hide();
+      }
+    });
+
+    document.addEventListener('pointerout', event => {
+      if (event.pointerType === 'touch') return;
+      if (this.currentTarget) {
+        clearTimeout(this.hoverTimer);
+        this.hoverTimer = setTimeout(() => {
+          if (this.currentTarget && !this.currentTarget.matches(':hover') && !this.tip.matches(':hover')) {
+            this.hide();
+          }
+        }, 160);
+      }
+    });
+
+    // Touch support & dismiss when tapping outside
+    document.addEventListener('pointerdown', event => {
+      if (event.target.closest('.float-tooltip')) return;
+
+      if (event.pointerType === 'touch') {
+        const target = this.findTarget(event.target);
+        if (target) {
+          if (this.currentTarget === target && !this.tip.classList.contains('is-interactive')) {
+            this.hide();
+          } else {
+            this.show(target);
+            clearTimeout(this.touchTimer);
+            if (!this.tip.classList.contains('is-interactive')) {
+              this.touchTimer = setTimeout(() => this.hide(), 4000);
+            }
+          }
+        } else {
+          this.hide();
+        }
+      } else {
+        // Desktop click outside target and tooltip dismisses
+        if (!this.findTarget(event.target)) {
+          this.hide();
+        }
       }
     });
 
     // Focus / blur for keyboard navigation
     document.addEventListener('focusin', event => {
+      if (event.target.closest('.float-tooltip')) return;
       const target = this.findTarget(event.target);
       if (target) this.show(target);
     });
 
     document.addEventListener('focusout', event => {
-      if (!this.tip.contains(event.relatedTarget)) {
-        this.hide();
-      }
+      if (event.relatedTarget && this.tip.contains(event.relatedTarget)) return;
+      setTimeout(() => {
+        if (this.currentTarget && !this.tip.contains(document.activeElement) && !this.currentTarget.contains(document.activeElement)) {
+          this.hide();
+        }
+      }, 100);
     });
 
     // Window scroll or resize reposition
@@ -105,7 +130,7 @@ class FloatingTooltipManager {
   }
 
   findTarget(el) {
-    if (!el || !(el instanceof Element)) return null;
+    if (!el || !(el instanceof Element) || el.closest('.float-tooltip')) return null;
     return el.closest(`
       [data-tooltip],
       [data-power],
@@ -127,7 +152,12 @@ class FloatingTooltipManager {
       .nav-pill,
       #mobile-confirm,
       #confirm,
-      [data-market],
+      [data-market="view"],
+      [data-market="collection"],
+      [data-market="exit"],
+      [data-market="advance"],
+      [data-market="candidate"],
+      [data-market="remove"],
       [title]
     `);
   }
