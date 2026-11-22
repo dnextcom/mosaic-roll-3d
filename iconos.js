@@ -30,6 +30,7 @@ const paths = {
   arrow: '<path d="M4.5 12h14.5M13.5 6.5 19 12l-5.5 5.5"/>',
   download: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
   moon: '<path d="M15.5 3.6a8.6 8.6 0 1 0 4.9 13.6A7.2 7.2 0 0 1 15.5 3.6Z"/>',
+  crown: '<path d="M4.5 18.5h15M5.3 18.5 3.5 8l5 3.8L12 5l3.5 6.8 5-3.8-1.8 10.5"/><path class="f" d="M12 13.2a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6Z"/>',
 };
 
 export function icon(name, className = '') {

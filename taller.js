@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { rarities } from './catalogo.js?v=alhambra-1';
+import { rarities } from './catalogo.js?v=alhambra-2';
 
 // Dice in the workshop are a little smaller than on the table so the whole scene fits on phones.
 const DIE_SCALE = .8;
@@ -375,10 +375,12 @@ export class Workshop {
     this.sockets = [];
     for (let index = 0; index < count; index++) {
       const x = (index - (count - 1) / 2) * .92;
-      const ring = this.piece(new THREE.TorusGeometry(.36, .045, 10, 40), this.brass, x, FLOOR + .36, HEARTH, this.socketGroup);
+      // Each ring owns its material so it can glow while a dragged die hovers over it.
+      const ring = this.piece(new THREE.TorusGeometry(.36, .045, 10, 40), this.brass.clone(), x, FLOOR + .36, HEARTH, this.socketGroup);
       ring.rotation.x = -Math.PI / 2;
       const hole = this.piece(new THREE.CylinderGeometry(.34, .34, .02, 40), this.night, x, FLOOR + .35, HEARTH, this.socketGroup);
       hole.userData.slot = index;
+      hole.userData.ring = ring;
       this.sockets.push(hole);
     }
   }
@@ -470,7 +472,26 @@ export class Workshop {
     this.canvas.style.cursor = 'grabbing';
     this.cast(event);
     const target = this.ray.ray.intersectPlane(this.dragPlane, new THREE.Vector3());
-    if (target) this.models.get(this.pointer.id)?.mesh.position.copy(target);
+    if (!target) return;
+    // On touch screens the die rides a little ahead of the finger so it stays visible.
+    if (event.pointerType !== 'mouse') target.z -= .4;
+    this.models.get(this.pointer.id)?.mesh.position.copy(target);
+    this.glow(this.nearestSocket(target));
+  }
+
+  // Sockets are judged by distance on the hearth plane, not by a ray: the die is dragged
+  // above the hearth, so a ray through the finger would land behind the small socket discs.
+  nearestSocket(position) {
+    let best = null, distance = .85;
+    for (const socket of this.sockets) {
+      const gap = Math.hypot(position.x - socket.position.x, position.z - socket.position.z);
+      if (gap < distance) [best, distance] = [socket, gap];
+    }
+    return best;
+  }
+
+  glow(socket) {
+    for (const hole of this.sockets) hole.userData.ring.material.emissive.setHex(hole === socket ? 0x8a5a18 : 0x000000);
   }
 
   up(event) {
@@ -478,16 +499,17 @@ export class Workshop {
     if (pointer?.pointerId !== event.pointerId) return;
     this.cancel();
     if (!pointer.moving) { this.onSelect(pointer.id); return; }
-    this.cast(event);
-    const hit = this.ray.intersectObjects(this.sockets)[0];
+    const item = this.models.get(pointer.id);
+    const socket = item && this.nearestSocket(item.mesh.position);
     // A die dropped anywhere else leaves its socket and returns to the bench.
-    this.onDrop(pointer.id, hit ? hit.object.userData.slot : -1);
+    this.onDrop(pointer.id, socket ? socket.userData.slot : -1);
   }
 
   cancel() {
     const pointer = this.pointer;
     this.pointer = null;
     this.canvas.style.cursor = '';
+    if (this.sockets.length) this.glow(null);
     if (pointer && this.canvas.hasPointerCapture(pointer.pointerId)) this.canvas.releasePointerCapture(pointer.pointerId);
   }
 

@@ -1,5 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, fuse } from './catalogo.js?v=alhambra-1';
-import { projectBoard, uniqueDice } from './unicos.js?v=alhambra-1';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, fuse } from './catalogo.js?v=alhambra-2';
+import { projectBoard, uniqueDice } from './unicos.js?v=alhambra-2';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 const campaignGoals = [48, 76, 94, 112, 128, 138, 168, 190, 212, 237, 270, 300];
@@ -12,6 +12,70 @@ const orders = [
 export const campaignLength = campaignGoals.length;
 export const orderAt = stage => orders[Math.floor(stage / 3)];
 export const handSize = 4;
+
+// Starting bags, chosen when a run begins, like the decks of a deck-builder.
+const classicGlazes = [0, 1, 2, 3, 0, 3, 0, 3, 1, 2, 1, 2];
+const evenFaces = [2, 2, 4, 4, 6, 6];
+const marble = 5;
+const randomGlaze = random => basicColors[Math.floor(random() * basicColors.length)];
+export const decks = {
+  classic: { name: 'Bolsa del alfarero', text: 'Los doce dados de siempre: tres de cada color.',
+    start: () => classicGlazes.map(colorDie), filler: random => colorDie(randomGlaze(random)) },
+  saffron: { name: 'Bolsa de azafrán', text: 'Doce dados amarillos. Las líneas monocolor salen solas; los colores distintos tendrán que esperar al zoco.',
+    start: () => classicGlazes.map(() => colorDie(1)), filler: () => colorDie(1) },
+  even: { name: 'Bolsa par', text: 'Todas las caras son 2, 4 o 6. Más puntos por dado y parejas fáciles, pero ninguna escalera.',
+    start: () => classicGlazes.map(glaze => plainDie(glaze, evenFaces)), filler: random => plainDie(randomGlaze(random), evenFaces) },
+  relics: { name: 'Tres reliquias', text: 'Empiezas con tres dados únicos al azar. El resto de la bolsa se rellena con dados de mármol del 1 al 6.',
+    start: random => choose(Object.keys(uniqueDice), 3, random).map(uniqueDie), filler: () => plainDie(marble, [1, 2, 3, 4, 5, 6]) },
+};
+
+// Sample dice shown on the bag picker; portraits show the first face, so it is moved to the front.
+const showing = (spec, value) => ({ ...spec, faces: [value, ...spec.faces.filter((_, index) => index !== spec.faces.indexOf(value))] });
+export function deckSample(key) {
+  if (key === 'relics') return [showing(uniqueDie('glass'), 4), showing(uniqueDie('twin'), 2), showing(uniqueDie('compass'), 5), plainDie(marble, [5, 1, 2, 3, 4, 6])];
+  if (key === 'saffron') return [6, 3, 2, 6].map(value => showing(colorDie(1), value));
+  if (key === 'even') return basicColors.map((glaze, index) => showing(plainDie(glaze, evenFaces), [6, 4, 2, 4][index]));
+  return basicColors.map((glaze, index) => showing(colorDie(glaze), [6, 3, 5, 4][index]));
+}
+
+// Every fourth mosaic is a boss with a rule of its own; beating it pays extra gold.
+export const BOSS_EVERY = 4;
+export const BOSS_GOLD = 4;
+export const bosses = {
+  eclipse: { name: 'El eclipse', about: 'Los dados de un color al azar no suman puntos ni cuentan para los combos de color.',
+    text: boss => `Los dados de ${glazes[boss.color].name.toLowerCase()} no suman puntos ni cuentan para los combos de color.` },
+  scarcity: { name: 'La mano corta', text: () => 'Solo hay tres dados en la bandeja.' },
+  hourglass: { name: 'El reloj de arena', text: () => 'Tienes un turno menos para llegar a la meta.' },
+  whitewash: { name: 'La cal', text: () => 'Los colores no multiplican: no hay monocolor, colores distintos ni resonancia cobalto.' },
+  slumber: { name: 'El sueño del sultán', text: () => 'Tus azulejos de poder no funcionan en este mosaico.' },
+  balance: { name: 'La balanza', text: () => 'Los dados con número impar no suman sus puntos.' },
+};
+export const isBossStage = stage => (stage + 1) % BOSS_EVERY === 0;
+export const bossAt = (state, stage = state.stage) => isBossStage(stage) ? state.bosses?.[(stage + 1) / BOSS_EVERY - 1] ?? null : null;
+export const bossText = boss => bosses[boss.key].text(boss);
+const bossKey = state => bossAt(state)?.key;
+
+function rollBoss(state, random) {
+  const recent = state.bosses.slice(-2).map(boss => boss.key);
+  // The even bag would never notice the balance boss.
+  const keys = Object.keys(bosses).filter(key => !recent.includes(key) && !(key === 'balance' && state.deck === 'even'));
+  const key = keys[Math.floor(random() * keys.length)];
+  if (key !== 'eclipse') return { key };
+  // A saffron bag would lose every die to a yellow eclipse.
+  const colors = basicColors.filter(color => state.deck !== 'saffron' || color !== 1);
+  return { key, color: colors[Math.floor(random() * colors.length)] };
+}
+
+// Bosses are drawn ahead of time so the zoco can announce the next one.
+function ensureBoss(state, stage, random) {
+  if (!isBossStage(stage)) return;
+  const index = (stage + 1) / BOSS_EVERY - 1;
+  while (state.bosses.length <= index) state.bosses.push(rollBoss(state, random));
+}
+
+// Power tiles fall asleep during the slumber boss.
+const has = (state, key) => state.powers.includes(key) && bossKey(state) !== 'slumber';
+const handLimit = state => bossKey(state) === 'scarcity' ? handSize - 1 : handSize;
 export const tileLimit = 5;
 export const isFresh = die => Boolean(die && !die.fixed);
 export const comboPoints = { line: 3, pair: 6, trio: 12, quartet: 23, straight: 10, longStraight: 17, panel: 10, mono: .4, chromatic: .25 };
@@ -26,14 +90,15 @@ export function stageAt(index) {
 
 function stockBag(state, gift, random) {
   const count = Math.max(gift ? 1 : 0, state.rows * state.cols + handSize - dieCount(state));
-  for (let index = 0; index < count; index++) state.bag.push(colorDie(basicColors[Math.floor(random() * basicColors.length)]));
+  const filler = (decks[state.deck] ?? decks.classic).filler;
+  for (let index = 0; index < count; index++) state.bag.push(filler(random));
 }
 
 function replenish(state, random) {
   const occupied = new Set([...state.board, ...state.hand].filter(Boolean).map(die => die.id));
   const available = state.bag.flatMap((spec, id) => spec && !occupied.has(id) ? [id] : []);
   const drawn = [];
-  for (let slot = 0; slot < handSize && available.length; slot++) {
+  for (let slot = 0; slot < handLimit(state) && available.length; slot++) {
     if (state.hand[slot]) continue;
     const [id] = available.splice(Math.floor(random() * available.length), 1);
     const face = Math.floor(random() * 6);
@@ -45,13 +110,16 @@ function replenish(state, random) {
 
 function startStage(state, random) {
   const stage = stageAt(state.stage);
+  ensureBoss(state, state.stage, random);
   state.phase = 'play';
   state.cols = stage.cols;
   state.rows = stage.rows;
   state.goal = stage.goal;
   state.points = state.lastScore = 0;
-  state.turns = state.maxTurns = stage.turns;
-  state.chisels = state.powers.includes('chisel') ? 3 : 2;
+  state.turns = state.maxTurns = stage.turns - (bossKey(state) === 'hourglass' ? 1 : 0);
+  state.chisels = has(state, 'chisel') ? 3 : 2;
+  // The short-handed boss sends the fourth die of the tray back to the bag.
+  if (handLimit(state) < handSize) state.hand = state.hand.map((die, slot) => slot < handLimit(state) ? die : null);
   state.board = Array(state.rows * state.cols).fill(null);
   state.market = null;
   state.forgeHand = [];
@@ -59,10 +127,16 @@ function startStage(state, random) {
   return replenish(state, random);
 }
 
-export function newRun(random = Math.random) {
-  const bag = [0, 1, 2, 3, 0, 3, 0, 3, 1, 2, 1, 2].map(colorDie);
-  const hand = [[0, 2], [1, 3], [4, 4], [2, 5]].map(([id, value], slot) => ({ id, slot, face: bag[id].faces.indexOf(value), value, stone: false, fixed: false }));
-  const state = { version: 5, stage: 0, gold: 0, powers: [], results: [], orders: [], history: [], endless: false, bag, hand };
+export function newRun(deck = 'classic', random = Math.random) {
+  if (!Object.hasOwn(decks, deck)) deck = 'classic';
+  const bag = decks[deck].start(random);
+  const die = (id, face, slot) => ({ id, slot, face, value: bag[id].faces[face], stone: false, fixed: false });
+  // The classic bag opens with a friendly hand; the relics bag always shows its three unique dice.
+  const hand = deck === 'classic' ? [[0, 2], [1, 3], [4, 4], [2, 5]].map(([id, value], slot) => die(id, bag[id].faces.indexOf(value), slot))
+    : deck === 'relics' ? [0, 1, 2, null].map((id, slot) => id == null ? null : die(id, Math.floor(random() * 6), slot))
+    : Array(handSize).fill(null);
+  const state = { version: 6, deck, stage: 0, gold: 0, powers: [], results: [], orders: [], history: [], endless: false, bag, hand, bosses: [] };
+  for (let stage = BOSS_EVERY - 1; stage < campaignLength; stage += BOSS_EVERY) ensureBoss(state, stage, random);
   startStage(state, random);
   return state;
 }
@@ -104,11 +178,18 @@ export function chip(state, cell, random = Math.random) {
   if (state.phase !== 'play' || !state.chisels || !state.board[cell]?.stone) return null;
   state.board[cell] = null;
   state.chisels--;
-  if (state.powers.includes('midas')) state.gold += 2;
+  if (has(state, 'midas')) state.gold += 2;
   return !state.hand.some(Boolean) && !state.board.some(isFresh) ? replenish(state, random) : [];
 }
 
-function colors(spec, die) {
+// Dice of the colour hidden by the eclipse boss.
+function eclipsed(state, spec) {
+  const boss = bossAt(state);
+  return boss?.key === 'eclipse' && !spec.rainbow && (spec.glaze === boss.color || spec.second === boss.color);
+}
+
+function colors(state, spec, die) {
+  if (eclipsed(state, spec)) return [];
   if (die.tint != null) return [die.tint];
   return spec.rainbow ? glazes.map((_, color) => color) : spec.second == null ? [spec.glaze] : [spec.glaze, spec.second];
 }
@@ -126,8 +207,8 @@ function distinct(options, at = 0, used = new Set()) {
 
 function numericPatterns(state, board, cells, column) {
   const candidates = [];
-  const colonnade = column && state.powers.includes('colonnade') ? 3 : 0;
-  const acanthus = state.powers.includes('acanthus') ? 5 : 0;
+  const colonnade = column && has(state, 'colonnade') ? 3 : 0;
+  const acanthus = has(state, 'acanthus') ? 5 : 0;
   for (let length = cells.length; length >= 1; length--) {
     for (let index = 0; index + length <= cells.length; index++) {
       const segment = cells.slice(index, index + length);
@@ -176,15 +257,15 @@ function evaluateLine(state, board, cells, column, axis, score, stones) {
   numeric.flatMap(item => item.cells).filter(cell => board[cell].stone).forEach(cell => stones.add(cell));
   score.numberSteps.push(...numbers);
   let color;
-  if (full && dice.every(die => !die.stone)) {
+  if (full && dice.every(die => !die.stone) && bossKey(state) !== 'whitewash') {
     const options = dice.flatMap(die => {
-      const choices = colors(state.bag[die.id], die);
+      const choices = colors(state, state.bag[die.id], die);
       return die.extra == null ? [choices] : [choices, choices];
     });
     if (options[0].some(shade => options.every(list => list.includes(shade)))) {
-      color = { name: 'Monocolor', add: 40 + (state.powers.includes('frieze') ? 25 : 0), cells };
+      color = { name: 'Monocolor', add: 40 + (has(state, 'frieze') ? 25 : 0), cells };
     } else if (distinct(options)) {
-      color = { name: 'Colores distintos', add: 25 + (state.powers.includes('prism') ? 15 : 0), cells };
+      color = { name: 'Colores distintos', add: 25 + (has(state, 'prism') ? 15 : 0), cells };
     }
     if (color) { score.colorSteps.push(color); cells.forEach(cell => highlighted.add(cell)); }
   }
@@ -206,7 +287,7 @@ export function preview(state) {
   score.numberSteps.push(...numberSteps);
   score.colorSteps.push(...colorSteps);
   score.powerMarks = [...numberSteps, ...colorSteps];
-  if (state.powers.includes('mortar')) for (const cell of stones) score.numberSteps.push({ name: 'Mortero Kintsugi', points: board[cell].value, cells: [cell] });
+  if (has(state, 'mortar')) for (const cell of stones) score.numberSteps.push({ name: 'Mortero Kintsugi', points: board[cell].value, cells: [cell] });
 
   const basalt = [], cobalt = [];
   board.forEach((die, cell) => {
@@ -217,11 +298,14 @@ export function preview(state) {
     const values = die.extra == null ? [die.value] : [die.value, die.extra];
     for (const value of values) {
       const label = die.echo ? 'Copia' : spec.unique ? uniqueDice[spec.unique].name : 'Dado';
-      score.dieSteps.push({ name: factor > 1 ? `${label} ${value} × ${factor}` : `${label} ${value}`, points: value * factor, cells: [cell] });
-      if (value === 1 && state.powers.includes('aces')) score.numberSteps.push({ name: 'Ases de artesano', points: 5, cells: [cell] });
+      // Boss rules can cancel a die's own points; the step stays so the sequence explains why.
+      const cancelled = eclipsed(state, spec) ? 'eclipsado' : bossKey(state) === 'balance' && value % 2 ? 'impar' : '';
+      if (cancelled) score.dieSteps.push({ name: `${label} ${value} · ${cancelled}`, points: 0, cells: [cell] });
+      else score.dieSteps.push({ name: factor > 1 ? `${label} ${value} × ${factor}` : `${label} ${value}`, points: value * factor, cells: [cell] });
+      if (value === 1 && has(state, 'aces')) score.numberSteps.push({ name: 'Ases de artesano', points: 5, cells: [cell] });
     }
     if (isFresh(die) && hasFace(spec.gild, die.face)) score.gold += 3;
-    if (colors(spec, die).includes(0)) cobalt.push(...values.map(() => cell));
+    if (colors(state, spec, die).includes(0)) cobalt.push(...values.map(() => cell));
     const row = Math.floor(cell / cols), col = cell % cols;
     const adjacent = [col > 0 ? cell - 1 : -1, col < cols - 1 ? cell + 1 : -1,
       row > 0 ? cell - cols : -1, row < rows - 1 ? cell + cols : -1].filter(index => {
@@ -230,12 +314,12 @@ export function preview(state) {
     });
     if (adjacent.length) score.numberSteps.push({ name: 'Obsidiana', points: adjacent.length * 4 * values.length, cells: [cell, ...adjacent] });
   });
-  if (basalt.length && state.powers.includes('basalt')) score.colorSteps.push({ name: 'Campanas de basalto', add: basalt.length * 8, cells: basalt });
-  if (cobalt.length && state.powers.includes('cobalt')) score.colorSteps.push({ name: 'Resonancia cobalto', add: cobalt.length * 15, cells: [...new Set(cobalt)] });
+  if (basalt.length && has(state, 'basalt')) score.colorSteps.push({ name: 'Campanas de basalto', add: basalt.length * 8, cells: basalt });
+  if (cobalt.length && has(state, 'cobalt') && bossKey(state) !== 'whitewash') score.colorSteps.push({ name: 'Resonancia cobalto', add: cobalt.length * 15, cells: [...new Set(cobalt)] });
   if (board.every(Boolean)) {
     const cells = board.map((_, index) => index);
     score.numberSteps.push({ name: 'Panel completo', points: comboPoints.panel, cells });
-    if (state.powers.includes('alhambra')) score.colorSteps.push({ name: 'Gran Alhambra', factor: 1.35, cells });
+    if (has(state, 'alhambra')) score.colorSteps.push({ name: 'Gran Alhambra', factor: 1.35, cells });
   }
   const order = orderAt(state.stage);
   if (order && !state.orders.includes(order.key) && [...score.numberSteps, ...score.colorSteps].some(step => order.combos.includes(step.name))) {
@@ -250,8 +334,9 @@ export function preview(state) {
 
 function openShop(state, random) {
   state.phase = 'shop';
-  state.gold += 10 + Math.min(6, Math.floor(state.stage / 4)) + state.turns * (state.powers.includes('patience') ? 2 : 1);
+  state.gold += 10 + Math.min(6, Math.floor(state.stage / 4)) + state.turns * (has(state, 'patience') ? 2 : 1) + (bossAt(state) ? BOSS_GOLD : 0);
   state.market = market(state.stage, state.powers, random, state.bag);
+  ensureBoss(state, state.stage + 1, random);
   const held = state.hand.filter(die => die && !state.bag[die.id].unique).map(die => die.id);
   const rest = state.bag.flatMap((spec, id) => spec && !spec.unique && !held.includes(id) ? [id] : []);
   state.forgeHand = choose([...held, ...choose(rest, handSize - held.length, random)], handSize, random);
@@ -365,8 +450,10 @@ function validSpec(spec) {
     [spec.gild, spec.boost, spec.wild].every(mask => Number.isInteger(mask) && mask >= 0 && mask <= 63));
 }
 
+const validBoss = boss => Boolean(boss && Object.hasOwn(bosses, boss.key) && (boss.key !== 'eclipse' || basicColors.includes(boss.color)));
+
 export function validSave(state) {
-  if (state?.version !== 5 || !['play', 'shop', 'won', 'lost'].includes(state.phase) || !Number.isSafeInteger(state.goal) || state.goal < 1 ||
+  if (state?.version !== 6 || !Object.hasOwn(decks, state.deck) || !Array.isArray(state.bosses) || !state.bosses.every(validBoss) || !['play', 'shop', 'won', 'lost'].includes(state.phase) || !Number.isSafeInteger(state.goal) || state.goal < 1 ||
       ![state.stage, state.points, state.turns, state.maxTurns, state.gold, state.chisels].every(value => Number.isSafeInteger(value) && value >= 0) ||
       ![3, 4].includes(state.cols) || ![2, 3, 4].includes(state.rows) || !Array.isArray(state.board) || state.board.length !== state.rows * state.cols ||
       !Array.isArray(state.hand) || state.hand.length !== handSize || !Array.isArray(state.bag) || !Array.isArray(state.powers) ||
@@ -388,9 +475,15 @@ export function validSave(state) {
 
 export function restoreRun(old, random = Math.random) {
   if (validSave(old)) return old;
+  // Runs from before bags and bosses keep the classic bag and get their bosses now.
+  if (old?.version === 5) {
+    const state = { ...old, version: 6, deck: 'classic', bosses: [] };
+    for (let stage = BOSS_EVERY - 1; stage <= Math.max(campaignLength - 1, (state.stage ?? 0) + 1); stage += BOSS_EVERY) ensureBoss(state, stage, random);
+    return validSave(state) ? state : null;
+  }
   if (old?.version === 4) {
     const state = { ...old, version: 5, orders: [], history: [], endless: Array.isArray(old.results) && old.results.length >= campaignLength };
-    return validSave(state) ? state : null;
+    return restoreRun(state, random);
   }
   if (old?.version === 3) {
     const index = old.stage;

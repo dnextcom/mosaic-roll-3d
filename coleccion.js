@@ -1,8 +1,8 @@
-import { basicColors, colorDie, dieCount, diceName, hasFace, powers, rarities, uniqueDie } from './catalogo.js?v=alhambra-1';
-import { diePortrait, tileArt } from './arte.js?v=alhambra-1';
-import { tileLimit } from './reglas.js?v=alhambra-1';
-import { uniqueDice } from './unicos.js?v=alhambra-1';
-import { icon } from './iconos.js?v=alhambra-1';
+import { basicColors, colorDie, dieCount, diceName, hasFace, powers, rarities, uniqueDie } from './catalogo.js?v=alhambra-2';
+import { diePortrait, tileArt } from './arte.js?v=alhambra-2';
+import { tileLimit, decks, deckSample, bosses, BOSS_EVERY } from './reglas.js?v=alhambra-2';
+import { uniqueDice } from './unicos.js?v=alhambra-2';
+import { icon } from './iconos.js?v=alhambra-2';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);
@@ -39,6 +39,18 @@ function tileCard(key) {
     <strong>${tile.name}</strong><small class="folio-rarity">${rarity.name}</small><p>${tile.text}</p></div></li>`;
 }
 
+function bagCard(key) {
+  const deck = decks[key];
+  return `<li class="folio" style="--rarity:var(--gold-2)"><span class="folio-niche"><img src="${diePortrait(deckSample(key)[0])}" alt="" loading="lazy"></span><div class="folio-text">
+    <strong>${deck.name}</strong><small class="folio-rarity">Bolsa inicial</small><p>${deck.text}</p></div></li>`;
+}
+
+function bossCard(key) {
+  const boss = bosses[key];
+  return `<li class="folio folio-boss" style="--rarity:var(--terra-2)"><span class="folio-niche">${icon('crown')}</span><div class="folio-text">
+    <strong>${boss.name}</strong><small class="folio-rarity">Jefe</small><p>${boss.about ?? boss.text({ key })}</p></div></li>`;
+}
+
 function groupDice(bag) {
   const groups = new Map();
   for (const spec of bag) {
@@ -69,7 +81,9 @@ export function collectionMarkup(run) {
     chapter('Historial del taller', run.history.length, historyMarkup(run.history)) : '';
   const catalog = chapter('Dados básicos', basicDice.length, `<ul class="folios">${basicDice.map(spec => diceCard(spec)).join('')}</ul>`, !run) +
     chapter('Dados únicos', specialDice.length, `<ul class="folios">${specialDice.map(spec => diceCard(spec)).join('')}</ul>`) +
-    chapter('Todos los azulejos', Object.keys(powers).length, `<ul class="folios">${Object.keys(powers).map(tileCard).join('')}</ul>`);
+    chapter('Todos los azulejos', Object.keys(powers).length, `<ul class="folios">${Object.keys(powers).map(tileCard).join('')}</ul>`) +
+    chapter('Bolsas iniciales', Object.keys(decks).length, `<ul class="folios">${Object.keys(decks).map(bagCard).join('')}</ul>`) +
+    chapter(`Jefes · cada ${BOSS_EVERY} mosaicos`, Object.keys(bosses).length, `<ul class="folios">${Object.keys(bosses).map(bossCard).join('')}</ul>`);
   return `<div class="book">
     <header class="book-head"><div class="book-heading"><span class="book-kicker">${run ? 'Tu colección' : 'Biblioteca del taller'}</span>
       <h2 id="dialog-title">${run ? 'Bolsa y azulejos' : 'Catálogo'}</h2></div>

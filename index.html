@@ -11,9 +11,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Reem+Kufi:wght@400..700&display=swap">
-  <link rel="stylesheet" href="estilo.css?v=alhambra-1">
+  <link rel="stylesheet" href="estilo.css?v=alhambra-2">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=alhambra-1"></script>
+  <script type="module" src="juego.js?v=alhambra-2"></script>
 </head>
 <body data-screen="title">
   <main class="patio" id="start">
@@ -97,11 +97,17 @@
         </div>
       </header>
 
-      <aside class="order" id="order" aria-label="Encargo" hidden>
-        <i data-icon="scroll" class="order-ico"></i>
-        <div class="order-text"><span class="order-kicker">Encargo</span><strong id="order-label"></strong></div>
-        <span class="order-reward" id="order-reward"></span>
-      </aside>
+      <div class="plaques">
+        <aside class="order" id="order" aria-label="Encargo" hidden>
+          <i data-icon="scroll" class="order-ico"></i>
+          <div class="order-text"><span class="order-kicker">Encargo</span><strong id="order-label"></strong></div>
+          <span class="order-reward" id="order-reward"></span>
+        </aside>
+        <aside class="boss" id="boss" aria-label="Regla del jefe" hidden>
+          <i data-icon="crown" class="boss-ico"></i>
+          <div class="boss-text"><span class="boss-kicker">Regla del jefe</span><strong id="boss-rule"></strong></div>
+        </aside>
+      </div>
 
       <nav class="rail" aria-label="Cámara y colección">
         <button class="orb orb-small" type="button" id="top" aria-label="Vista cenital" title="Vista cenital (V)"><i data-icon="grid"></i></button>

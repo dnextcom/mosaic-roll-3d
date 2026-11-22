@@ -1,11 +1,12 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=alhambra-1';
-import { DiceArt, tileArt } from './arte.js?v=alhambra-1';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=alhambra-1';
-import { stageAt, campaignLength, orderAt, comboPoints, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance } from './reglas.js?v=alhambra-1';
-import { uniqueDice } from './unicos.js?v=alhambra-1';
-import { MarketUI } from './mercado.js?v=alhambra-1';
-import { collectionMarkup } from './coleccion.js?v=alhambra-1';
-import { icon, hydrateIcons } from './iconos.js?v=alhambra-1';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=alhambra-2';
+import { DiceArt, tileArt, diePortrait } from './arte.js?v=alhambra-2';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=alhambra-2';
+import { stageAt, campaignLength, orderAt, comboPoints, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance,
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=alhambra-2';
+import { uniqueDice } from './unicos.js?v=alhambra-2';
+import { MarketUI } from './mercado.js?v=alhambra-2';
+import { collectionMarkup } from './coleccion.js?v=alhambra-2';
+import { icon, hydrateIcons } from './iconos.js?v=alhambra-2';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -183,7 +184,7 @@ function title() {
   button.disabled = !table;
   const label = !table ? 'Cargando…' : run?.phase === 'won' ? 'Ver victoria' : ongoing() ? 'Continuar' : 'Jugar';
   $('play-label').textContent = label;
-  $('play-note').textContent = !table ? '' : !ongoing() ? 'Primer mosaico · 2 × 3'
+  $('play-note').textContent = !table ? '' : !ongoing() ? 'Elige tu bolsa inicial'
     : run.phase === 'shop' ? `Zoco · tras el mosaico ${run.stage + 1}` : `Mosaico ${run.stage + 1} · ${stageAt(run.stage).name}`;
   $('new').hidden = !table || !ongoing();
   if (table) button.focus({ preventScroll: true });
@@ -246,9 +247,23 @@ function enter(roll = []) {
   table.frame(now);
   if (roll.length) note('roll');
   if (run.phase !== 'play') showOutcome();
+  else if (bossAt(run)) popup(`Jefe: ${bosses[bossAt(run).key].name}`, [], 'banner boss');
 }
 
-function startRun() { run = newRun(); save(); enter(run.hand.filter(Boolean).map(die => die.id)); }
+function startRun(deck) { run = newRun(deck); save(); enter(run.hand.filter(Boolean).map(die => die.id)); }
+
+// New runs begin by choosing a starting bag, like the decks of a deck-builder.
+function chooseBag() {
+  showDialog('bags', `<div class="book bags">
+    <header class="book-head"><div class="book-heading"><span class="book-kicker">Nueva partida · ${campaignLength} mosaicos</span>
+      <h2 id="dialog-title">Elige tu bolsa</h2></div>
+      <button class="btn btn-quiet btn-small" type="button" data-action="back">${icon('close')}Cancelar</button></header>
+    <div class="bag-grid">${Object.entries(decks).map(([key, deck]) => `<button class="bag-card" type="button" data-action="bag" data-bag="${key}">
+      <span class="bag-dice" aria-hidden="true">${deckSample(key).map(spec => `<img src="${diePortrait(spec)}" alt="">`).join('')}</span>
+      <strong class="bag-name">${deck.name}</strong><span class="bag-text">${deck.text}</span></button>`).join('')}</div>
+    <p class="bag-foot">${icon('crown')}Cada ${BOSS_EVERY} mosaicos te espera un jefe con una regla especial. Vencerlo da ${BOSS_GOLD} de oro extra.</p></div>`);
+  dialog.querySelector('.bag-card').focus({ preventScroll: true });
+}
 
 function nextMosaic() {
   const rolled = advance(run);
@@ -262,8 +277,13 @@ function render() {
   const points = resolution ? run.points - score.total : run.points;
   const dimensions = run.cols === 4 ? `${run.cols} × ${run.rows}` : `${run.rows} × ${run.cols}`;
   const progress = run.endless ? `Modo libre · Mosaico ${run.stage + 1}` : `Mosaico ${run.stage + 1}/${campaignLength}`;
-  $('stage-label').textContent = `${progress} · ${dimensions}`;
-  $('stage-name').textContent = stage.name;
+  const boss = bossAt(run);
+  const finalBoss = boss && !run.endless && run.stage === campaignLength - 1;
+  $('stage-label').textContent = `${boss ? (finalBoss ? 'Jefe final · ' : 'Jefe · ') : ''}${progress} · ${dimensions}`;
+  $('stage-name').textContent = boss ? bosses[boss.key].name : stage.name;
+  $('crown').classList.toggle('boss-stage', Boolean(boss));
+  $('boss').hidden = !boss;
+  if (boss) $('boss-rule').textContent = bossText(boss);
   countTo($('score'), points);
   $('goal').textContent = `/ ${run.goal}`;
   const ring = $('progress');
@@ -565,13 +585,15 @@ function showWorkshop(mode, content) {
 
 function help() {
   showDialog('help', windowMarkup({ title: 'Cómo jugar', eyebrow: `${campaignLength} mosaicos · hasta 4 × 4`, emblem: 'moon',
-    body: `<p class="lede">Alcanza la meta de puntos de cada mosaico antes de quedarte sin turnos.</p>
+    body: `<p class="lede">Supera ${campaignLength} mosaicos alcanzando su meta de puntos antes de quedarte sin turnos. Al ganar puedes seguir en modo libre.</p>
     <ol class="precepts">
       <li><strong>Coloca.</strong> Arrastra dados de la bandeja al tablero, o toca un dado y luego una casilla. Puedes recolocarlos antes de puntuar.</li>
       <li><strong>Puntúa.</strong> Los números dan puntos base (parejas, tríos, escaleras, líneas llenas) y los colores multiplican (monocolor o todos distintos). El panel lleno suma ${comboPoints.panel}.</li>
       <li><strong>Cincela.</strong> Los dados puntuados se vuelven piedra. Toca una piedra para romperla y liberar la casilla; su número sigue contando mientras esté en la mesa.</li>
       <li><strong>Encargos.</strong> Cada tres mosaicos hay un encargo opcional que paga oro una vez.</li>
       <li><strong>Zoco y horno.</strong> Tras cada mosaico compras dados, equipas hasta ${tileLimit} azulejos de poder y usas el horno una vez para mejorar un dado.</li>
+      <li><strong>Bolsa inicial.</strong> Cada partida empieza eligiendo una bolsa de dados distinta.</li>
+      <li><strong>Jefes.</strong> Cada ${BOSS_EVERY} mosaicos llega un jefe con una regla especial. El zoco te avisa antes y vencerlo da ${BOSS_GOLD} de oro extra.</li>
       <li><strong>Dados únicos.</strong> Cuentan como cualquier color. Selecciónalos para leer su poder.</li>
     </ol>
     <p class="keys"><kbd>1–4</kbd> elige dado · <kbd>flechas</kbd> e <kbd>Intro</kbd> colocan · <kbd>Espacio</kbd> puntúa · <kbd>Retroceso</kbd> retira · <kbd>V</kbd> cenital · <kbd>R</kbd> centra · <kbd>Esc</kbd> pausa</p>`,
@@ -591,13 +613,14 @@ function showOutcome() {
   const total = run.results.reduce((sum, points) => sum + points, 0);
   const stat = (value, label) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`;
   if (run.phase === 'won') {
-    showDialog('outcome', windowMarkup({ title: '¡Campaña completada!', eyebrow: `${campaignLength} de ${campaignLength} mosaicos`,
+    showDialog('outcome', windowMarkup({ title: '¡Campaña completada!', eyebrow: `${campaignLength} de ${campaignLength} mosaicos · ${decks[run.deck].name}`,
       body: `<div class="stats">${stat(total, 'Puntos')}${stat(run.orders.length, 'Encargos')}</div>`,
       actions: action('endless', 'Modo libre', 'play', 'gold') + action('collection', 'Ver bolsa y azulejos', 'bag') + action('title', 'Volver al patio', 'door') }), 'victory');
     return;
   }
   const heading = run.turns && run.board.every(Boolean) ? 'Tablero bloqueado' : 'Sin turnos';
-  showDialog('outcome', windowMarkup({ title: heading, eyebrow: `Mosaico ${run.stage + 1}${run.endless ? '' : ` de ${campaignLength}`} · ${stageAt(run.stage).name}`,
+  const boss = bossAt(run);
+  showDialog('outcome', windowMarkup({ title: heading, eyebrow: `Mosaico ${run.stage + 1}${run.endless ? '' : ` de ${campaignLength}`} · ${boss ? `Jefe: ${bosses[boss.key].name}` : stageAt(run.stage).name}`,
     body: `<div class="stats">${stat(`${run.points}/${run.goal}`, 'Este mosaico')}${stat(total + run.points, 'Total partida')}</div>`,
     actions: action('restart', 'Volver a jugar', 'refresh', 'gold') + action('collection', 'Ver bolsa y azulejos', 'bag') + action('title', 'Volver al patio', 'door') }), 'defeat');
 }
@@ -626,7 +649,8 @@ dialog.addEventListener('click', event => {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       else document.documentElement.requestFullscreen().catch(() => {});
       break;
-    case 'restart': startRun(); break;
+    case 'restart': chooseBag(); break;
+    case 'bag': startRun(button.dataset.bag); break;
   }
 });
 
@@ -799,7 +823,7 @@ document.addEventListener('keydown', event => {
 });
 
 $('play').addEventListener('click', () => {
-  if (ongoing()) { save(); enter(); } else startRun();
+  if (ongoing()) { save(); enter(); } else chooseBag();
 });
 $('new').addEventListener('click', () => showDialog('restart', windowMarkup({ title: '¿Empezar de nuevo?', emblem: 'star',
   body: '<p class="lede">La partida actual se perderá y volverás al primer mosaico.</p>',

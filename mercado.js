@@ -1,10 +1,10 @@
-import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=alhambra-1';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize } from './reglas.js?v=alhambra-1';
-import { diePortrait, tileArt } from './arte.js?v=alhambra-1';
-import { Workshop } from './taller.js?v=alhambra-1';
-import { uniqueDice } from './unicos.js?v=alhambra-1';
-import { dieFaces, dieTraits } from './coleccion.js?v=alhambra-1';
-import { icon } from './iconos.js?v=alhambra-1';
+import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=alhambra-2';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=alhambra-2';
+import { diePortrait, tileArt } from './arte.js?v=alhambra-2';
+import { Workshop } from './taller.js?v=alhambra-2';
+import { uniqueDice } from './unicos.js?v=alhambra-2';
+import { dieFaces, dieTraits } from './coleccion.js?v=alhambra-2';
+import { icon } from './iconos.js?v=alhambra-2';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -109,7 +109,7 @@ export class MarketUI {
       ${icon(glyph)}<span>${label}</span>${extra}</button>`;
     const oven = run.market.forged ? '<span class="tab-note">usado</span>' : '<span class="tab-ember" aria-hidden="true"></span>';
     return `<header class="zoco-head">
-      <div class="zoco-heading"><span class="zoco-kicker">Mosaico ${run.stage + 1} superado · ${run.points} puntos</span>
+      <div class="zoco-heading"><span class="zoco-kicker">${bossAt(run) ? `Jefe vencido · +${BOSS_GOLD} de oro` : `Mosaico ${run.stage + 1} superado`} · ${run.points} puntos</span>
         <h2 id="workshop-title" tabindex="-1">${this.mode === 'shop' ? 'El zoco' : 'El horno'}</h2></div>
       <nav class="zoco-tabs" aria-label="Secciones del taller">${tab('shop', 'store', 'Puestos')}${tab('oven', 'flame', 'Horno', oven)}</nav>
       <div class="zoco-tools">
@@ -124,10 +124,15 @@ export class MarketUI {
 
   footerMarkup() {
     const next = this.run.stage + 1;
+    const boss = bossAt(this.run, next);
+    // The next boss is announced here, with its rule one tap away.
+    const goal = boss ? `<button type="button" class="boss-pill" data-tip="boss" data-key="${next}" aria-haspopup="dialog" aria-expanded="false">
+        ${icon('crown')}<span class="boss-pill-name">${bosses[boss.key].name}</span><small>Meta ${stageAt(next).goal}</small></button>`
+      : `<span class="goal-pill">${icon('star')}Meta <strong>${stageAt(next).goal}</strong></span>`;
     return `<footer class="zoco-foot">
-      <button type="button" class="btn btn-quiet zoco-exit" data-market="exit">${icon('exit')}<span>Guardar y salir</span></button>
-      <div class="zoco-next"><span class="goal-pill">${icon('star')}Meta <strong>${stageAt(next).goal}</strong></span>
-        <button type="button" class="btn btn-gold btn-big" data-market="advance"><span>Mosaico ${next + 1}</span>${icon('arrow')}</button></div></footer>`;
+      <button type="button" class="btn btn-quiet zoco-exit" data-market="exit" aria-label="Guardar y salir">${icon('exit')}<span>Guardar y salir</span></button>
+      <div class="zoco-next">${goal}
+        <button type="button" class="btn btn-gold btn-big${boss ? ' btn-boss' : ''}" data-market="advance"><span>Mosaico ${next + 1}</span>${icon('arrow')}</button></div></footer>`;
   }
 
   // ---------- Stalls ----------
@@ -187,6 +192,12 @@ export class MarketUI {
 
   tipMarkup(kind, key) {
     const run = this.run;
+    if (kind === 'boss') {
+      const boss = bossAt(run, key);
+      return { color: '#f0a184', html: `<div class="ztip-card"><span class="ztip-emblem" aria-hidden="true">${icon('crown')}</span><div class="ztip-text">
+        <small class="ztip-kicker">Jefe · mosaico ${key + 1}</small><strong id="ztip-title">${bosses[boss.key].name}</strong><p>${bossText(boss)}</p>
+        <p class="ztip-plain">Meta ${stageAt(key).goal}. Vencerlo da ${BOSS_GOLD} de oro extra.</p></div></div>` };
+    }
     if (kind === 'die' || kind === 'candidate') {
       const spec = kind === 'die' ? run.market.dice[key] : run.bag[key];
       const rarity = rarities[spec.rarity], unique = uniqueDice[spec.unique], traits = dieTraits(spec);
