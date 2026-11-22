@@ -1,17 +1,19 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=alhambra-2';
-import { DiceArt, tileArt, diePortrait } from './arte.js?v=alhambra-2';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=alhambra-2';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=alhambra-3';
+import { DiceArt, tileArt, diePortrait } from './arte.js?v=alhambra-3';
+import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=alhambra-3';
 import { stageAt, campaignLength, orderAt, comboPoints, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=alhambra-2';
-import { uniqueDice } from './unicos.js?v=alhambra-2';
-import { MarketUI } from './mercado.js?v=alhambra-2';
-import { collectionMarkup } from './coleccion.js?v=alhambra-2';
-import { icon, hydrateIcons } from './iconos.js?v=alhambra-2';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=alhambra-3';
+import { uniqueDice } from './unicos.js?v=alhambra-3';
+import { MarketUI } from './mercado.js?v=alhambra-3';
+import { collectionMarkup } from './coleccion.js?v=alhambra-3';
+import { icon, hydrateIcons } from './iconos.js?v=alhambra-3';
+import { Music } from './musica.js?v=alhambra-3';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
 const storage = 'mosaic-roll/3d-web-v2';
 const soundStorage = `${storage}/sound`;
+const musicStorage = `${storage}/music`;
 const dialog = $('dialog');
 const canvas = $('canvas');
 const activePowers = $('active-powers');
@@ -45,6 +47,8 @@ let playing = false;
 let modal = '';
 let collectionReturn = '';
 let muted = read(soundStorage) === 'off';
+let musicOn = read(musicStorage) !== 'off';
+let music = null, musicMood = 'title';
 let selected = -1, focused = -1, hovered = -1;
 let tooltip = -1, pinned = false;
 let pointer = null, lockUntil = 0;
@@ -116,6 +120,37 @@ const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden=
 const chips = (base, multiplier, popBase = false, popMulti = false) =>
   `<span class="chip chip-base${popBase ? ' pop' : ''}">${base}</span><span class="times" aria-label="por">×</span><span class="chip chip-mult${popMulti ? ' pop' : ''}">${decimal(multiplier)}</span>`;
 
+// Music plays while sound is on, the music switch is on and the page is visible.
+function syncMusic() {
+  try {
+    if (musicOn && !muted && !document.hidden && window.AudioContext) {
+      sound ??= new AudioContext();
+      if (sound.state === 'suspended') sound.resume().catch(() => {});
+      music ??= new Music(sound);
+      music.setMood(musicMood);
+      music.start();
+    } else music?.stop();
+  } catch { /* The game stays playable without music. */ }
+  paintMusic();
+}
+
+function paintMusic() {
+  const button = $('music');
+  button.setAttribute('aria-pressed', String(musicOn));
+  button.querySelector('.music-state').textContent = musicOn ? 'sí' : 'no';
+}
+
+function setMusicMood(mood) {
+  musicMood = mood;
+  music?.setMood(mood);
+}
+
+function toggleMusic() {
+  musicOn = !musicOn;
+  write(musicStorage, musicOn ? 'on' : 'off');
+  syncMusic();
+}
+
 function note(type) {
   if (muted || !window.AudioContext) return;
   try {
@@ -168,6 +203,7 @@ function closeDialog() {
 }
 
 function title() {
+  setMusicMood('title');
   closeDialog();
   cancelPointer();
   setCodex(false);
@@ -246,6 +282,7 @@ function enter(roll = []) {
   render();
   table.frame(now);
   if (roll.length) note('roll');
+  setMusicMood(bossAt(run) ? 'boss' : 'play');
   if (run.phase !== 'play') showOutcome();
   else if (bossAt(run)) popup(`Jefe: ${bosses[bossAt(run).key].name}`, [], 'banner boss');
 }
@@ -578,6 +615,7 @@ function showWorkshop(mode, content) {
   $('play-layout').hidden = true;
   $('game').classList.add('workshop-open');
   document.body.dataset.screen = 'workshop';
+  setMusicMood('shop');
   workshop.innerHTML = content;
   workshop.hidden = false;
   workshop.querySelector('h2').focus({ preventScroll: true });
@@ -604,6 +642,7 @@ function pause() {
   if (!playing || modal || resolution || pendingOutcome) return;
   showDialog('pause', windowMarkup({ title: 'Pausa', eyebrow: `Mosaico ${run.stage + 1} · ${stageAt(run.stage).name}`, emblem: 'moon',
     actions: action('back', 'Continuar', 'play', 'gold') + action('help', 'Cómo jugar', 'help') +
+      action('music', `Música: ${musicOn ? 'sí' : 'no'}`, musicOn ? 'music' : 'music-off') +
       (document.fullscreenEnabled ? action('fullscreen', 'Pantalla completa', 'expand') : '') + action('title', 'Volver al patio', 'door') }));
 }
 
@@ -613,6 +652,7 @@ function showOutcome() {
   const total = run.results.reduce((sum, points) => sum + points, 0);
   const stat = (value, label) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`;
   if (run.phase === 'won') {
+    setMusicMood('title');
     showDialog('outcome', windowMarkup({ title: '¡Campaña completada!', eyebrow: `${campaignLength} de ${campaignLength} mosaicos · ${decks[run.deck].name}`,
       body: `<div class="stats">${stat(total, 'Puntos')}${stat(run.orders.length, 'Encargos')}</div>`,
       actions: action('endless', 'Modo libre', 'play', 'gold') + action('collection', 'Ver bolsa y azulejos', 'bag') + action('title', 'Volver al patio', 'door') }), 'victory');
@@ -645,6 +685,10 @@ dialog.addEventListener('click', event => {
       if (continueEndless(run)) { save(); closeDialog(); showOutcome(); }
       break;
     case 'help': help(); break;
+    case 'music':
+      toggleMusic();
+      button.innerHTML = `${icon(musicOn ? 'music' : 'music-off')}Música: ${musicOn ? 'sí' : 'no'}`;
+      break;
     case 'fullscreen':
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       else document.documentElement.requestFullscreen().catch(() => {});
@@ -844,7 +888,20 @@ $('sound').addEventListener('click', () => {
   write(soundStorage, muted ? 'off' : 'on');
   if (!muted) note('pick');
   else if (sound) sound.suspend().catch(() => {});
+  syncMusic();
   render();
+});
+$('music').addEventListener('click', toggleMusic);
+// Browsers only allow audio after a gesture, so music starts with the first touch or key.
+for (const type of ['pointerdown', 'keydown']) addEventListener(type, () => { if (!music?.running) syncMusic(); }, { capture: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    music?.stop();
+    if (sound) sound.suspend().catch(() => {});
+  } else if (!muted && sound) {
+    sound.resume().catch(() => {});
+    syncMusic();
+  }
 });
 
 $('world').addEventListener('animationend', event => {
@@ -864,6 +921,7 @@ function frame(now) {
 }
 
 setCodex(false);
+paintMusic();
 try {
   const art = new DiceArt();
   table = new Table(canvas, $('world-labels'), art);

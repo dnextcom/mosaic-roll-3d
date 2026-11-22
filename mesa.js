@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt } from './arte.js?v=alhambra-2';
-import { projectBoard } from './unicos.js?v=alhambra-2';
+import { DiceArt, tileArt } from './arte.js?v=alhambra-3';
+import { projectBoard } from './unicos.js?v=alhambra-3';
 
 export const HAND = 32;
 export const POWER = 48;

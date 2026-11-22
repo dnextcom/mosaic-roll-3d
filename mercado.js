@@ -1,10 +1,10 @@
-import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=alhambra-2';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=alhambra-2';
-import { diePortrait, tileArt } from './arte.js?v=alhambra-2';
-import { Workshop } from './taller.js?v=alhambra-2';
-import { uniqueDice } from './unicos.js?v=alhambra-2';
-import { dieFaces, dieTraits } from './coleccion.js?v=alhambra-2';
-import { icon } from './iconos.js?v=alhambra-2';
+import { glazes, basicColors, rarities, powers, upgrades, diceName, dieCount, fuse } from './catalogo.js?v=alhambra-3';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=alhambra-3';
+import { diePortrait, tileArt } from './arte.js?v=alhambra-3';
+import { Workshop } from './taller.js?v=alhambra-3';
+import { uniqueDice } from './unicos.js?v=alhambra-3';
+import { dieFaces, dieTraits } from './coleccion.js?v=alhambra-3';
+import { icon } from './iconos.js?v=alhambra-3';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.

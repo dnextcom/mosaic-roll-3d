@@ -221,6 +221,9 @@ kbd {
 
 .boot { max-width: 40ch; margin-top: 10px; color: var(--terra-2); text-align: center; }
 .patio-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 26px; margin-top: 8px; color: var(--ivory-3); font: 500 12px/1 var(--font-kufi); letter-spacing: .1em; }
+.music-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0; border: 0; background: none; color: var(--ivory-3); font: inherit; letter-spacing: inherit; }
+.music-toggle:hover { color: var(--gold-3); }
+.music-toggle[aria-pressed="false"] { opacity: .6; }
 .download { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; color: var(--ivory-3); text-decoration: none; }
 .download:hover { color: var(--gold-3); }
 

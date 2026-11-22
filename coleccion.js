@@ -1,8 +1,8 @@
-import { basicColors, colorDie, dieCount, diceName, hasFace, powers, rarities, uniqueDie } from './catalogo.js?v=alhambra-2';
-import { diePortrait, tileArt } from './arte.js?v=alhambra-2';
-import { tileLimit, decks, deckSample, bosses, BOSS_EVERY } from './reglas.js?v=alhambra-2';
-import { uniqueDice } from './unicos.js?v=alhambra-2';
-import { icon } from './iconos.js?v=alhambra-2';
+import { basicColors, colorDie, dieCount, diceName, hasFace, powers, rarities, uniqueDie } from './catalogo.js?v=alhambra-3';
+import { diePortrait, tileArt } from './arte.js?v=alhambra-3';
+import { tileLimit, decks, deckSample, bosses, BOSS_EVERY } from './reglas.js?v=alhambra-3';
+import { uniqueDice } from './unicos.js?v=alhambra-3';
+import { icon } from './iconos.js?v=alhambra-3';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);
