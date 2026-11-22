@@ -1,5 +1,4 @@
-// Inline line icons for the «Alhambra de noche» skin.
-// Icons are emitted as full <svg> markup because <base href="../"> breaks same-document <use href="#…"> references.
+// Inline line icons for the «Alhambra de noche» look, emitted as full <svg> markup.
 const star = 'M12 2.5 14.78 5.28H18.72V9.22L21.5 12 18.72 14.78V18.72H14.78L12 21.5 9.22 18.72H5.28V14.78L2.5 12 5.28 9.22V5.28H9.22Z';
 
 const paths = {
