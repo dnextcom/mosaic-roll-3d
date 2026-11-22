@@ -11,7 +11,8 @@ export class Workshop {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x2a1a12);
+    // Skins may tint the workshop backdrop through the --scene-workshop custom property.
+    this.scene.background = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--scene-workshop').trim() || 0x2a1a12);
     this.camera = new THREE.OrthographicCamera(-3.45, 3.45, 2, -2, .1, 25);
     this.camera.position.set(0, 5, 8);
     this.camera.lookAt(0, .21, .25);

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <base href="../">
+  <meta name="theme-color" content="#1d1519">
+  <meta name="description" content="Mosaic Roll 3D · Talavera. Pinta líneas con dados de mayólica, cumple los encargos del alfar y cuece mejoras en el horno.">
+  <title>Mosaic Roll 3D · Talavera</title>
+  <link rel="icon" type="image/jpeg" href="azulejo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=Figtree:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="v3/talavera.css?v=1">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+  <script type="module" src="v3/juego.js?v=1"></script>
+</head>
+<body>
+  <!-- Title screen: a potter's shelf (vasar) where every plate is a menu option -->
+  <main class="alfar" id="start">
+    <div class="alfar-scene" aria-hidden="true"></div>
+    <nav class="versions" aria-label="Versiones del diseño">
+      <a href="./">Actual</a><a href="v1/">V1</a><a href="v2/">V2</a><a href="v3/" aria-current="page">V3</a>
+    </nav>
+    <header class="alfar-head">
+      <p class="alfar-kicker">Alfar de mayólica · Talavera</p>
+      <h1 class="wordmark"><span class="wordmark-main">Mosaic Roll</span> <span class="wordmark-3d">3D</span></h1>
+      <p class="alfar-tagline">Pinta líneas con dados de cerámica, cumple los encargos del alfar y cuece mejoras en el horno.</p>
+    </header>
+    <section class="vasar" aria-label="Menú principal">
+      <div class="vasar-plates">
+        <button class="plate plate-side" type="button" data-help data-plate="help">
+          <span class="plate-art" aria-hidden="true"></span>
+          <span class="plate-label"><i data-icon="help"></i>Cómo jugar</span>
+        </button>
+        <button class="plate plate-main" type="button" id="play" data-plate="main" disabled>
+          <span class="plate-art" aria-hidden="true"></span>
+          <span class="plate-label"><span class="plate-title" id="play-label">Cargando…</span><small class="plate-note" id="play-note"></small></span>
+        </button>
+        <button class="plate plate-side" type="button" id="catalog" data-plate="catalog">
+          <span class="plate-art" aria-hidden="true"></span>
+          <span class="plate-label"><i data-icon="book"></i>Catálogo</span>
+        </button>
+      </div>
+      <div class="vasar-plank" aria-hidden="true"><span class="bracket"></span><span class="bracket"></span></div>
+      <div class="zocalo">
+        <div class="zocalo-plaques">
+          <button class="plaque" type="button" id="new" hidden><i data-icon="refresh"></i>Nueva partida</button>
+          <a class="plaque" href="Mosaic-Roll-3D.zip?v=taller-2" download><i data-icon="download"></i>Edición Windows</a>
+        </div>
+        <p class="boot" id="boot" role="status" hidden></p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Game screen: the UI itself is a tile sampler board framing the 3D table -->
+  <main class="muestrario" id="game" hidden>
+    <div class="loom" id="play-layout">
+      <section class="ledger" aria-label="Recursos del mosaico">
+        <button class="tile tile-tool t-pause" type="button" id="pause" aria-label="Pausa" title="Pausa (Esc)"><i data-icon="pause"></i></button>
+        <button class="tile tile-tool t-sound" type="button" id="sound" aria-label="Sonido" aria-pressed="true" title="Sonido"><i class="when-on" data-icon="sound"></i><i class="when-off" data-icon="mute"></i></button>
+        <div class="tile t-score" id="score-tile">
+          <span class="tile-label">Puntos</span>
+          <p class="score-line"><span class="sr-only">Puntuación</span><strong class="score-value" id="score">0</strong><span class="score-goal" id="goal"></span></p>
+          <div class="tesserae" id="progress" role="progressbar" aria-label="Objetivo del mosaico" aria-valuemin="0" aria-valuenow="0" aria-valuemax="1"></div>
+        </div>
+        <div class="tile t-small t-turns" title="Turnos restantes">
+          <span class="tile-label"><i data-icon="hourglass"></i>Turnos</span>
+          <div class="turns" id="turns" role="img"></div>
+        </div>
+        <div class="tile t-small t-chisel" title="Cargas de cincel">
+          <span class="tile-label"><i data-icon="chisel"></i>Cincel</span>
+          <span class="sr-only">Cargas de cincel</span><strong class="small-value" id="chisel-count"></strong>
+        </div>
+        <div class="tile t-small t-gold" title="Oro">
+          <span class="tile-label"><i class="coin" aria-hidden="true"></i>Oro</span>
+          <span class="sr-only">Oro</span><strong class="small-value" id="gold-count"></strong>
+        </div>
+        <button class="tile t-small t-bag" type="button" id="collection-button" title="Bolsa y azulejos">
+          <span class="tile-label"><i data-icon="jar"></i>Bolsa</span>
+          <strong class="small-value" id="bag-count"></strong><span class="sr-only"> dados. Ver bolsa y azulejos</span>
+        </button>
+        <div class="tile t-order" id="order" hidden>
+          <span class="tile-label">Encargo del alfar</span>
+          <strong class="order-text" id="order-label"></strong>
+          <span class="order-reward" id="order-reward"></span>
+        </div>
+      </section>
+
+      <section class="stage" aria-label="Mesa 3D">
+        <header class="cartouche">
+          <span class="cartouche-kicker" id="stage-label"></span>
+          <h1 class="cartouche-title" id="stage-name"></h1>
+        </header>
+        <div class="cenefa">
+          <div class="world" id="world">
+            <canvas id="canvas" tabindex="0" aria-label="Tablero de dados 3D" aria-describedby="hint"></canvas>
+            <div class="world-labels" id="world-labels" aria-hidden="true"></div>
+            <div class="popups" id="popups" aria-hidden="true"></div>
+            <div class="glaze-tip" id="power-tooltip" role="tooltip" hidden></div>
+            <div class="glaze-tip unique-tip" id="die-tooltip" role="tooltip" hidden></div>
+          </div>
+        </div>
+        <div class="caption">
+          <p class="hint" id="hint" aria-live="polite"></p>
+          <button class="btn btn-sm btn-quiet" type="button" id="recall" hidden><i data-icon="undo"></i>Retirar</button>
+          <p class="keys" aria-hidden="true"><kbd>1–4</kbd> dado · <kbd>Clic der.</kbd> girar · <kbd>Rueda</kbd> zoom</p>
+        </div>
+      </section>
+
+      <section class="kiln" aria-label="Jugada y azulejos">
+        <button class="tile tile-tool" type="button" id="top" aria-label="Vista cenital" title="Vista cenital (V)"><i data-icon="grid"></i></button>
+        <button class="tile tile-tool" type="button" id="reset-camera" aria-label="Centrar cámara" title="Centrar cámara (R)"><i data-icon="target"></i></button>
+        <div class="tile t-play" id="play-tile">
+          <div class="play-summary" aria-live="polite">
+            <h2 class="tile-label">Jugada</h2>
+            <strong class="preview" id="preview">+0</strong>
+            <p class="breakdown" id="breakdown"></p>
+            <p class="placed"><span class="placed-dice" id="placed-dice" aria-hidden="true"></span><span id="placed"></span></p>
+          </div>
+          <div class="firing" id="sequence" hidden>
+            <ol class="firing-steps" id="firing-steps" aria-hidden="true">
+              <li data-phase="Dados">Dados</li><li data-phase="Combos numéricos">Combos</li><li data-phase="Multiplicador">Color</li><li data-phase="Total">Total</li>
+            </ol>
+            <span class="firing-phase" id="sequence-phase"></span>
+            <div class="firing-value" id="sequence-value"></div>
+            <small class="firing-detail" id="sequence-detail"></small>
+            <button class="btn btn-sm btn-quiet firing-skip" id="skip-score" type="button">Saltar<i data-icon="forward"></i></button>
+          </div>
+        </div>
+        <button class="tile t-fire" type="button" id="confirm" disabled>
+          <span class="fire-label">Puntuar</span><kbd>Espacio</kbd>
+        </button>
+        <div class="tile t-shelf">
+          <h2 class="tile-label" id="equipped-label">Azulejos <span class="shelf-count" id="equipped-count"></span></h2>
+          <div class="shelf-slots" id="active-powers" role="group" aria-labelledby="equipped-label"></div>
+        </div>
+      </section>
+
+      <section class="sampler" aria-labelledby="sampler-title">
+        <h2 class="sampler-title" id="sampler-title">Muestrario <span>de combinaciones</span></h2>
+        <ul class="sampler-tiles" id="patterns"></ul>
+      </section>
+    </div>
+    <section class="atelier" id="workshop" aria-labelledby="workshop-title" hidden></section>
+  </main>
+
+  <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+  <noscript>Activa JavaScript en el navegador para jugar a Mosaic Roll 3D.</noscript>
+</body>
+</html>

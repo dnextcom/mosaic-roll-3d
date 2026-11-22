@@ -1,0 +1,43 @@
+// Inline line icons for the «Alhambra de noche» skin.
+// Icons are emitted as full <svg> markup because <base href="../"> breaks same-document <use href="#…"> references.
+const star = 'M12 2.5 14.78 5.28H18.72V9.22L21.5 12 18.72 14.78V18.72H14.78L12 21.5 9.22 18.72H5.28V14.78L2.5 12 5.28 9.22V5.28H9.22Z';
+
+const paths = {
+  pause: '<path d="M9 6.5v11M15 6.5v11"/>',
+  play: '<path class="f" d="M8.5 5.8v12.4a.8.8 0 0 0 1.2.7l9.6-6.2a.8.8 0 0 0 0-1.4L9.7 5.1a.8.8 0 0 0-1.2.7Z"/>',
+  sound: '<path d="M4.5 9.5h3l4.5-3.8v12.6L7.5 14.5h-3Z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.4 7.4 0 0 1 0 10.4"/>',
+  mute: '<path d="M4.5 9.5h3l4.5-3.8v12.6L7.5 14.5h-3Z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/>',
+  codex: '<path d="M3.5 5.6c2.9-1.2 5.9-1 8.5.9 2.6-1.9 5.6-2.1 8.5-.9v12.6c-2.9-1.2-5.9-1-8.5.9-2.6-1.9-5.6-2.1-8.5-.9Z"/><path d="M12 6.5v12.6M6.5 9.3c1.3-.2 2.5 0 3.5.5M14 9.8c1-.5 2.2-.7 3.5-.5"/>',
+  bag: '<path d="M9.3 4.2h5.4l-1.3 3.1h-2.8Z"/><path d="M9.8 7.3c-3.8 2.7-5.3 6-4.4 9.1.7 2.3 3 3.4 6.6 3.4s5.9-1.1 6.6-3.4c.9-3.1-.6-6.4-4.4-9.1"/><path d="M9.5 13.5h5"/>',
+  help: '<path d="M12 20.8a8.8 8.8 0 1 0 0-17.6 8.8 8.8 0 0 0 0 17.6Z"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.6v.4"/><path class="f" d="M12 16.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/>',
+  door: '<path d="M6 20.5v-9a6 6 0 0 1 12 0v9"/><path d="M3.5 20.5h17M9.5 20.5v-7.2a2.5 2.5 0 0 1 5 0v7.2"/>',
+  refresh: '<path d="M19.6 12.4a7.6 7.6 0 1 1-2.3-5.8"/><path d="M19.8 4.6v4.6h-4.6"/>',
+  skip: '<path d="m5.5 6.5 6 5.5-6 5.5M12.5 6.5l6 5.5-6 5.5"/>',
+  grid: '<path d="M4.5 4.5h15v15h-15ZM4.5 12h15M12 4.5v15"/>',
+  target: '<path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3"/><path class="f" d="M12 10.6a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8Z"/>',
+  undo: '<path d="M9 14.5 4.5 10 9 5.5"/><path d="M4.5 10h9.3a5.7 5.7 0 0 1 0 11.4H11"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  close: '<path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/>',
+  flame: '<path d="M12 3.2c.9 3.3 5.2 5.4 5.2 10a5.2 5.2 0 0 1-10.4 0c0-2.4 1.3-3.9 2.4-5 .3 1.9 1 3 2.4 3.5-.5-3-.3-5.8.4-8.5Z"/>',
+  store: '<path d="M3.5 9.5 6 4.5h12l2.5 5"/><path d="M3.5 9.5a2.8 2.8 0 0 0 5.7 0 2.8 2.8 0 0 0 5.6 0 2.8 2.8 0 0 0 5.7 0"/><path d="M5.5 12v8.5h13V12M10 20.5v-4a2 2 0 0 1 4 0v4"/>',
+  exit: '<path d="M13.5 4.5h5v15h-5"/><path d="m9.5 8-4 4 4 4M5.5 12h10"/>',
+  expand: '<path d="M4.5 9V4.5H9M15 4.5h4.5V9M19.5 15v4.5H15M9 19.5H4.5V15"/>',
+  star: `<path d="${star}"/>`,
+  'star-fill': `<path class="f" d="${star}"/>`,
+  chisel: '<path d="m15.7 3.6 4.7 4.7-2.6 2.6-4.7-4.7Z"/><path d="m13.1 6.2 4.7 4.7-7.6 7.6-4.6 1.6-.7-.7 1.6-4.6Z"/>',
+  dice: '<path d="M7.5 4h9A3.5 3.5 0 0 1 20 7.5v9a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5v-9A3.5 3.5 0 0 1 7.5 4Z"/><path class="f" d="M8.6 7.4a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4ZM15.4 14.2a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4ZM12 10.8a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z"/>',
+  hourglass: '<path d="M7 3.5h10M7 20.5h10"/><path d="M8 3.5c0 4.4 4 5.3 4 8.5s-4 4.1-4 8.5M16 3.5c0 4.4-4 5.3-4 8.5s4 4.1 4 8.5"/>',
+  scroll: '<path d="M8 4h9.5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8"/><path d="M8 4a2 2 0 0 0-2 2v1.5h4M8 4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-1.5"/><path d="M13 9h3.5M13 12.5h3.5"/>',
+  arrow: '<path d="M4.5 12h14.5M13.5 6.5 19 12l-5.5 5.5"/>',
+  download: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
+  moon: '<path d="M15.5 3.6a8.6 8.6 0 1 0 4.9 13.6A7.2 7.2 0 0 1 15.5 3.6Z"/>',
+};
+
+export function icon(name, className = '') {
+  return `<svg class="ico${className ? ` ${className}` : ''}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name] ?? ''}</svg>`;
+}
+
+// Replaces every <i data-icon="name"> placeholder in static markup with its inline SVG.
+export function hydrateIcons(root = document) {
+  for (const element of root.querySelectorAll('[data-icon]')) element.outerHTML = icon(element.dataset.icon, element.className);
+}

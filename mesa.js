@@ -49,7 +49,8 @@ export class Table {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x22150f);
+    // Skins may tint the room behind the table through the --scene custom property.
+    this.scene.background = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--scene').trim() || 0x22150f);
     this.camera = new THREE.PerspectiveCamera(35, 1, .1, 50);
     this.ray = new THREE.Raycaster();
     this.rayPoint = new THREE.Vector2();

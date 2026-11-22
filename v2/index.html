@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <base href="../">
+  <meta name="theme-color" content="#f6f3ec">
+  <meta name="description" content="Mosaic Roll 3D · Cícladas. Una travesía de doce mosaicos con dados de cerámica, azulejos de poder y mercados de puerto.">
+  <title>Mosaic Roll 3D · Cícladas</title>
+  <link rel="icon" type="image/jpeg" href="azulejo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Jost:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="v2/cicladas.css?v=1">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+  <script type="module" src="v2/juego.js?v=1"></script>
+</head>
+<body>
+  <!-- Title: travel poster + island-hopping route chart -->
+  <main class="atlas" id="start">
+    <svg class="bougainvillea" viewBox="0 0 260 200" aria-hidden="true" focusable="false">
+      <path d="M260 6C214 12 170 30 132 62 104 86 88 116 70 150" fill="none" stroke="#6f6a4c" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M196 26c-8 10-26 12-36 4 12-10 26-12 36-4zM142 58c4 14-6 28-20 30 0-14 8-26 20-30zM110 96c-12 4-26-2-30-14 12-4 26 2 30 14zM92 128c10 8 12 22 4 32-10-8-12-22-4-32z" fill="#6f8a55"/>
+      <g fill="#c2286f"><circle cx="226" cy="30" r="11"/><circle cx="240" cy="44" r="9"/><circle cx="214" cy="46" r="8"/><circle cx="174" cy="44" r="10"/><circle cx="160" cy="34" r="7"/></g>
+      <g fill="#d9488c"><circle cx="232" cy="40" r="7"/><circle cx="168" cy="52" r="6"/><circle cx="122" cy="76" r="9"/><circle cx="108" cy="70" r="7"/><circle cx="116" cy="88" r="6"/></g>
+      <g fill="#e978ac"><circle cx="220" cy="36" r="4"/><circle cx="178" cy="38" r="4"/><circle cx="116" cy="78" r="3.5"/><circle cx="84" cy="118" r="7"/><circle cx="74" cy="132" r="5"/></g>
+      <g fill="#fbefc4"><circle cx="226" cy="38" r="1.8"/><circle cx="170" cy="45" r="1.6"/><circle cx="115" cy="80" r="1.6"/><circle cx="82" cy="124" r="1.6"/></g>
+    </svg>
+
+    <section class="poster" aria-labelledby="logo">
+      <p class="poster-kicker"><span>Islas Cícladas</span><span>Temporada de loza</span></p>
+      <h1 class="logo" id="logo"><span class="logo-word">Mosaic</span> <span class="logo-line"><span class="logo-word">Roll</span> <span class="logo-dome">3D</span></span></h1>
+      <p class="poster-tag">Una travesía de doce mosaicos. Tira dados de cerámica, combina números y esmaltes, y equípate en los mercados del puerto.</p>
+
+      <div class="logbook" id="logbook" hidden></div>
+
+      <div class="atlas-actions">
+        <button class="door-btn big" type="button" id="play" disabled>Cargando…</button>
+        <button class="line-btn" type="button" id="new" hidden><i class="ic ic-refresh" aria-hidden="true"></i>Nueva travesía</button>
+      </div>
+      <div class="atlas-links">
+        <button class="text-btn" type="button" data-help><i class="ic ic-help" aria-hidden="true"></i>Cómo jugar</button>
+        <button class="text-btn" type="button" id="catalog"><i class="ic ic-book" aria-hidden="true"></i>Catálogo</button>
+        <a class="text-btn" href="Mosaic-Roll-3D.zip?v=taller-2" download><i class="ic ic-download" aria-hidden="true"></i>Edición Windows</a>
+      </div>
+      <p class="boot" id="boot" role="status" hidden></p>
+      <nav class="versions" aria-label="Versiones del diseño"><a href="./">Actual</a><a href="v1/">V1 · Alhambra</a><a href="v2/" aria-current="page">V2 · Cícladas</a><a href="v3/">V3 · Talavera</a></nav>
+    </section>
+
+    <section class="chart" aria-labelledby="chart-title">
+      <div class="chart-frame">
+        <div class="chart-sea" id="chart">
+          <span class="chart-sun" aria-hidden="true"></span>
+          <svg class="chart-rose" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width=".8"/>
+            <circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" stroke-width=".4" stroke-dasharray="1 2.6"/>
+            <path d="M50 6 55 45 50 50 45 45ZM50 94 45 55 50 50 55 55Z" fill="currentColor"/>
+            <path d="M6 50 45 45 50 50 45 55ZM94 50 55 55 50 50 55 45Z" fill="currentColor" opacity=".55"/>
+            <text x="50" y="4" text-anchor="middle" font-size="7" fill="currentColor" font-family="Jost, sans-serif">N</text>
+          </svg>
+          <svg class="route" id="route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <path class="route-all" id="route-all" d=""/>
+            <path class="route-done" id="route-done" d=""/>
+          </svg>
+          <ul class="archipelagos" id="archipelagos" aria-hidden="true"></ul>
+          <ol class="isles" id="isles" aria-label="Mosaicos de la campaña"></ol>
+          <span class="port" id="port" aria-hidden="true"><i></i>Puerto</span>
+          <span class="ferry" id="ferry" aria-hidden="true">
+            <svg viewBox="0 0 40 36" focusable="false"><path d="M20 3v22" stroke="#16263f" stroke-width="1.6"/><path d="M21 4 34 23H21Z" fill="#fffdf8"/><path d="M19 8 9 23h10Z" fill="#fbefc4"/><path d="M20 3l7 3-7 3Z" fill="#c2286f"/><path d="M4 26h32l-5 7H9Z" fill="#1f5fa8"/></svg>
+          </span>
+        </div>
+      </div>
+      <div class="chart-caption">
+        <h2 id="chart-title">Carta de la travesía</h2>
+        <ul class="chart-legend" aria-label="Leyenda">
+          <li><i class="key key-done" aria-hidden="true"></i>Completado</li>
+          <li><i class="key key-here" aria-hidden="true"></i>Escala actual</li>
+          <li><i class="key key-ahead" aria-hidden="true"></i>Por descubrir</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <!-- Game: slim status strip, arched window over the table, harbour pier -->
+  <main class="voyage" id="game" hidden>
+    <header class="strip">
+      <button class="round-btn" type="button" id="pause" aria-label="Pausa" title="Pausa (Esc)"><i class="ic ic-pause" aria-hidden="true"></i></button>
+      <div class="strip-title">
+        <span class="strip-kicker" id="stage-label"></span>
+        <h1 id="stage-name"></h1>
+      </div>
+      <ul class="ledger" aria-label="Recursos">
+        <li class="ledger-turns" title="Turnos restantes"><span class="ledger-label">Turnos</span><span class="domes" id="turns" role="img"></span></li>
+        <li title="Cargas de cincel"><i class="ic ic-chisel" aria-hidden="true"></i><span class="sr-only">Cincel</span><strong id="chisel-count"></strong></li>
+        <li title="Oro"><i class="coin" aria-hidden="true"></i><span class="sr-only">Oro</span><strong id="gold-count"></strong></li>
+        <li class="ledger-bag"><button type="button" id="collection-button" aria-label="Bolsa y azulejos" title="Bolsa y azulejos"><i class="ic ic-bag" aria-hidden="true"></i><span class="sr-only">Dados en la bolsa</span><strong id="bag-count"></strong></button></li>
+      </ul>
+      <button class="round-btn" type="button" id="sound" aria-label="Sonido" aria-pressed="true" title="Sonido"><i class="ic ic-sound" aria-hidden="true"></i></button>
+    </header>
+
+    <div class="harbour" id="play-layout">
+      <section class="bay" aria-label="Mesa 3D">
+        <div class="world" id="world">
+          <canvas id="canvas" tabindex="0" aria-label="Tablero de dados 3D" aria-describedby="hint"></canvas>
+          <div class="world-labels" id="world-labels" aria-hidden="true"></div>
+          <div class="popups" id="popups" aria-hidden="true"></div>
+
+          <div class="order-tag" id="order" hidden>
+            <span class="order-kicker">Encargo</span>
+            <strong id="order-label"></strong>
+            <span class="order-reward" id="order-reward"></span>
+          </div>
+
+          <section class="stamps" aria-labelledby="equipped-label">
+            <h2 class="stamps-label" id="equipped-label">Azulejos <span id="equipped-count"></span></h2>
+            <div class="stamp-column" id="active-powers" role="group" aria-labelledby="equipped-label"></div>
+          </section>
+
+          <div class="note-tip" id="power-tooltip" role="tooltip" hidden></div>
+          <div class="note-tip note-unique" id="die-tooltip" role="tooltip" hidden></div>
+
+          <div class="tally" id="sequence" hidden>
+            <span class="tally-phase" id="sequence-phase"></span>
+            <div class="tally-value" id="sequence-value"></div>
+            <small class="tally-detail" id="sequence-detail"></small>
+            <button class="text-btn small" id="skip-score" type="button">Saltar <i class="ic ic-forward" aria-hidden="true"></i></button>
+          </div>
+        </div>
+        <div class="sill">
+          <p class="hint" id="hint" aria-live="polite"></p>
+          <button class="line-btn small" type="button" id="recall" hidden><i class="ic ic-undo" aria-hidden="true"></i>Retirar</button>
+          <div class="camera-tools">
+            <button class="round-btn small" type="button" id="top" aria-label="Vista cenital" title="Vista cenital (V)"><i class="ic ic-grid" aria-hidden="true"></i></button>
+            <button class="round-btn small" type="button" id="reset-camera" aria-label="Centrar cámara" title="Centrar cámara (R)"><i class="ic ic-target" aria-hidden="true"></i></button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="pier" aria-label="Puntuación y combinaciones">
+        <section class="pier-score" id="score-pill">
+          <span class="pier-label">Puntos</span>
+          <div class="pier-tally"><span class="sr-only">Puntuación</span><strong id="score">0</strong><span id="goal"></span></div>
+          <div class="sea-meter">
+            <progress id="progress" value="0" aria-label="Objetivo del mosaico"></progress>
+            <span class="sea-meter-boat" aria-hidden="true"></span>
+          </div>
+        </section>
+
+        <section class="postcards" aria-labelledby="combos-title">
+          <h2 class="pier-label" id="combos-title">Combinaciones</h2>
+          <ul class="postcard-strip" id="patterns"></ul>
+        </section>
+
+        <section class="pier-play" aria-live="polite">
+          <span class="pier-label">Jugada</span>
+          <strong class="play-preview" id="preview">+0</strong>
+          <p class="play-breakdown" id="breakdown"></p>
+          <p class="play-placed" id="placed"></p>
+        </section>
+
+        <button class="door-btn score-btn" id="confirm" type="button" disabled><span>Puntuar</span><kbd>Espacio</kbd></button>
+      </footer>
+    </div>
+
+    <section class="market" id="workshop" aria-labelledby="workshop-title" hidden></section>
+  </main>
+
+  <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+  <noscript>Activa JavaScript en el navegador para jugar a Mosaic Roll 3D.</noscript>
+</body>
+</html>
