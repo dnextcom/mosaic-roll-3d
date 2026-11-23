@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-1';
-import { Table, HAND, POWER, UNIQUE, ROLL_TIME } from './mesa.js?v=esmaltes-1';
-import { DiceArt, tileArt, diePortrait } from './arte.js?v=esmaltes-1';
-import { powers, rarities, dieCount, hasFace, getDieSpec } from './catalogo.js?v=esmaltes-1';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-2';
+import { Table, HAND, POWER, UNIQUE, ROLL_TIME } from './mesa.js?v=esmaltes-2';
+import { DiceArt, tileArt, diePortrait } from './arte.js?v=esmaltes-2';
+import { powers, rarities, dieCount, hasFace, getDieSpec } from './catalogo.js?v=esmaltes-2';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=esmaltes-1';
-import { uniqueDice } from './unicos.js?v=esmaltes-1';
-import { MarketUI } from './mercado.js?v=esmaltes-1';
-import { collectionMarkup } from './coleccion.js?v=esmaltes-1';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-1';
-import { Music } from './musica.js?v=esmaltes-1';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=esmaltes-2';
+import { uniqueDice } from './unicos.js?v=esmaltes-2';
+import { MarketUI } from './mercado.js?v=esmaltes-2';
+import { collectionMarkup } from './coleccion.js?v=esmaltes-2';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-2';
+import { Music } from './musica.js?v=esmaltes-2';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -1024,7 +1024,7 @@ canvas.addEventListener('contextmenu', event => event.preventDefault());
 canvas.addEventListener('pointerdown', event => {
   if (!playing || modal || pointer || event.button !== 0 && event.button !== 2) return;
   const target = table.pick(event.clientX, event.clientY);
-  if (target >= POWER && event.button === 0) { showPower(target - POWER, true); return; }
+  if (target >= POWER && target < UNIQUE && event.button === 0) { showPower(target - POWER, true); return; }
   showPower(-1);
   const touch = event.pointerType !== 'mouse';
   const orbit = event.button === 2 || touch && target < 0;
@@ -1068,8 +1068,8 @@ canvas.addEventListener('pointermove', event => {
   }
   focused = -1;
   const previous = hovered;
-  hovered = table.pick(event.clientX, event.clientY, Boolean(pointer?.drag && selected >= HAND));
-  if (!pointer && !pinned && event.pointerType === 'mouse' && previous !== hovered) showPower(hovered >= POWER ? hovered - POWER : -1);
+  hovered = table.pick(event.clientX, event.clientY, Boolean(pointer?.drag && (selected >= HAND || selected >= UNIQUE)));
+  if (!pointer && !pinned && event.pointerType === 'mouse' && previous !== hovered) showPower(hovered >= POWER && hovered < UNIQUE ? hovered - POWER : -1);
   canvas.style.cursor = pointer?.drag ? 'grabbing' : hovered >= 0 ? 'pointer' : 'default';
   if (ready() && previous !== hovered) $('hint').textContent = hint(run.board.filter(isFresh).length);
   updateFocus();

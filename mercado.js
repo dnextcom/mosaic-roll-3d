@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-1';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-1';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-1';
-import { diePortrait, tileArt } from './arte.js?v=esmaltes-1';
-import { Workshop } from './taller.js?v=esmaltes-1';
-import { uniqueDice } from './unicos.js?v=esmaltes-1';
-import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-1';
-import { icon } from './iconos.js?v=esmaltes-1';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-2';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-2';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-2';
+import { diePortrait, tileArt } from './arte.js?v=esmaltes-2';
+import { Workshop } from './taller.js?v=esmaltes-2';
+import { uniqueDice } from './unicos.js?v=esmaltes-2';
+import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-2';
+import { icon } from './iconos.js?v=esmaltes-2';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -132,12 +132,10 @@ export class MarketUI {
       : `<span class="goal-pill">${icon('star')}${t('Meta')} <strong>${stageAt(next).goal}</strong></span>`;
 
     let nextBtn;
-    if (!this.run.market.forged) {
-      if (this.mode === 'shop') {
-        nextBtn = `<button type="button" class="btn btn-gold btn-big" data-market="to-oven"><span>${t("Ir al horno")}</span>${icon('flame')}</button>`;
-      } else {
-        nextBtn = `<button type="button" class="btn btn-gold btn-big" disabled title="${t("Horno obligatorio")}"><span>${t("Horno obligatorio")}</span>${icon('flame')}</button>`;
-      }
+    if (this.mode === 'shop') {
+      nextBtn = `<button type="button" class="btn btn-gold btn-big" data-market="to-oven"><span>${t("Ir al horno")}</span>${icon('flame')}</button>`;
+    } else if (!this.run.market.forged) {
+      nextBtn = `<button type="button" class="btn btn-gold btn-big" disabled title="${t("Horno obligatorio")}"><span>${t("Horno obligatorio")}</span>${icon('flame')}</button>`;
     } else {
       nextBtn = `<button type="button" class="btn btn-gold btn-big${boss ? ' btn-boss' : ''}" data-market="advance"><span>${message`Mosaico ${next + 1}`}</span>${icon('arrow')}</button>`;
     }

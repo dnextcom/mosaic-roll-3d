@@ -1,5 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-1';
-import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-1';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-2';
+import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-2';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 const campaignGoals = [48, 76, 94, 112, 128, 138, 168, 190, 212, 237, 270, 300];
@@ -135,6 +135,7 @@ function startStage(state, random) {
   // Setup unique rack from state.uniques
   state.uniques ??= [];
   state.uniqueRack = Array(3).fill(null);
+  const uniqueRolls = [];
   state.uniques.forEach((spec, index) => {
     const face = Math.floor(random() * 6);
     state.uniqueRack[index] = {
@@ -146,10 +147,11 @@ function startStage(state, random) {
       stone: false,
       fixed: false,
     };
+    uniqueRolls.push(`u_${index}`);
   });
 
   stockBag(state, state.stage > 0, random);
-  return replenish(state, random);
+  return [...replenish(state, random), ...uniqueRolls];
 }
 
 export function newRun(deck = 'classic', random = Math.random) {
@@ -407,6 +409,7 @@ export function commit(state, random = Math.random) {
     die.stone = !spec?.eternal;
   }
   // Re-roll unplayed unique dice in uniqueRack
+  const reRolledUniques = [];
   if (Array.isArray(state.uniqueRack)) {
     for (let slot = 0; slot < 3; slot++) {
       const die = state.uniqueRack[slot];
@@ -415,6 +418,7 @@ export function commit(state, random = Math.random) {
         const face = Math.floor(random() * 6);
         die.face = face;
         die.value = spec.faces[face];
+        reRolledUniques.push(`u_${die.uniqueIndex}`);
       }
     }
   }
@@ -424,7 +428,8 @@ export function commit(state, random = Math.random) {
     if (state.stage + 1 === campaignLength && !state.endless) state.phase = 'won';
     else openShop(state, random);
   } else if (!state.turns || blocked) state.phase = 'lost';
-  score.drawn = state.phase === 'play' ? replenish(state, random) : [];
+  const drawn = state.phase === 'play' ? replenish(state, random) : [];
+  score.drawn = [...drawn, ...reRolledUniques];
   return score;
 }
 

@@ -1,9 +1,9 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-1';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-2';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt } from './arte.js?v=esmaltes-1';
-import { projectBoard } from './unicos.js?v=esmaltes-1';
-import { getDieSpec } from './catalogo.js?v=esmaltes-1';
+import { DiceArt, tileArt } from './arte.js?v=esmaltes-2';
+import { projectBoard } from './unicos.js?v=esmaltes-2';
+import { getDieSpec } from './catalogo.js?v=esmaltes-2';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -402,7 +402,17 @@ export class Table {
           existing.spec = spec;
           existing.variant = variant;
         }
-        if (existing.id !== id || existing.dragged || existing.size !== size) {
+        const rotation = rotationFor(die);
+        const shouldRoll = id >= HAND && (roll === true || (roll instanceof Set && (roll.has(die.id) || (die.isUnique && roll.has(`u_${die.uniqueIndex}`)))));
+        if (shouldRoll) {
+          existing.from.copy(existing.mesh.position);
+          existing.to.copy(to);
+          existing.rotation = rotation;
+          existing.start = now + (die.slot ?? 0) * 54;
+          existing.duration = 680;
+          existing.rolling = true;
+          existing.dragged = false;
+        } else if (existing.id !== id || existing.dragged || existing.size !== size) {
           existing.from.copy(existing.mesh.position);
           existing.to.copy(to);
           existing.size = size;
@@ -411,6 +421,10 @@ export class Table {
           existing.start = now;
           existing.duration = 260;
           existing.rolling = existing.dragged = false;
+          existing.rotation = rotation;
+        } else {
+          existing.rotation = rotation;
+          if (!existing.rolling) existing.mesh.quaternion.copy(rotation);
         }
       } else {
         const model = this.art.create(appearance(spec, seen), seen.stone);
