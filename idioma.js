@@ -53,6 +53,25 @@ export function displayBossRule(boss, bossText) {
   return t(bossText(boss));
 }
 
+export function displayComboGain(comboKey, nextLevel) {
+  if (comboKey === 'pair') return message`+${6 + (nextLevel - 1) * 3} puntos base por pareja (+3 por nivel)`;
+  if (comboKey === 'trio') return message`+${12 + (nextLevel - 1) * 5} puntos base por trío (+5 por nivel)`;
+  if (comboKey === 'quartet') return message`+${23 + (nextLevel - 1) * 8} puntos base por cuarteto (+8 por nivel)`;
+  if (comboKey === 'straight') return message`+${10 + (nextLevel - 1) * 5} puntos base por escalera (+5 por nivel)`;
+  if (comboKey === 'longStraight') return message`+${17 + (nextLevel - 1) * 7} puntos base por escalera larga (+7 por nivel)`;
+  if (comboKey === 'line') return message`+${3 + (nextLevel - 1) * 2} puntos base por línea llena (+2 por nivel)`;
+  if (comboKey === 'mono') {
+    const val = ((40 + (nextLevel - 1) * 15) / 100).toFixed(2);
+    return message`+${val}× al multiplicador por monocolor (+0,15× por nivel)`;
+  }
+  if (comboKey === 'chromatic') {
+    const val = ((25 + (nextLevel - 1) * 10) / 100).toFixed(2);
+    return message`+${val}× al multiplicador por colores distintos (+0,10× por nivel)`;
+  }
+  if (comboKey === 'panel') return message`+${10 + (nextLevel - 1) * 6} puntos base por panel lleno (+6 por nivel)`;
+  return '';
+}
+
 export function displayItem(name) {
   if (!name.startsWith('Quimera de ')) return t(name);
   const colors = name.slice('Quimera de '.length).split(' y ');

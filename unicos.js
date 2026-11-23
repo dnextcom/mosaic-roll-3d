@@ -12,8 +12,12 @@ export const uniqueDice = {
 };
 
 export function projectBoard(state) {
-  const { rows, cols, bag } = state;
-  const sources = state.board.flatMap((die, cell) => die && !die.fixed && bag[die.id].unique ? [{ die, cell, key: bag[die.id].unique }] : []);
+  const { rows, cols } = state;
+  const sources = state.board.flatMap((die, cell) => {
+    if (!die || die.fixed) return [];
+    const spec = die.isUnique ? state.uniques?.[die.uniqueIndex] : state.bag?.[die.id];
+    return spec?.unique ? [{ die, cell, key: spec.unique }] : [];
+  });
   const numberSteps = [], colorSteps = [];
   if (!sources.length) return { board: state.board, numberSteps, colorSteps };
   const board = state.board.map(die => die ? { ...die } : null);

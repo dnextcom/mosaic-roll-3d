@@ -1,5 +1,5 @@
 import { t, message, language, displayDie, displayItem } from './idioma.js?v=esmaltes-1';
-import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie } from './catalogo.js?v=esmaltes-1';
+import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes } from './catalogo.js?v=esmaltes-1';
 import { diePortrait, tileArt } from './arte.js?v=esmaltes-1';
 import { tileLimit, decks, deckSample, bosses, BOSS_EVERY } from './reglas.js?v=esmaltes-1';
 import { uniqueDice } from './unicos.js?v=esmaltes-1';
@@ -12,14 +12,19 @@ const escapeHtml = value => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '
 export function dieFaces(spec) {
   return `<span class="face-list" aria-label="${t("Caras del dado")}">${spec.faces.map((value, index) => {
     const gilded = hasFace(spec.gild, index);
-    const label = [value, hasFace(spec.boost, index) && '×2', gilded && t('oro'), hasFace(spec.wild, index) && '★'].filter(Boolean).join(' ');
+    const boostLabel = spec.boostMult === 4 ? '×4' : '×2';
+    const goldLabel = spec.goldYield === 6 ? t('oro +6') : t('oro');
+    const label = [value, hasFace(spec.boost, index) && boostLabel, gilded && goldLabel, hasFace(spec.wild, index) && '★'].filter(Boolean).join(' ');
     return `<span${gilded ? ' class="gilded"' : ''}>${label}</span>`;
   }).join('')}</span>`;
 }
 
 export function dieTraits(spec) {
-  return [spec.rainbow && t('Multicolor'), spec.eternal && t('Eterno'), spec.obsidian && t('Obsidiana'), spec.gild && t('Oro en caras marcadas'),
-    spec.boost && t('Puntos dobles en caras ×2'), spec.wild && t('Comodín en caras ★')].filter(Boolean).join(' · ');
+  const boostText = spec.boostMult === 4 ? t('Puntos cuádruples en caras ×4') : t('Puntos dobles en caras ×2');
+  const goldText = spec.goldYield === 6 ? t('Oro x2 en caras doradas') : t('Oro en caras marcadas');
+  const dyeText = spec.second != null ? `${t('Segundo color')}: ${t(glazes[spec.second]?.name || '')}` : '';
+  return [spec.rainbow && t('Multicolor'), dyeText, spec.eternal && t('Eterno'), spec.obsidian && t('Obsidiana'), spec.gild && goldText,
+    spec.boost && boostText, spec.wild && t('Comodín en caras ★')].filter(Boolean).join(' · ');
 }
 
 const rarityStyle = rarity => `--rarity:${rarity.color}`;
@@ -76,7 +81,16 @@ const chapter = (title, count, body, open = false) =>
   `<details class="chapter"${open ? ' open' : ''}><summary><span class="chapter-mark" aria-hidden="true"></span><span class="chapter-title">${title}</span>${count == null ? '' : `<span class="chapter-count">${count}</span>`}</summary>${body}</details>`;
 
 export function collectionMarkup(run) {
-  const owned = run ? chapter(t('Dados de la bolsa'), dieCount(run), `<ul class="folios">${groupDice(run.bag).map(({ spec, count }) => diceCard(spec, count)).join('')}</ul>`, true) +
+  const uniquesOwned = run?.uniques?.length ? run.uniques : [];
+  const uniquesBody = uniquesOwned.length ? `<ul class="folios">${uniquesOwned.map((spec, idx) => `
+    <li class="folio" style="${rarityStyle(rarities[spec.rarity])}"><span class="folio-niche"><img src="${diePortrait(spec)}" alt="" loading="lazy"></span><div class="folio-text">
+      <strong>${displayDie(spec)}</strong>
+      <small class="folio-rarity">${t(rarities[spec.rarity].name)}</small>${dieFaces(spec)}
+      <p>${t(uniqueDice[spec.unique]?.text || '')}</p>
+      <button class="btn btn-quiet btn-small btn-break-die" type="button" data-action="break-unique" data-index="${idx}">${icon('close')}${t('Romper dado único')}</button>
+    </div></li>`).join('')}</ul>` : `<p class="book-empty">${t('No tienes dados únicos.')}</p>`;
+  const owned = run ? chapter(t('Dados únicos en posesión'), `${uniquesOwned.length}/3`, uniquesBody, true) +
+    chapter(t('Dados de la bolsa'), dieCount(run), `<ul class="folios">${groupDice(run.bag).map(({ spec, count }) => diceCard(spec, count)).join('')}</ul>`, true) +
     chapter(t('Azulejos equipados'), `${run.powers.length}/${tileLimit}`, run.powers.length ? `<ul class="folios">${run.powers.map(tileCard).join('')}</ul>`
       : `<p class="book-empty">${t('Todavía no tienes azulejos equipados.')}</p>`) +
     chapter(t('Historial del taller'), run.history.length, historyMarkup(run.history)) : '';

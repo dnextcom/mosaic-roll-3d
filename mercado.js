@@ -1,5 +1,5 @@
-import { t, message, displayDie, displayBossRule } from './idioma.js?v=esmaltes-1';
-import { glazes, basicColors, rarities, powers, upgrades, dieCount, fuse } from './catalogo.js?v=esmaltes-1';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-1';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-1';
 import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-1';
 import { diePortrait, tileArt } from './arte.js?v=esmaltes-1';
 import { Workshop } from './taller.js?v=esmaltes-1';
@@ -130,23 +130,38 @@ export class MarketUI {
     const goal = boss ? `<button type="button" class="boss-pill" data-tip="boss" data-key="${next}" aria-haspopup="dialog" aria-expanded="false">
         ${icon('crown')}<span class="boss-pill-name">${t(bosses[boss.key].name)}</span><small>${message`Meta ${stageAt(next).goal}`}</small></button>`
       : `<span class="goal-pill">${icon('star')}${t('Meta')} <strong>${stageAt(next).goal}</strong></span>`;
+
+    let nextBtn;
+    if (!this.run.market.forged) {
+      if (this.mode === 'shop') {
+        nextBtn = `<button type="button" class="btn btn-gold btn-big" data-market="to-oven"><span>${t("Ir al horno")}</span>${icon('flame')}</button>`;
+      } else {
+        nextBtn = `<button type="button" class="btn btn-gold btn-big" disabled title="${t("Horno obligatorio")}"><span>${t("Horno obligatorio")}</span>${icon('flame')}</button>`;
+      }
+    } else {
+      nextBtn = `<button type="button" class="btn btn-gold btn-big${boss ? ' btn-boss' : ''}" data-market="advance"><span>${message`Mosaico ${next + 1}`}</span>${icon('arrow')}</button>`;
+    }
+
     return `<footer class="zoco-foot">
       <button type="button" class="btn btn-quiet zoco-exit" data-market="exit" aria-label="${t("Guardar y salir")}">${icon('exit')}<span>${t("Guardar y salir")}</span></button>
-      <div class="zoco-next">${goal}
-        <button type="button" class="btn btn-gold btn-big${boss ? ' btn-boss' : ''}" data-market="advance"><span>${message`Mosaico ${next + 1}`}</span>${icon('arrow')}</button></div></footer>`;
+      <div class="zoco-next">${goal}${nextBtn}</div></footer>`;
   }
 
   // ---------- Stalls ----------
 
   shopMarkup() {
     const { market, gold } = this.run;
-    return `<section class="stall" aria-label="${t("Puestos de dados")}">
-        <div class="workshop-stage" id="draft-scene"><div class="exhibits" role="group" aria-label="${t("Dados a la venta")}">${market.dice.map((spec, index) => {
+    return `<section class="stall" aria-label="${t("Puestos del taller")}">
+        <div class="workshop-stage" id="draft-scene"><div class="exhibits" role="group" aria-label="${t("Artículos a la venta")}">${market.dice.map((spec, index) => {
           const rarity = rarities[spec.rarity];
           const sold = market.purchased.includes(index);
-          return `<button type="button" class="exhibit${!sold && gold < rarity.price ? ' dear' : ''}" data-tip="die" data-key="${index}" data-anchor="inspect/${index}"
-            aria-haspopup="dialog" aria-expanded="false" aria-label="${displayDie(spec)}, ${t(rarity.name)}, ${sold ? t('comprado') : message`${rarity.price} de oro`}" style="--rarity:${rarity.color}"${sold ? ' disabled' : ''}>
-            <span class="exhibit-plate"><strong>${displayDie(spec)}</strong><small><span class="rarity-name">${t(rarity.name)}</span>${sold ? `${icon('check')}${t('Comprado')}` : coins(rarity.price)}</small></span></button>`;
+          const price = spec.price ?? rarity.price;
+          const isCombo = Boolean(spec.combo);
+          const title = isCombo ? t(spec.name) : displayDie(spec);
+          const kicker = isCombo ? message`Niv. ${spec.level} → ${spec.nextLevel}` : t(rarity.name);
+          return `<button type="button" class="exhibit${!sold && gold < price ? ' dear' : ''}" data-tip="${isCombo ? 'combo' : 'die'}" data-key="${index}" data-anchor="inspect/${index}"
+            aria-haspopup="dialog" aria-expanded="false" aria-label="${title}, ${kicker}, ${sold ? (isCombo ? t('mejorado') : t('comprado')) : message`${price} de oro`}" style="--rarity:${rarity.color}"${sold ? ' disabled' : ''}>
+            <span class="exhibit-plate"><strong>${title}</strong><small><span class="rarity-name">${kicker}</span>${sold ? `${icon('check')}${isCombo ? t('Mejorado') : t('Comprado')}` : coins(price)}</small></span></button>`;
         }).join('')}</div></div>
       </section>
       <section class="wall" aria-label="${t("Azulejos de poder")}">${this.wallMarkup()}</section>`;
@@ -167,7 +182,7 @@ export class MarketUI {
         <div class="wall-tiles">${forSale || `<span class="wall-empty">${t('Agotado')}</span>`}</div></div>
       <div class="wall-row"><h3 class="wall-label">${t('Equipados')} <span class="count">${owned.length}/${tileLimit}</span></h3>
         <div class="wall-tiles wall-owned">${mine}${'<span class="niche-empty" aria-hidden="true"></span>'.repeat(Math.max(0, tileLimit - owned.length))}</div></div>
-      <p class="wall-note">${icon('help')}${t('Toca un dado o un azulejo para ver qué hace.')}</p>`;
+      <p class="wall-note">${icon('help')}${t('Toca un artículo o un azulejo para ver qué hace.')}</p>`;
   }
 
   refreshShop() {
@@ -178,11 +193,13 @@ export class MarketUI {
       const index = Number(button.dataset.key);
       const spec = this.run.market.dice[index];
       const sold = this.run.market.purchased.includes(index);
+      const price = spec.price ?? rarities[spec.rarity].price;
+      const isCombo = Boolean(spec.combo);
       button.disabled = sold;
-      button.classList.toggle('dear', !sold && gold < rarities[spec.rarity].price);
+      button.classList.toggle('dear', !sold && gold < price);
       if (sold) {
-        button.querySelector('small').innerHTML = `<span class="rarity-name">${t(rarities[spec.rarity].name)}</span>${icon('check')}${t('Comprado')}`;
-        button.setAttribute('aria-label', `${displayDie(spec)}, ${t('comprado')}`);
+        button.querySelector('small').innerHTML = `<span class="rarity-name">${isCombo ? message`Niv. ${spec.nextLevel}` : t(rarities[spec.rarity].name)}</span>${icon('check')}${isCombo ? t('Mejorado') : t('Comprado')}`;
+        button.setAttribute('aria-label', `${isCombo ? t(spec.name) : displayDie(spec)}, ${isCombo ? t('mejorado') : t('comprado')}`);
       }
     }
     const wall = this.element.querySelector('.wall');
@@ -199,14 +216,31 @@ export class MarketUI {
         <small class="ztip-kicker">${message`Jefe · mosaico ${key + 1}`}</small><strong id="ztip-title">${t(bosses[boss.key].name)}</strong><p>${displayBossRule(boss, bossText)}</p>
         <p class="ztip-plain">${message`Meta ${stageAt(key).goal}. Vencerlo da ${BOSS_GOLD} de oro extra.`}</p></div></div>` };
     }
+    if (kind === 'combo') {
+      const spec = run.market.dice[key];
+      const combo = comboCatalog[spec.combo];
+      const sold = run.market.purchased.includes(key);
+      const price = spec.price;
+      const label = sold ? t('Mejorado') : run.gold < price ? message`Te faltan ${price - run.gold} de oro` : message`Mejorar · ${coins(price)}`;
+      const action = `<button class="btn btn-gold ztip-action" type="button" data-market="combo" data-key="${key}"${!sold && run.gold >= price ? '' : ' disabled'}>${label}</button>`;
+      return {
+        color: rarities[spec.rarity].color,
+        html: `<div class="ztip-card"><img class="ztip-die" src="${diePortrait(spec)}" alt=""><div class="ztip-text">
+          <small class="ztip-kicker">${t('Mejora de combo')} · ${message`Nivel ${spec.level}`}</small><strong id="ztip-title">${t(spec.name)}</strong>
+          <p class="ztip-combo-gain">${displayComboGain(spec.combo, spec.nextLevel) || combo.text(spec.nextLevel)}</p>
+          <p class="ztip-plain">${message`Sube el efecto de ${t(spec.name)} a Nivel ${spec.nextLevel}.`}</p>
+        </div></div>${action}`
+      };
+    }
     if (kind === 'die' || kind === 'candidate') {
       const spec = kind === 'die' ? run.market.dice[key] : run.bag[key];
-      const rarity = rarities[spec.rarity], unique = uniqueDice[spec.unique], traits = dieTraits(spec);
+      const rarity = rarities[spec.rarity], unique = spec.unique && uniqueDice[spec.unique], traits = dieTraits(spec);
       let action = '';
       if (kind === 'die') {
         const sold = run.market.purchased.includes(key);
-        const owned = spec.unique && run.bag.some(other => other?.unique === spec.unique);
-        const label = sold ? t('Comprado') : owned ? t('Ya tienes este dado') : run.gold < rarity.price ? message`Te faltan ${rarity.price - run.gold} de oro` : message`Comprar · ${coins(rarity.price)}`;
+        const owned = spec.unique && run.uniques?.some(other => other?.unique === spec.unique);
+        const atCapacity = spec.unique && (run.uniques?.length || 0) >= 3;
+        const label = sold ? t('Comprado') : owned ? t('Ya tienes este dado') : atCapacity ? (run.gold < rarity.price ? message`Te faltan ${rarity.price - run.gold} de oro` : message`Comprar y cambiar · ${coins(rarity.price)}`) : run.gold < rarity.price ? message`Te faltan ${rarity.price - run.gold} de oro` : message`Comprar · ${coins(rarity.price)}`;
         action = `<button class="btn btn-gold ztip-action" type="button" data-market="die" data-key="${key}"${canBuy(run, 'die', key) ? '' : ' disabled'}>${label}</button>`;
       }
       return { color: rarity.color, html: `<div class="ztip-card"><img class="ztip-die" src="${diePortrait(spec)}" alt=""><div class="ztip-text">
@@ -305,14 +339,14 @@ export class MarketUI {
   ovenMarkup() {
     const { market, gold } = this.run;
     const forged = market.forged;
-    if (!this.recipe || !market.oven.includes(this.recipe)) this.recipe = market.oven.find(key => gold >= upgrades[key].price) ?? market.oven[0];
+    if (!this.recipe || !market.oven.includes(this.recipe)) this.recipe = market.oven[0];
     this.forgeCandidates = this.run.forgeHand.filter(id => this.run.bag[id] && !this.run.bag[id].unique);
     this.slots = Array(upgrades[this.recipe].slots).fill(null);
     this.color = basicColors[0];
     const recipes = market.oven.map(key => {
       const recipe = upgrades[key];
-      return `<button type="button" class="recipe${gold < recipe.price ? ' dear' : ''}" data-market="recipe" data-key="${key}" aria-pressed="${key === this.recipe}"${forged ? ' disabled' : ''}>
-        <span class="recipe-top"><span class="recipe-name">${t(recipe.name)}</span>${coins(recipe.price)}</span>
+      return `<button type="button" class="recipe" data-market="recipe" data-key="${key}" aria-pressed="${key === this.recipe}"${forged ? ' disabled' : ''}>
+        <span class="recipe-top"><span class="recipe-name">${t(recipe.name)}</span><span class="recipe-free">${icon('flame')}${t('Gratis')}</span></span>
         <span class="recipe-desc">${t(recipe.text)}</span></button>`;
     }).join('');
     const candidates = this.forgeCandidates.map(id => `<button type="button" class="candidate" data-market="candidate" data-tip="candidate" data-key="${id}" aria-pressed="false"
@@ -321,13 +355,13 @@ export class MarketUI {
       <input type="radio" name="dye" value="${id}"${id === this.color ? ' checked' : ''}><span class="sr-only">${t(glazes[id].name)}</span></label>`).join('');
     return `<section class="stall kiln-stall" aria-label="${t("Horno")}">
         <div class="workshop-stage kiln-stage" id="kiln-scene">
-          <span class="kiln-state" id="kiln-state">${forged ? `${icon('moon')}${t('Horno en reposo')}` : `${icon('flame')}${t('Horno encendido')}`}</span>
-          <fieldset class="dye-bar" id="dye-bar" hidden><legend>${t("Nuevo esmalte")}</legend><div class="swatches">${swatches}</div></fieldset>
+          <span class="kiln-state" id="kiln-state">${forged ? `${icon('moon')}${t('Horno en reposo')}` : `${icon('flame')}${t('Horno encendido · Gratis')}`}</span>
+          <fieldset class="dye-bar" id="dye-bar" hidden><legend>${t("Segundo color")}</legend><div class="swatches">${swatches}</div></fieldset>
           <div class="kiln-result" id="kiln-result" hidden></div>
         </div>
       </section>
       <section class="kiln-panel" aria-label="${t("Recetas del horno")}">
-        <h3 class="panel-label">${t('Recetas de hoy')} <small>${t('una por taller')}</small></h3>
+        <h3 class="panel-label">${t('Recetas de hoy')} <small>${t('mejora obligatoria y gratis')}</small></h3>
         <div class="recipes" role="group" aria-label="${t("Recetas")}">${recipes}</div>
         <p class="recipe-text" id="recipe-text" aria-hidden="true"></p>
         <h3 class="panel-label">${t('Dados del banco')} <small>${this.forgeCandidates.length ? t('toca o arrastra al horno') : t('sin dados disponibles')}</small></h3>
@@ -380,22 +414,15 @@ export class MarketUI {
   forgeState() {
     const run = this.run, recipe = upgrades[this.recipe];
     const ids = this.slots.filter(id => id != null);
-    if (run.market.forged) return { text: t('El horno ya coció en este taller. Volverá a encenderse en el próximo mosaico.') };
-    if (run.gold < recipe.price) return { text: message`Te faltan ${recipe.price - run.gold} de oro para esta receta.`, warn: true };
-    if (this.recipe === 'fusion' && dieCount(run) <= handSize) return { text: message`Necesitas más de ${handSize} dados en la bolsa para fundir dos.`, warn: true };
+    if (run.market.forged) return { text: t('El horno ya coció en este taller. Puedes avanzar al siguiente mosaico.') };
     if (ids.length < this.slots.length) {
-      if (this.slots.length === 1) return { text: t('Elige un dado del banco para meterlo en el horno.') };
-      return { text: ids.length ? t('Elige el segundo dado de la fusión.') : t('Elige dos dados: se fundirán en una quimera.') };
+      return { text: t('Elige un dado del banco para meterlo en el horno.') };
     }
     if (!canForge(run, this.recipe, ids, this.color)) {
       const spec = run.bag[ids[0]];
-      return { text: this.recipe === 'dye' && spec.rainbow ? t('Un dado multicolor no admite otro esmalte.') : refusals[this.recipe] ?? t('Este dado no admite la receta.'), warn: true };
+      return { text: this.recipe === 'dye' && spec.rainbow ? t('Un dado multicolor no admite otro esmalte.') : refusals[this.recipe] ?? t('Este dado ya tiene el máximo de mejoras de este tipo.'), warn: true };
     }
-    if (this.recipe === 'fusion') {
-      const fused = fuse(...ids.map(id => run.bag[id]));
-      return { ready: true, text: message`Saldrá ${fused.rainbow ? t('una quimera multicolor') : displayDie(fused)} con caras ${fused.faces.join(' · ')}.` };
-    }
-    return { ready: true, text: message`${displayDie(run.bag[ids[0]])} está listo. Pulsa «Cocer» para aplicar la receta.` };
+    return { ready: true, text: message`${displayDie(run.bag[ids[0]])} listo para cocer gratis. Pulsa «Cocer» para aplicar la receta.` };
   }
 
   refreshForge() {
@@ -422,8 +449,7 @@ export class MarketUI {
     status.classList.toggle('ready', Boolean(state.ready));
     const fire = this.element.querySelector('[data-market="forge"]');
     fire.disabled = !state.ready;
-    fire.querySelector('.fire-label').innerHTML = this.run.market.forged ? t('Horno usado')
-      : `${this.recipe === 'fusion' ? t('Fundir') : t('Cocer')} · ${coins(recipe.price)}`;
+    fire.querySelector('.fire-label').innerHTML = this.run.market.forged ? t('Horno usado') : t('Cocer gratis');
     this.scene?.socketsFor(this.slots);
   }
 
@@ -443,7 +469,7 @@ export class MarketUI {
     for (const button of this.element.querySelectorAll('button')) button.disabled = true;
     this.element.querySelector('.kiln-panel').classList.add('firing');
     this.element.querySelector('#dye-bar').hidden = true;
-    this.element.querySelector('#forge-status').textContent = recipe === 'fusion' ? t('Fundiendo los dados…') : t('El horno está cociendo el dado…');
+    this.element.querySelector('#forge-status').textContent = t('El horno está cociendo el dado…');
   }
 
   showResult() {
@@ -458,8 +484,10 @@ export class MarketUI {
     this.element.querySelector('#kiln-state').innerHTML = `${icon('moon')}${t('Horno en reposo')}`;
     this.showForged();
     this.refreshForge();
+    const foot = this.element.querySelector('.zoco-foot');
+    if (foot) foot.outerHTML = this.footerMarkup();
     this.toast(message`${displayDie(spec)} ha vuelto a tu bolsa.`);
-    this.element.querySelector('[data-market="advance"]').focus({ preventScroll: true });
+    this.element.querySelector('[data-market="advance"]')?.focus({ preventScroll: true });
   }
 
   // Card over the kiln with the die that came out of it in this workshop.
@@ -468,7 +496,7 @@ export class MarketUI {
     if (!card || !this.lastForged) return;
     const { spec, recipe } = this.lastForged;
     const traits = dieTraits(spec);
-    card.innerHTML = `<small class="ztip-kicker">${recipe === 'fusion' ? t('Quimera forjada') : t(upgrades[recipe].name)}</small><strong>${displayDie(spec)}</strong>${dieFaces(spec)}${traits ? `<p>${traits}</p>` : ''}`;
+    card.innerHTML = `<small class="ztip-kicker">${t(upgrades[recipe]?.name || 'Mejora')}</small><strong>${displayDie(spec)}</strong>${dieFaces(spec)}${traits ? `<p>${traits}</p>` : ''}`;
     card.hidden = false;
   }
 
@@ -488,7 +516,13 @@ export class MarketUI {
     }
     if (!actionButton || actionButton.disabled) return;
     const { market, key } = actionButton.dataset;
-    if (market === 'die' || market === 'tile') this.purchase(market, market === 'die' ? Number(key) : key);
+    if (market === 'to-oven') this.show('oven');
+    else if (market === 'combo') this.purchaseCombo(Number(key));
+    else if (market === 'die' || market === 'tile') this.purchase(market, market === 'die' ? Number(key) : key);
+    else if (market === 'replace-unique') {
+      const replaceIndex = Number(actionButton.dataset.replace);
+      this.purchase('die', Number(key), replaceIndex);
+    }
     else if (market === 'sell') this.sell(key);
     else if (market === 'view') { if (key !== this.mode) this.show(key); }
     else if (market === 'recipe') this.selectRecipe(key);
@@ -499,16 +533,47 @@ export class MarketUI {
     else if (market === 'advance') this.callbacks.advance();
   }
 
-  purchase(kind, key) {
-    if (!buy(this.run, kind, key)) return;
+  purchaseCombo(key) {
+    if (!buy(this.run, 'combo', key)) return;
+    this.closeTip();
+    this.callbacks.note('place');
+    this.callbacks.changed();
+    this.scene?.sold(key);
+    const spec = this.run.market.dice[key];
+    this.toast(message`¡${t(spec.name)} mejorado a Nivel ${this.run.comboLevels[spec.combo]}!`);
+    this.refreshShop();
+  }
+
+  purchase(kind, key, replaceIndex = null) {
+    if (kind === 'die') {
+      const spec = this.run.market.dice[key];
+      if (spec?.unique && (this.run.uniques?.length || 0) >= 3 && replaceIndex == null) {
+        this.promptBreakUnique(key);
+        return;
+      }
+    }
+    if (!buy(this.run, kind, key, replaceIndex)) return;
     this.closeTip();
     this.callbacks.note('place');
     this.callbacks.changed();
     if (kind === 'die') {
       this.scene?.sold(key);
-      this.toast(message`${displayDie(this.run.market.dice[key])} se une a tu bolsa.`);
+      const spec = this.run.market.dice[key];
+      this.toast(spec?.unique ? message`¡${displayDie(spec)} añadido a tus dados únicos!` : message`${displayDie(spec)} se une a tu bolsa.`);
     } else this.toast(message`${t(powers[key].name)} equipado.`);
     this.refreshShop();
+  }
+
+  promptBreakUnique(dieKey) {
+    const spec = this.run.market.dice[dieKey];
+    const html = `<div class="ztip-card"><div class="ztip-text">
+      <small class="ztip-kicker">${t('Repisa de dados únicos llena (3/3)')}</small>
+      <strong id="ztip-title">${t('Elige qué dado romper')}</strong>
+      <p>${message`Rompe un dado único (0 oro) para sustituirlo por ${displayDie(spec)}:`}</p>
+      <div class="break-unique-list" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">${this.run.uniques.map((u, i) => `<button type="button" class="btn btn-quiet btn-break" data-market="replace-unique" data-key="${dieKey}" data-replace="${i}" style="text-align:left;padding:6px 10px;">${icon('close')} ${displayDie(u)}</button>`).join('')}</div>
+    </div></div>`;
+    this.tipElement.innerHTML = html;
+    this.tipElement.hidden = false;
   }
 
   sell(key) {

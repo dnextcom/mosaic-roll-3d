@@ -55,6 +55,50 @@ function relicFace(ctx, spec, face, stone) {
   }
 }
 
+function comboFace(ctx, spec, face, stone) {
+  const glaze = glazes[spec.glaze ?? 4];
+  const wash = ctx.createLinearGradient(0, 0, 128, 128);
+  if (spec.rainbow) rainbow.forEach((color, i) => wash.addColorStop(i / (rainbow.length - 1), color));
+  else {
+    wash.addColorStop(0, glaze.light);
+    wash.addColorStop(1, glaze.color);
+  }
+  ctx.fillStyle = wash;
+  ctx.fillRect(0, 0, 128, 128);
+
+  ctx.beginPath();
+  ctx.roundRect(8, 8, 112, 112, 14);
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = '#d4af37';
+  ctx.stroke();
+
+  ctx.fillStyle = '#111e38';
+  ctx.beginPath();
+  ctx.roundRect(18, 22, 92, 84, 12);
+  ctx.fill();
+  ctx.strokeStyle = '#f1c563';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffd779';
+  ctx.fillText(spec.name || 'COMBO', 64, 42);
+
+  ctx.font = 'bold 24px Georgia';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(`Niv. ${spec.level || 1}`, 64, 72);
+
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillStyle = '#60a5fa';
+  ctx.fillText(`→ Niv. ${spec.nextLevel || 2}`, 64, 94);
+
+  ctx.font = '16px sans-serif';
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillText('★', 64, 15);
+}
+
 function texture(canvas) {
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
@@ -66,6 +110,10 @@ function dieFace(spec, face, stone) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 128;
   const ctx = canvas.getContext('2d');
+  if (spec.combo) {
+    comboFace(ctx, spec, face, stone);
+    return canvas;
+  }
   if (spec.unique) {
     relicFace(ctx, spec, face, stone);
     return canvas;
@@ -129,7 +177,8 @@ function dieFace(spec, face, stone) {
     ctx.font = 'bold 15px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(hasFace(spec.boost, face) && spec.sealed ? '×4' : '×2', 92, 100);
+    const mult = (hasFace(spec.boost, face) ? (spec.boostMult || 2) : 1) * (spec.sealed ? 2 : 1);
+    ctx.fillText(`×${mult}`, 92, 100);
   }
   if (!stone && spec.eternal) {
     ctx.fillStyle = '#10121a';

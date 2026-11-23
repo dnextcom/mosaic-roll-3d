@@ -1312,3 +1312,36 @@ dialog[data-kind="options"] { --w: min(480px, calc(100vw - 20px)); }
 }
 .options-toggle:hover { border-color: var(--gold-2); color: var(--gold-3); background: rgba(255, 243, 205, .09); }
 .options-toggle .ico { width: 16px; height: 16px; }
+
+/* Combos & Uniques additions */
+.exhibit-combo-lvl {
+  display: inline-block; padding: 1px 7px; border-radius: 999px;
+  background: rgba(240, 200, 110, .18); border: 1px solid var(--gold-2);
+  color: var(--gold-3); font: 700 11px/1.2 var(--font-kufi); letter-spacing: .04em;
+}
+.combo-lvl-tag {
+  display: inline-block; padding: 1px 5px; margin-left: 4px; border-radius: 4px;
+  background: rgba(240, 200, 110, .2); border: 1px solid rgba(240, 200, 110, .4);
+  color: var(--gold-3); font: 700 10px/1 var(--font-kufi); vertical-align: middle;
+}
+.btn-break-die {
+  margin-top: 6px; color: var(--terra-3); border-color: rgba(233, 154, 125, .3);
+  font-size: 11px; padding: 4px 8px;
+}
+.btn-break-die:hover {
+  background: rgba(185, 28, 28, .2); border-color: var(--terra-2); color: var(--ivory);
+}
+.btn-break {
+  display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+  border-radius: 6px; background: rgba(255, 243, 205, .04); color: var(--ivory);
+  font: 500 13px/1.3 var(--font-kufi); cursor: pointer; transition: all .2s;
+}
+.btn-break:hover {
+  border-color: var(--terra-2); background: rgba(185, 28, 28, .15); color: var(--gold-4);
+}
+.recipe-free {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px;
+  background: rgba(4, 120, 87, .25); border: 1px solid rgba(134, 197, 162, .4);
+  color: #a7f3d0; font: 700 11px/1 var(--font-kufi); text-transform: uppercase;
+}
+.recipe-free .ico { width: 11px; height: 11px; }

@@ -3,9 +3,11 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
 import { DiceArt, tileArt } from './arte.js?v=esmaltes-1';
 import { projectBoard } from './unicos.js?v=esmaltes-1';
+import { getDieSpec } from './catalogo.js?v=esmaltes-1';
 
 export const HAND = 32;
 export const POWER = 48;
+export const UNIQUE = 64;
 export const ROLL_TIME = 850;
 const spacing = 1.365;
 const xAxis = new THREE.Vector3(1, 0, 0);
@@ -64,6 +66,8 @@ export class Table {
     this.lit = new Set();
     this.models = new Map();
     this.extras = new Map();
+    this.uniqueTray = [];
+    this.uniqueRackGroup = new THREE.Group();
     this.tray = [];
     this.cells = [];
     this.tags = [];
@@ -73,7 +77,7 @@ export class Table {
     this.selected = -1;
     this.focused = -1;
     this.dirty = true;
-    this.scene.add(this.board, this.effects, this.powerShelf, this.highlight);
+    this.scene.add(this.board, this.effects, this.powerShelf, this.highlight, this.uniqueRackGroup);
     this.reset();
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(canvas);
@@ -151,7 +155,18 @@ export class Table {
 
   slot(index) { return new THREE.Vector3((index - 1.5) * 1.105, .052, 2.83); }
 
+  uniqueSlot(index) {
+    const leftX = -(this.cols * spacing / 2 + 1.28);
+    const z = -0.31 + index * spacing;
+    return new THREE.Vector3(leftX, .052, z);
+  }
+
   destination(id) {
+    if (id >= UNIQUE) {
+      const at = this.uniqueSlot(id - UNIQUE);
+      at.y += .43;
+      return at;
+    }
     const at = id >= HAND ? this.slot(id - HAND) : this.cell(id);
     at.y += .43;
     return at;
@@ -185,6 +200,25 @@ export class Table {
     }
     this.board.add(set.group);
     this.cells = set.cells;
+
+    if (this.uniqueRackGroup) {
+      this.uniqueRackGroup.clear();
+      this.uniqueTray = [];
+      const leftX = -(cols * spacing / 2 + 1.28);
+      const rackCenterZ = 1.055;
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.28, .24, 3 * spacing + .22, 2, .1), this.cobalt, leftX, -.22, rackCenterZ));
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.15, .073, 3 * spacing + .1, 1, .035), this.brass, leftX, -.083, rackCenterZ));
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.05, .086, 3 * spacing, 1, .036), this.slates, leftX, -.044, rackCenterZ));
+      const socketGeometry = new RoundedBoxGeometry(.95, .102, .95, 2, .045);
+      for (let slot = 0; slot < 3; slot++) {
+        const loc = this.uniqueSlot(slot);
+        const socket = mesh(socketGeometry, this.slates, loc.x, -.002, loc.z, false);
+        socket.userData.id = UNIQUE + slot;
+        this.uniqueTray.push(socket);
+        this.uniqueRackGroup.add(socket);
+      }
+    }
+
     this.reset();
   }
 
@@ -286,7 +320,7 @@ export class Table {
       if (!extra.source || targets.includes(extra.source.mesh)) targets.push(extra.mesh);
     }
     targets.push(...this.cells);
-    if (!boardOnly) targets.push(...this.tray, ...this.powerMeshes);
+    if (!boardOnly) targets.push(...this.tray, ...this.uniqueTray, ...this.powerMeshes);
     const hit = this.ray.intersectObjects(targets, false)[0];
     return hit?.object.userData.id ?? -1;
   }
@@ -336,7 +370,8 @@ export class Table {
     const extraDice = new Map();
     state.board.forEach((die, id) => { if (die) live.set(die, id); });
     state.hand.forEach((die, slot) => { if (die) live.set(die, HAND + slot); });
-    board.forEach((die, id) => { if (die?.echo) extraDice.set(id, { die, spec: state.bag[die.id] }); });
+    state.uniqueRack?.forEach((die, slot) => { if (die) live.set(die, UNIQUE + slot); });
+    board.forEach((die, id) => { if (die?.echo) extraDice.set(id, { die, spec: getDieSpec(state, die) }); });
     for (const [die, piece] of this.models) {
       if (live.has(die) || piece.removing) continue;
       if (dissolve && piece.id < HAND) {
@@ -349,7 +384,7 @@ export class Table {
     }
     for (const [die, id] of live) {
       const seen = id < HAND ? board[id] : die;
-      const spec = state.bag[die.id];
+      const spec = getDieSpec(state, die);
       const extraValue = id >= HAND && spec.unique === 'twin' ? die.value + 1 : seen.extra;
       const paired = extraValue != null;
       const size = paired ? twinSize : 1;
@@ -384,7 +419,7 @@ export class Table {
         model.userData.id = id;
         const rotation = rotationFor(die);
         model.quaternion.copy(rotation);
-        const rolling = id >= HAND && (roll === true || roll instanceof Set && roll.has(die.id));
+        const rolling = id >= HAND && (roll === true || (roll instanceof Set && (roll.has(die.id) || (die.isUnique && roll.has(`u_${die.uniqueIndex}`)))));
         const piece = { mesh: model, id, spec, variant, size, to, from: to.clone(), rotation,
           rolling, start: now + die.slot * 54, duration: rolling ? 680 : 0 };
         this.models.set(die, piece);

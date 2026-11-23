@@ -1,8 +1,8 @@
 import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-1';
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=esmaltes-1';
+import { Table, HAND, POWER, UNIQUE, ROLL_TIME } from './mesa.js?v=esmaltes-1';
 import { DiceArt, tileArt, diePortrait } from './arte.js?v=esmaltes-1';
-import { powers, rarities, dieCount, hasFace } from './catalogo.js?v=esmaltes-1';
-import { stageAt, campaignLength, orderAt, comboPoints, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance,
+import { powers, rarities, dieCount, hasFace, getDieSpec } from './catalogo.js?v=esmaltes-1';
+import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
   decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=esmaltes-1';
 import { uniqueDice } from './unicos.js?v=esmaltes-1';
 import { MarketUI } from './mercado.js?v=esmaltes-1';
@@ -198,7 +198,7 @@ function note(type) {
 const save = () => write(storage, JSON.stringify(run));
 const ongoing = () => run && run.phase !== 'lost';
 const ready = () => playing && !modal && !resolution && !lockUntil && run.phase === 'play';
-const at = id => id >= HAND && id < POWER ? run.hand[id - HAND] : id >= 0 && id < HAND ? run.board[id] : null;
+const at = id => id >= UNIQUE && id < UNIQUE + 3 ? run.uniqueRack?.[id - UNIQUE] : id >= HAND && id < POWER ? run.hand[id - HAND] : id >= 0 && id < HAND ? run.board[id] : null;
 const movable = id => isFresh(at(id));
 
 function setCodex(open, focus = false) {
@@ -358,20 +358,34 @@ function render() {
   $('bag-count').textContent = dieCount(run);
   $('sound').setAttribute('aria-pressed', String(!muted));
   $('sound').innerHTML = icon(muted ? 'mute' : 'sound');
-  const entries = run.cols === 4 ? [...patterns.slice(0, 4), ['Cuarteto', [4, 4, 4, 4], `+${comboPoints.quartet}`],
-    ['Escalera larga', [1, 2, 3, 4], `+${comboPoints.longStraight}`], ...patterns.slice(4)] : patterns;
+  const pList = [
+    { key: 'line', name: 'Línea llena', faces: [1, 5, 2] },
+    { key: 'pair', name: 'Pareja', faces: [2, 2] },
+    { key: 'trio', name: 'Trío', faces: [3, 3, 3] },
+    ...(run.cols === 4 ? [{ key: 'quartet', name: 'Cuarteto', faces: [4, 4, 4, 4] }] : []),
+    { key: 'straight', name: 'Escalera', faces: [2, 3, 4] },
+    ...(run.cols === 4 ? [{ key: 'longStraight', name: 'Escalera larga', faces: [1, 2, 3, 4] }] : []),
+    { key: 'mono', name: 'Monocolor', faces: [4, 2, 6], color: 'mono' },
+    { key: 'chromatic', name: 'Colores distintos', faces: [1, 3, 6], color: 'mixed' },
+    { key: 'panel', name: 'Panel completo', glyph: '<span class="panel-glyph"></span>' },
+  ];
   const active = new Map();
   for (const step of [...score.numberSteps, ...score.colorSteps]) active.set(step.name, (active.get(step.name) ?? 0) + 1);
   let lit = 0;
-  const row = (name, glyphs, value, color = '') => {
-    const count = active.get(name) ?? 0;
+  const row = item => {
+    const count = active.get(item.name) ?? 0;
     if (count) lit++;
-    const classes = [color && 'color-pattern', count && 'active'].filter(Boolean).join(' ');
-    return `<li${classes ? ` class="${classes}"` : ''}><span class="glyphs ${color}" aria-hidden="true">${glyphs}</span>
-      <span class="pattern-name">${t(name)}${count > 1 ? ` <em>×${count}</em>` : ''}${count ? `<span class="sr-only"> ${t('(activa)')}</span>` : ''}</span><strong>${language === 'en' ? value.replace(',', '.') : value}</strong></li>`;
+    const classes = [item.color && 'color-pattern', count && 'active'].filter(Boolean).join(' ');
+    const glyphs = item.glyph ?? item.faces.map(face => `<i>${face}</i>`).join('');
+    const lvl = run?.comboLevels?.[item.key] ?? 1;
+    const val = (item.key === 'mono' || item.key === 'chromatic')
+      ? `+${decimal(getComboValue(run, item.key) / 100)}×`
+      : `+${getComboValue(run, item.key)}`;
+    const lvlTag = lvl > 1 ? ` <span class="combo-lvl-tag">N.${lvl}</span>` : '';
+    return `<li${classes ? ` class="${classes}"` : ''}><span class="glyphs ${item.color || ''}" aria-hidden="true">${glyphs}</span>
+      <span class="pattern-name">${t(item.name)}${lvlTag}${count > 1 ? ` <em>×${count}</em>` : ''}${count ? `<span class="sr-only"> ${t('(activa)')}</span>` : ''}</span><strong>${language === 'en' ? val.replace(',', '.') : val}</strong></li>`;
   };
-  $('patterns').innerHTML = entries.map(([name, faces, value, color]) => row(name, faces.map(face => `<i>${face}</i>`).join(''), value, color)).join('') +
-    row('Panel completo', '<span class="panel-glyph"></span>', `+${comboPoints.panel}`);
+  $('patterns').innerHTML = pList.map(row).join('');
   $('codex-count').textContent = lit || '';
   $('codex-count').hidden = !lit;
   $('codex-toggle').setAttribute('aria-label', lit ? message`Códice: ${lit} ${lit === 1 ? t('combinación activa') : t('combinaciones activas')}` : t('Códice de combinaciones y azulejos'));
@@ -422,9 +436,12 @@ function hint(count) {
   if (lockUntil && run.phase === 'play') return t('Reponiendo los dados jugados…');
   if (armed >= 0 && run.board[armed]?.stone) return message`Toca otra vez la piedra para cincelarla · ${run.chisels === 1 ? t('queda 1 carga') : message`quedan ${run.chisels} cargas`}.`;
   if (movable(selected)) {
-    const die = at(selected), spec = run.bag[die.id];
-    const value = [die.value, hasFace(spec.boost, die.face) && '×2', hasFace(spec.wild, die.face) && '★'].filter(Boolean).join(' ');
-    return `${displayDie(spec)} · ${value}. ${selected >= HAND ? t('Elige una casilla para colocarlo o sustituir otro.') : t('Recolócalo o devuélvelo a la bandeja.')}`;
+    const die = at(selected), spec = getDieSpec(run, die);
+    if (!spec) return '';
+    const multText = spec.boostMult === 4 ? '×4' : '×2';
+    const value = [die.value, hasFace(spec.boost, die.face) && multText, hasFace(spec.wild, die.face) && '★'].filter(Boolean).join(' ');
+    const origin = (selected >= HAND || selected >= UNIQUE) ? t('Elige una casilla para colocarlo o sustituir otro.') : t('Recolócalo o devuélvelo a la bandeja.');
+    return `${displayDie(spec)} · ${value}. ${origin}`;
   }
   if (hovered >= 0 && hovered < HAND && run.board[hovered]?.stone) return run.chisels ? t('Pulsa la piedra para cincelarla.') : t('Has agotado las cargas del cincel.');
   if (run.board.every(Boolean) && !count && run.chisels) return t('Tablero lleno. Pulsa una piedra para liberar una casilla.');
@@ -434,6 +451,7 @@ function hint(count) {
 }
 
 function canTarget(cell) {
+  if (selected >= UNIQUE) return canPlace(run, selected - UNIQUE, cell, true);
   return selected >= HAND ? canPlace(run, selected - HAND, cell) : canMove(run, selected, cell);
 }
 
@@ -463,7 +481,9 @@ function applyCell(cell, direct = true) {
     if (drawn.length && !reducedMotion.matches) lockUntil = now + ROLL_TIME;
     table.sync(run, now, { roll: new Set(reducedMotion.matches ? [] : drawn), dissolve: true });
   } else {
-    const placed = selected >= HAND ? place(run, selected - HAND, cell) : move(run, selected, cell);
+    const placed = selected >= UNIQUE ? place(run, selected - UNIQUE, cell, true)
+      : selected >= HAND ? place(run, selected - HAND, cell)
+      : move(run, selected, cell);
     if (!placed) return false;
     selected = -1;
     note('place');
@@ -507,7 +527,8 @@ function positionPower() {
 function showUnique() {
   const element = $('die-tooltip');
   const die = selected >= 0 ? at(selected) : null;
-  const power = die && uniqueDice[run.bag[die.id].unique];
+  const spec = die ? getDieSpec(run, die) : null;
+  const power = spec?.unique ? uniqueDice[spec.unique] : null;
   element.hidden = !power;
   canvas.setAttribute('aria-describedby', power ? 'hint die-tooltip' : 'hint');
   if (power) {
@@ -954,6 +975,16 @@ dialog.addEventListener('click', event => {
     case 'close-options': closeOptions(); break;
     case 'collection': showCollection(); break;
     case 'close-collection': closeCollection(); break;
+    case 'break-unique': {
+      const index = Number(button.dataset.index);
+      if (breakUnique(run, index)) {
+        save();
+        table.sync(run, performance.now());
+        showCollection();
+        render();
+      }
+      break;
+    }
     case 'title': title(); break;
     case 'endless':
       if (continueEndless(run)) { save(); closeDialog(); showOutcome(); }
@@ -1056,8 +1087,8 @@ canvas.addEventListener('pointerup', event => {
     armed = -1;
     if (wasArmed >= 0 && !confirmed) render();
     if (gesture.drag) {
-      const target = table.pick(event.clientX, event.clientY, selected >= HAND);
-      const accepted = target >= HAND && target < POWER ? returnDie() : applyCell(target, false);
+      const target = table.pick(event.clientX, event.clientY, selected >= HAND || selected >= UNIQUE);
+      const accepted = (target >= HAND && target < POWER) || target >= UNIQUE ? returnDie() : applyCell(target, false);
       if (!accepted) table.sync(run, performance.now());
     } else if (stone && gesture.touch && !confirmed) {
       // Touch screens have no hover preview, so the first tap only arms the stone.
@@ -1068,9 +1099,9 @@ canvas.addEventListener('pointerup', event => {
       }
       render();
       if (!run.chisels) $('hint').textContent = t('Has agotado las cargas del cincel.');
-    } else if (gesture.target >= HAND && !gesture.movable && selected < HAND) {
+    } else if (((gesture.target >= HAND && gesture.target < POWER) || gesture.target >= UNIQUE) && !gesture.movable && selected < HAND) {
       returnDie();
-    } else if (gesture.target < HAND && selected >= HAND && canTarget(gesture.target)) {
+    } else if (gesture.target < HAND && (selected >= HAND || selected >= UNIQUE) && canTarget(gesture.target)) {
       applyCell(gesture.target);
     } else if (gesture.movable) select(gesture.target);
     else applyCell(gesture.target);
