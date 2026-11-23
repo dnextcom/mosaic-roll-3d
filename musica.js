@@ -358,6 +358,15 @@ export class Music {
     for (const [name, bus] of Object.entries(this.buses)) bus.level.gain.setTargetAtTime(bus.base * MOODS[mood].levels[name], now, 1.2);
   }
 
+  setVolume(volume) {
+    this.volume = Math.max(0, Math.min(1, volume));
+    if (this.running) {
+      const now = this.context.currentTime;
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setTargetAtTime(this.volume, now, .08);
+    }
+  }
+
   start() {
     if (this.running) return;
     this.running = true;

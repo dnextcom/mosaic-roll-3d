@@ -1,4 +1,4 @@
-import { t, message, language, setupLanguage, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-1';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-1';
 import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=esmaltes-1';
 import { DiceArt, tileArt, diePortrait } from './arte.js?v=esmaltes-1';
 import { powers, rarities, dieCount, hasFace } from './catalogo.js?v=esmaltes-1';
@@ -15,6 +15,10 @@ const $ = id => document.getElementById(id);
 const storage = 'mosaic-roll/3d-web-v2';
 const soundStorage = `${storage}/sound`;
 const musicStorage = `${storage}/music`;
+const musicVolumeStorage = `${storage}/music-volume`;
+const soundVolumeStorage = `${storage}/sound-volume`;
+const hapticsStorage = `${storage}/haptics`;
+const speedStorage = `${storage}/animation-speed`;
 const dialog = $('dialog');
 const canvas = $('canvas');
 const activePowers = $('active-powers');
@@ -48,8 +52,13 @@ let table, market, sound, resolution;
 let playing = false;
 let modal = '';
 let collectionReturn = '';
+let optionsReturn = '';
 let muted = read(soundStorage) === 'off';
 let musicOn = read(musicStorage) !== 'off';
+let musicVolume = Number(read(musicVolumeStorage) ?? '0.6') || 0.6;
+let sfxVolume = Number(read(soundVolumeStorage) ?? '0.8') || 0.8;
+let hapticsEnabled = read(hapticsStorage) !== 'off';
+let fastSpeed = read(speedStorage) === 'fast';
 let music = null, musicMood = 'title';
 let selected = -1, focused = -1, hovered = -1;
 let tooltip = -1, pinned = false;
@@ -130,6 +139,7 @@ function syncMusic() {
       if (sound.state === 'suspended') sound.resume().catch(() => {});
       music ??= new Music(sound);
       music.setMood(musicMood);
+      music.setVolume(musicVolume);
       music.start();
     } else music?.stop();
   } catch { /* The game stays playable without music. */ }
@@ -153,26 +163,34 @@ function toggleMusic() {
   syncMusic();
 }
 
+function vibrate(pattern = [15]) {
+  if (hapticsEnabled && 'vibrate' in navigator) {
+    try { navigator.vibrate(pattern); } catch {}
+  }
+}
+
 function note(type) {
-  if (muted || !window.AudioContext) return;
+  if (muted || !window.AudioContext || sfxVolume <= 0) return;
   try {
     sound ??= new AudioContext();
     if (sound.state === 'suspended') sound.resume().catch(() => {});
     const cues = { pick: [840], place: [560, 1280], chip: [285, 153], roll: [388, 551, 434, 661],
       count: [574], color: [733, 890], score: [392, 523, 659, 784], forge: [262, 392, 523, 659, 784, 1047] };
-    const interval = type === 'forge' ? .115 : type === 'score' ? .075 : .037;
+    const speedMult = fastSpeed ? 0.75 : 1;
+    const interval = (type === 'forge' ? .115 : type === 'score' ? .075 : .037) * speedMult;
     cues[type].forEach((frequency, index) => {
       const time = sound.currentTime + index * interval;
       const oscillator = sound.createOscillator();
       const volume = sound.createGain();
       oscillator.type = type === 'chip' ? 'triangle' : 'sine';
       oscillator.frequency.value = frequency;
+      const targetVolume = (type === 'count' ? .024 : .059) * sfxVolume;
       volume.gain.setValueAtTime(.001, time);
-      volume.gain.exponentialRampToValueAtTime(type === 'count' ? .024 : .059, time + .008);
-      volume.gain.exponentialRampToValueAtTime(.001, time + .18);
+      volume.gain.exponentialRampToValueAtTime(Math.max(0.0001, targetVolume), time + .008 * speedMult);
+      volume.gain.exponentialRampToValueAtTime(.001, time + .18 * speedMult);
       oscillator.connect(volume).connect(sound.destination);
       oscillator.start(time);
-      oscillator.stop(time + .185);
+      oscillator.stop(time + .185 * speedMult);
     });
   } catch { /* Audio can be unavailable while the game is still playable. */ }
 }
@@ -440,6 +458,7 @@ function applyCell(cell, direct = true) {
     const drawn = chip(run, cell);
     if (!drawn) return false;
     note('chip');
+    vibrate([15]);
     popup(t('¡Crac!'), [cell], 'mult');
     if (drawn.length && !reducedMotion.matches) lockUntil = now + ROLL_TIME;
     table.sync(run, now, { roll: new Set(reducedMotion.matches ? [] : drawn), dissolve: true });
@@ -448,6 +467,7 @@ function applyCell(cell, direct = true) {
     if (!placed) return false;
     selected = -1;
     note('place');
+    vibrate([15]);
     table.sync(run, now);
   }
   save();
@@ -458,6 +478,7 @@ function applyCell(cell, direct = true) {
 function returnDie() {
   if (!ready() || selected < 0 || selected >= HAND || !recall(run, selected)) return false;
   selected = -1;
+  vibrate([10]);
   table.sync(run, performance.now());
   save();
   render();
@@ -510,14 +531,16 @@ function scoreTurn() {
   const gold = run.gold;
   const score = commit(run);
   if (!score) return;
+  vibrate([25, 35, 25]);
   clearSelection();
   save();
+  const speedMult = fastSpeed ? 0.6 : 1;
   resolution = { score, gold, at: 0, next: performance.now(), base: 0, multi: 1, steps: [
-    ...score.dieSteps.map(step => ({ ...step, phase: 'Dados', time: 330 })),
-    ...score.numberSteps.map(step => ({ ...step, phase: 'Combos numéricos', time: 550 })),
-    ...score.colorSteps.map(step => ({ ...step, phase: 'Multiplicador', time: 550 })),
-    { name: 'Total de la jugada', phase: 'Total', time: 1000, cells: [] },
-    ...(score.order ? [{ name: score.order.label, phase: 'Encargo cumplido', reward: score.order.gold, time: 1050, cells: [] }] : []),
+    ...score.dieSteps.map(step => ({ ...step, phase: 'Dados', time: Math.round(330 * speedMult) })),
+    ...score.numberSteps.map(step => ({ ...step, phase: 'Combos numéricos', time: Math.round(550 * speedMult) })),
+    ...score.colorSteps.map(step => ({ ...step, phase: 'Multiplicador', time: Math.round(550 * speedMult) })),
+    { name: 'Total de la jugada', phase: 'Total', time: Math.round(1000 * speedMult), cells: [] },
+    ...(score.order ? [{ name: score.order.label, phase: 'Encargo cumplido', reward: score.order.gold, time: Math.round(1050 * speedMult), cells: [] }] : []),
   ] };
   $('sequence').hidden = false;
   $('sequence-phase').textContent = t('Dados');
@@ -643,9 +666,256 @@ function help() {
 function pause() {
   if (!playing || modal || resolution || pendingOutcome) return;
   showDialog('pause', windowMarkup({ title: t('Pausa'), eyebrow: `${message`Mosaico ${run.stage + 1}`} · ${t(stageAt(run.stage).name)}`, emblem: 'moon',
-    actions: action('back', t('Continuar'), 'play', 'gold') + action('help', t('Cómo jugar'), 'help') +
+    actions: action('back', t('Continuar'), 'play', 'gold') +
+      action('options', t('Ajustes'), 'settings') +
+      action('help', t('Cómo jugar'), 'help') +
       action('music', message`Música: ${musicOn ? t('sí') : t('no')}`, musicOn ? 'music' : 'music-off') +
-      (document.fullscreenEnabled ? action('fullscreen', t('Pantalla completa'), 'expand') : '') + action('title', t('Volver al patio'), 'door') }));
+      (document.fullscreenEnabled ? action('fullscreen', t('Pantalla completa'), 'expand') : '') +
+      action('title', t('Volver al patio'), 'door') }));
+}
+
+function showOptions() {
+  if (resolution) return;
+  optionsReturn = modal;
+  showDialog('options', optionsMarkup());
+  bindOptionsEvents();
+}
+
+function closeOptions() {
+  const previous = optionsReturn;
+  optionsReturn = '';
+  modal = '';
+  if (previous === 'pause') {
+    pause();
+  } else if (previous === 'outcome') {
+    showOutcome();
+    dialog.querySelector('[data-action]')?.focus({ preventScroll: true });
+  } else {
+    dialog.close();
+    delete dialog.dataset.kind;
+  }
+  if (playing && !modal) render();
+}
+
+function optionsMarkup() {
+  return `
+    <div class="window window-options">
+      <div class="window-crown">
+        <span class="emblem emblem-moon" aria-hidden="true">${icon('settings')}</span>
+        <h2 id="dialog-title">${t('Ajustes')}</h2>
+        <p class="eyebrow">${t('Mosaic Roll 3D')}</p>
+      </div>
+      <div class="window-body options-body">
+        
+        <!-- Idioma / Language / Langue -->
+        <section class="opt-group">
+          <h3 class="opt-heading">${icon('codex')} ${t('Idioma')}</h3>
+          <div class="opt-lang-picker" role="radiogroup" aria-label="${t('Idioma')}">
+            <button type="button" class="opt-lang-btn ${language === 'es' ? 'active' : ''}" data-lang="es">
+              <span class="flag">🇪🇸</span>
+              <span>Español</span>
+            </button>
+            <button type="button" class="opt-lang-btn ${language === 'en' ? 'active' : ''}" data-lang="en">
+              <span class="flag">🇬🇧</span>
+              <span>English</span>
+            </button>
+            <button type="button" class="opt-lang-btn ${language === 'fr' ? 'active' : ''}" data-lang="fr">
+              <span class="flag">🇫🇷</span>
+              <span>Français</span>
+            </button>
+          </div>
+          ${isLanguageAutoDetected ? `<p class="opt-hint">${icon('check')} ${t('Idioma detectado automáticamente')}</p>` : ''}
+        </section>
+
+        <!-- Sonido y música -->
+        <section class="opt-group">
+          <h3 class="opt-heading">${icon('sound')} ${t('Sonido y música')}</h3>
+          
+          <!-- Música -->
+          <div class="opt-row">
+            <div class="opt-label-wrap">
+              <span class="opt-label">${icon('music')} ${t('Música')}</span>
+              <button type="button" class="opt-toggle ${musicOn ? 'active' : ''}" id="opt-music-toggle" aria-pressed="${musicOn}">
+                ${musicOn ? t('sí') : t('no')}
+              </button>
+            </div>
+            <div class="opt-slider-wrap">
+              <input type="range" min="0" max="100" value="${Math.round(musicVolume * 100)}" id="opt-music-vol" aria-label="${t('Volumen de música')}" ${musicOn ? '' : 'disabled'}>
+              <span class="opt-val" id="opt-music-val">${Math.round(musicVolume * 100)}%</span>
+            </div>
+          </div>
+
+          <!-- Efectos SFX -->
+          <div class="opt-row">
+            <div class="opt-label-wrap">
+              <span class="opt-label">${icon('sound')} ${t('Efectos de sonido')}</span>
+              <div class="opt-sub-actions">
+                <button type="button" class="opt-btn-test" id="opt-sound-test" title="${t('Probar sonido')}">
+                  ${icon('play')} ${t('Probar')}
+                </button>
+                <button type="button" class="opt-toggle ${!muted ? 'active' : ''}" id="opt-sound-toggle" aria-pressed="${!muted}">
+                  ${!muted ? t('sí') : t('no')}
+                </button>
+              </div>
+            </div>
+            <div class="opt-slider-wrap">
+              <input type="range" min="0" max="100" value="${Math.round(sfxVolume * 100)}" id="opt-sfx-vol" aria-label="${t('Volumen de efectos')}" ${!muted ? '' : 'disabled'}>
+              <span class="opt-val" id="opt-sfx-val">${Math.round(sfxVolume * 100)}%</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Ajustes Generales -->
+        <section class="opt-group">
+          <h3 class="opt-heading">${icon('star')} ${t('General')}</h3>
+          
+          <!-- Vibración háptica -->
+          <div class="opt-row">
+            <div class="opt-label-wrap">
+              <span class="opt-label">${t('Vibración háptica')}</span>
+              <button type="button" class="opt-toggle ${hapticsEnabled ? 'active' : ''}" id="opt-haptics-toggle" aria-pressed="${hapticsEnabled}">
+                ${hapticsEnabled ? t('sí') : t('no')}
+              </button>
+            </div>
+          </div>
+
+          <!-- Velocidad animaciones -->
+          <div class="opt-row">
+            <div class="opt-label-wrap">
+              <span class="opt-label">${t('Velocidad de animaciones')}</span>
+              <div class="opt-pill-group">
+                <button type="button" class="opt-pill ${!fastSpeed ? 'active' : ''}" data-speed="normal">${t('Normal')}</button>
+                <button type="button" class="opt-pill ${fastSpeed ? 'active' : ''}" data-speed="fast">${t('Rápida')}</button>
+              </div>
+            </div>
+          </div>
+
+          ${document.fullscreenEnabled ? `
+          <div class="opt-row">
+            <div class="opt-label-wrap">
+              <span class="opt-label">${t('Pantalla completa')}</span>
+              <button type="button" class="btn btn-small" id="opt-fullscreen-toggle">
+                ${icon('expand')} ${document.fullscreenElement ? t('Salir') : t('Pantalla completa')}
+              </button>
+            </div>
+          </div>` : ''}
+        </section>
+
+      </div>
+      <div class="window-actions">
+        ${action('close-options', t('Guardar y cerrar'), 'check', 'gold')}
+      </div>
+    </div>
+  `;
+}
+
+function bindOptionsEvents() {
+  dialog.querySelectorAll('.opt-lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.dataset.lang;
+      if (lang === language) return;
+      setLanguage(lang, true);
+    });
+  });
+
+  const musicToggle = $('opt-music-toggle');
+  const musicSlider = $('opt-music-vol');
+  const musicVal = $('opt-music-val');
+  if (musicToggle) {
+    musicToggle.addEventListener('click', () => {
+      toggleMusic();
+      musicToggle.classList.toggle('active', musicOn);
+      musicToggle.setAttribute('aria-pressed', String(musicOn));
+      musicToggle.textContent = musicOn ? t('sí') : t('no');
+      if (musicSlider) musicSlider.disabled = !musicOn;
+    });
+  }
+
+  if (musicSlider) {
+    musicSlider.addEventListener('input', () => {
+      musicVolume = Number(musicSlider.value) / 100;
+      write(musicVolumeStorage, String(musicVolume));
+      if (musicVal) musicVal.textContent = `${Math.round(musicVolume * 100)}%`;
+      music?.setVolume(musicVolume);
+    });
+  }
+
+  const soundToggle = $('opt-sound-toggle');
+  const soundSlider = $('opt-sfx-vol');
+  const soundVal = $('opt-sfx-val');
+  if (soundToggle) {
+    soundToggle.addEventListener('click', () => {
+      muted = !muted;
+      write(soundStorage, muted ? 'off' : 'on');
+      soundToggle.classList.toggle('active', !muted);
+      soundToggle.setAttribute('aria-pressed', String(!muted));
+      soundToggle.textContent = !muted ? t('sí') : t('no');
+      if (soundSlider) soundSlider.disabled = muted;
+      if (!muted) note('pick');
+      else if (sound) sound.suspend().catch(() => {});
+      syncMusic();
+      $('sound').setAttribute('aria-pressed', String(!muted));
+    });
+  }
+
+  if (soundSlider) {
+    soundSlider.addEventListener('input', () => {
+      sfxVolume = Number(soundSlider.value) / 100;
+      write(soundVolumeStorage, String(sfxVolume));
+      if (soundVal) soundVal.textContent = `${Math.round(sfxVolume * 100)}%`;
+    });
+  }
+
+  const soundTest = $('opt-sound-test');
+  if (soundTest) {
+    soundTest.addEventListener('click', () => {
+      if (muted) {
+        muted = false;
+        write(soundStorage, 'on');
+        if (soundToggle) {
+          soundToggle.classList.add('active');
+          soundToggle.setAttribute('aria-pressed', 'true');
+          soundToggle.textContent = t('sí');
+        }
+        if (soundSlider) soundSlider.disabled = false;
+        $('sound').setAttribute('aria-pressed', 'true');
+      }
+      note('score');
+      vibrate([20]);
+    });
+  }
+
+  const hapticsToggle = $('opt-haptics-toggle');
+  if (hapticsToggle) {
+    hapticsToggle.addEventListener('click', () => {
+      hapticsEnabled = !hapticsEnabled;
+      write(hapticsStorage, hapticsEnabled ? 'on' : 'off');
+      hapticsToggle.classList.toggle('active', hapticsEnabled);
+      hapticsToggle.setAttribute('aria-pressed', String(hapticsEnabled));
+      hapticsToggle.textContent = hapticsEnabled ? t('sí') : t('no');
+      if (hapticsEnabled) vibrate([30]);
+    });
+  }
+
+  dialog.querySelectorAll('.opt-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      fastSpeed = (pill.dataset.speed === 'fast');
+      write(speedStorage, fastSpeed ? 'fast' : 'normal');
+      dialog.querySelectorAll('.opt-pill').forEach(p => p.classList.toggle('active', p === pill));
+      vibrate([15]);
+    });
+  });
+
+  const fsBtn = $('opt-fullscreen-toggle');
+  if (fsBtn) {
+    fsBtn.addEventListener('click', () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    });
+  }
 }
 
 function showOutcome() {
@@ -680,6 +950,8 @@ dialog.addEventListener('click', event => {
   if (!button || button.disabled) return;
   switch (button.dataset.action) {
     case 'back': back(); break;
+    case 'options': showOptions(); break;
+    case 'close-options': closeOptions(); break;
     case 'collection': showCollection(); break;
     case 'close-collection': closeCollection(); break;
     case 'title': title(); break;
@@ -703,6 +975,7 @@ dialog.addEventListener('click', event => {
 dialog.addEventListener('cancel', event => {
   event.preventDefault();
   if (modal === 'collection') closeCollection();
+  else if (modal === 'options') closeOptions();
   else if (modal === 'outcome') title();
   else back();
 });
@@ -876,6 +1149,8 @@ $('new').addEventListener('click', () => showDialog('restart', windowMarkup({ ti
   actions: action('restart', t('Nueva partida'), 'refresh', 'danger') + action('back', t('Cancelar')) }), 'defeat'));
 document.querySelector('[data-help]').addEventListener('click', help);
 $('pause').addEventListener('click', pause);
+$('options-button')?.addEventListener('click', showOptions);
+$('title-options')?.addEventListener('click', showOptions);
 $('top').addEventListener('click', topCamera);
 $('reset-camera').addEventListener('click', centerCamera);
 $('catalog').addEventListener('click', () => showCollection(true));

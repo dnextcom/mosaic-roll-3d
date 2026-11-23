@@ -1,8 +1,21 @@
 import english from './ingles.js?v=esmaltes-1';
+import french from './frances.js?v=esmaltes-1';
 import { diceName, glazes } from './catalogo.js?v=esmaltes-1';
 
 const preferenceKey = 'mosaic-roll/language';
-const supported = value => value === 'es' || value === 'en';
+export const supported = value => value === 'es' || value === 'en' || value === 'fr';
+
+function detectBrowserLanguage() {
+  const list = (navigator.languages?.length ? navigator.languages : [navigator.language || ''])
+    .map(l => (l || '').toLowerCase());
+  for (const l of list) {
+    if (l.startsWith('fr')) return 'fr';
+    if (l.startsWith('es')) return 'es';
+    if (l.startsWith('en')) return 'en';
+  }
+  return 'es';
+}
+
 const requested = new URLSearchParams(location.search).get('lang');
 let preference;
 try {
@@ -10,8 +23,19 @@ try {
   if (supported(requested)) localStorage.setItem(preferenceKey, requested);
 } catch { /* The language in the URL works without local storage. */ }
 
-export const language = supported(requested) ? requested : preference === 'en' ? 'en' : 'es';
-export const t = text => language === 'en' && Object.hasOwn(english, text) ? english[text] : text;
+export let language = supported(requested)
+  ? requested
+  : supported(preference)
+    ? preference
+    : detectBrowserLanguage();
+
+export const isLanguageAutoDetected = !supported(requested) && !supported(preference);
+
+export const t = text => {
+  if (language === 'en' && Object.hasOwn(english, text)) return english[text];
+  if (language === 'fr' && Object.hasOwn(french, text)) return french[text];
+  return text;
+};
 
 export function message(parts, ...values) {
   const key = parts.reduce((text, part, index) => text + (index ? `{${index - 1}}` : '') + part, '');
@@ -23,21 +47,27 @@ export function displayDie(spec) {
 }
 
 export function displayBossRule(boss, bossText) {
-  if (language === 'en' && boss.key === 'eclipse') {
+  if (boss.key === 'eclipse') {
     return message`Los dados de ${t(glazes[boss.color].name)} no suman puntos ni cuentan para los combos de color.`;
   }
   return t(bossText(boss));
 }
 
 export function displayItem(name) {
-  if (language !== 'en' || !name.startsWith('Quimera de ')) return t(name);
+  if (!name.startsWith('Quimera de ')) return t(name);
   const colors = name.slice('Quimera de '.length).split(' y ');
   const translate = color => t(glazes.find(glaze => glaze.name.toLowerCase() === color)?.name ?? color);
-  return `${colors.map(translate).join(' & ')} Chimera`;
+  if (language === 'en') {
+    return `${colors.map(translate).join(' & ')} Chimera`;
+  }
+  if (language === 'fr') {
+    return `Chimère ${colors.map(translate).join(' et ')}`;
+  }
+  return t(name);
 }
 
 export function scoreText(label) {
-  if (language !== 'en') return label;
+  if (language === 'es') return label;
   return label.split(' + ').map(combo => {
     const match = combo.match(/^(.+?)( \d+(?: × \d+)?)(?: · (eclipsado|impar))?$/);
     if (!match) return t(combo);
@@ -46,29 +76,52 @@ export function scoreText(label) {
   }).join(' + ');
 }
 
-function translateNodes(root) {
+export function translateNodes(root = document.documentElement) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    const original = node.data.trim();
-    const translated = t(original);
-    if (translated !== original) node.data = node.data.replace(original, translated);
+    const text = node.data.trim();
+    if (!text) continue;
+    if (!node._original) node._original = text;
+    const translated = t(node._original);
+    if (translated !== node.data) node.data = node.data.replace(node._original, translated);
   }
   for (const element of root.querySelectorAll('[aria-label], [title], meta[name="description"]')) {
     for (const attribute of ['aria-label', 'title', 'content']) {
-      if (element.hasAttribute(attribute)) element.setAttribute(attribute, t(element.getAttribute(attribute)));
+      if (element.hasAttribute(attribute)) {
+        const origAttr = 'data-orig-' + attribute;
+        if (!element.hasAttribute(origAttr)) element.setAttribute(origAttr, element.getAttribute(attribute));
+        element.setAttribute(attribute, t(element.getAttribute(origAttr)));
+      }
     }
+  }
+}
+
+export function setLanguage(newLang, reload = false) {
+  if (!supported(newLang)) return;
+  language = newLang;
+  try { localStorage.setItem(preferenceKey, newLang); } catch {}
+  document.documentElement.lang = newLang;
+  translateNodes(document.documentElement);
+  const picker = document.getElementById('language');
+  if (picker) picker.value = newLang;
+  const url = new URL(location.href);
+  url.searchParams.set('lang', newLang);
+  if (reload) {
+    location.assign(url);
+  } else {
+    history.replaceState(null, '', url);
   }
 }
 
 export function setupLanguage() {
   document.documentElement.lang = language;
-  if (language === 'en') translateNodes(document.documentElement);
+  if (language !== 'es') translateNodes(document.documentElement);
   const picker = document.getElementById('language');
-  picker.value = language;
-  picker.addEventListener('change', () => {
-    const url = new URL(location.href);
-    url.searchParams.set('lang', picker.value);
-    location.assign(url);
-  });
+  if (picker) {
+    picker.value = language;
+    picker.addEventListener('change', () => {
+      setLanguage(picker.value, true);
+    });
+  }
 }
