@@ -1,7 +1,8 @@
+import { t, language, scoreText } from './idioma.js?v=esmaltes-1';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt } from './arte.js?v=alhambra-3';
-import { projectBoard } from './unicos.js?v=alhambra-3';
+import { DiceArt, tileArt } from './arte.js?v=esmaltes-1';
+import { projectBoard } from './unicos.js?v=esmaltes-1';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -438,8 +439,8 @@ export class Table {
       const tag = document.createElement('span');
       tag.className = `match${match.column ? ' column' : ''}`;
       const points = match.points ? `+${match.points}` : '';
-      const bonus = match.add ? `+${(match.add / 100).toLocaleString('es-ES')}×` : '';
-      tag.textContent = `${match.name} ${[points, bonus].filter(Boolean).join(' · ')}`;
+      const bonus = match.add ? `+${(match.add / 100).toLocaleString(language)}×` : '';
+      tag.textContent = `${scoreText(match.name)} ${[points, bonus].filter(Boolean).join(' · ')}`;
       this.labels.append(tag);
       first.y = .63;
       if (match.column) first.z -= .79;
@@ -449,7 +450,7 @@ export class Table {
     for (const power of powers) {
       const tag = document.createElement('span');
       tag.className = 'match unique-mark';
-      tag.textContent = `${power.name} · +${(power.points ?? power.add / 100).toLocaleString('es-ES')}${power.add ? '×' : ''}`;
+      tag.textContent = `${t(power.name)} · +${(power.points ?? power.add / 100).toLocaleString(language)}${power.add ? '×' : ''}`;
       const anchor = this.cell(power.cells[0]);
       anchor.y = 1.31;
       this.labels.append(tag);

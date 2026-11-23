@@ -1,13 +1,14 @@
-import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=alhambra-3';
-import { DiceArt, tileArt, diePortrait } from './arte.js?v=alhambra-3';
-import { powers, rarities, diceName, dieCount, hasFace } from './catalogo.js?v=alhambra-3';
+import { t, message, language, setupLanguage, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-1';
+import { Table, HAND, POWER, ROLL_TIME } from './mesa.js?v=esmaltes-1';
+import { DiceArt, tileArt, diePortrait } from './arte.js?v=esmaltes-1';
+import { powers, rarities, dieCount, hasFace } from './catalogo.js?v=esmaltes-1';
 import { stageAt, campaignLength, orderAt, comboPoints, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=alhambra-3';
-import { uniqueDice } from './unicos.js?v=alhambra-3';
-import { MarketUI } from './mercado.js?v=alhambra-3';
-import { collectionMarkup } from './coleccion.js?v=alhambra-3';
-import { icon, hydrateIcons } from './iconos.js?v=alhambra-3';
-import { Music } from './musica.js?v=alhambra-3';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=esmaltes-1';
+import { uniqueDice } from './unicos.js?v=esmaltes-1';
+import { MarketUI } from './mercado.js?v=esmaltes-1';
+import { collectionMarkup } from './coleccion.js?v=esmaltes-1';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-1';
+import { Music } from './musica.js?v=esmaltes-1';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -19,7 +20,7 @@ const canvas = $('canvas');
 const activePowers = $('active-powers');
 const workshop = $('workshop');
 const codex = $('codex');
-const decimal = value => value.toLocaleString('es-ES', { maximumFractionDigits: 2 });
+const decimal = value => value.toLocaleString(language, { maximumFractionDigits: 2 });
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const patterns = [
   ['Línea llena', [1, 5, 2], `+${comboPoints.line}`], ['Pareja', [2, 2], `+${comboPoints.pair}`],
@@ -28,6 +29,7 @@ const patterns = [
 ];
 
 hydrateIcons();
+setupLanguage();
 
 function read(key) {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -118,7 +120,7 @@ function shake() {
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 const chips = (base, multiplier, popBase = false, popMulti = false) =>
-  `<span class="chip chip-base${popBase ? ' pop' : ''}">${base}</span><span class="times" aria-label="por">×</span><span class="chip chip-mult${popMulti ? ' pop' : ''}">${decimal(multiplier)}</span>`;
+  `<span class="chip chip-base${popBase ? ' pop' : ''}">${base}</span><span class="times" aria-label="${t("por")}">×</span><span class="chip chip-mult${popMulti ? ' pop' : ''}">${decimal(multiplier)}</span>`;
 
 // Music plays while sound is on, the music switch is on and the page is visible.
 function syncMusic() {
@@ -137,7 +139,7 @@ function syncMusic() {
 function paintMusic() {
   const button = $('music');
   button.setAttribute('aria-pressed', String(musicOn));
-  button.querySelector('.music-state').textContent = musicOn ? 'sí' : 'no';
+  button.querySelector('.music-state').textContent = musicOn ? t('sí') : t('no');
 }
 
 function setMusicMood(mood) {
@@ -218,10 +220,10 @@ function title() {
   document.body.dataset.screen = 'title';
   const button = $('play');
   button.disabled = !table;
-  const label = !table ? 'Cargando…' : run?.phase === 'won' ? 'Ver victoria' : ongoing() ? 'Continuar' : 'Jugar';
+  const label = !table ? t('Cargando…') : run?.phase === 'won' ? t('Ver victoria') : ongoing() ? t('Continuar') : t('Jugar');
   $('play-label').textContent = label;
-  $('play-note').textContent = !table ? '' : !ongoing() ? 'Elige tu bolsa inicial'
-    : run.phase === 'shop' ? `Zoco · tras el mosaico ${run.stage + 1}` : `Mosaico ${run.stage + 1} · ${stageAt(run.stage).name}`;
+  $('play-note').textContent = !table ? '' : !ongoing() ? t('Elige tu bolsa inicial')
+    : run.phase === 'shop' ? message`Zoco · tras el mosaico ${run.stage + 1}` : `${message`Mosaico ${run.stage + 1}`} · ${t(stageAt(run.stage).name)}`;
   $('new').hidden = !table || !ongoing();
   if (table) button.focus({ preventScroll: true });
 }
@@ -284,7 +286,7 @@ function enter(roll = []) {
   if (roll.length) note('roll');
   setMusicMood(bossAt(run) ? 'boss' : 'play');
   if (run.phase !== 'play') showOutcome();
-  else if (bossAt(run)) popup(`Jefe: ${bosses[bossAt(run).key].name}`, [], 'banner boss');
+  else if (bossAt(run)) popup(message`Jefe: ${t(bosses[bossAt(run).key].name)}`, [], 'banner boss');
 }
 
 function startRun(deck) { run = newRun(deck); save(); enter(run.hand.filter(Boolean).map(die => die.id)); }
@@ -292,13 +294,13 @@ function startRun(deck) { run = newRun(deck); save(); enter(run.hand.filter(Bool
 // New runs begin by choosing a starting bag, like the decks of a deck-builder.
 function chooseBag() {
   showDialog('bags', `<div class="book bags">
-    <header class="book-head"><div class="book-heading"><span class="book-kicker">Nueva partida · ${campaignLength} mosaicos</span>
-      <h2 id="dialog-title">Elige tu bolsa</h2></div>
-      <button class="btn btn-quiet btn-small" type="button" data-action="back">${icon('close')}Cancelar</button></header>
+    <header class="book-head"><div class="book-heading"><span class="book-kicker">${message`Nueva partida · ${campaignLength} mosaicos`}</span>
+      <h2 id="dialog-title">${t('Elige tu bolsa')}</h2></div>
+      <button class="btn btn-quiet btn-small" type="button" data-action="back">${icon('close')}${t('Cancelar')}</button></header>
     <div class="bag-grid">${Object.entries(decks).map(([key, deck]) => `<button class="bag-card" type="button" data-action="bag" data-bag="${key}">
       <span class="bag-dice" aria-hidden="true">${deckSample(key).map(spec => `<img src="${diePortrait(spec)}" alt="">`).join('')}</span>
-      <strong class="bag-name">${deck.name}</strong><span class="bag-text">${deck.text}</span></button>`).join('')}</div>
-    <p class="bag-foot">${icon('crown')}Cada ${BOSS_EVERY} mosaicos te espera un jefe con una regla especial. Vencerlo da ${BOSS_GOLD} de oro extra.</p></div>`);
+      <strong class="bag-name">${t(deck.name)}</strong><span class="bag-text">${t(deck.text)}</span></button>`).join('')}</div>
+    <p class="bag-foot">${icon('crown')}${message`Cada ${BOSS_EVERY} mosaicos te espera un jefe con una regla especial. Vencerlo da ${BOSS_GOLD} de oro extra.`}</p></div>`);
   dialog.querySelector('.bag-card').focus({ preventScroll: true });
 }
 
@@ -313,23 +315,23 @@ function render() {
   const score = resolution?.score ?? preview(run);
   const points = resolution ? run.points - score.total : run.points;
   const dimensions = run.cols === 4 ? `${run.cols} × ${run.rows}` : `${run.rows} × ${run.cols}`;
-  const progress = run.endless ? `Modo libre · Mosaico ${run.stage + 1}` : `Mosaico ${run.stage + 1}/${campaignLength}`;
+  const progress = run.endless ? message`Modo libre · Mosaico ${run.stage + 1}` : message`Mosaico ${run.stage + 1}/${campaignLength}`;
   const boss = bossAt(run);
   const finalBoss = boss && !run.endless && run.stage === campaignLength - 1;
-  $('stage-label').textContent = `${boss ? (finalBoss ? 'Jefe final · ' : 'Jefe · ') : ''}${progress} · ${dimensions}`;
-  $('stage-name').textContent = boss ? bosses[boss.key].name : stage.name;
+  $('stage-label').textContent = `${boss ? (finalBoss ? `${t('Jefe final')} · ` : `${t('Jefe')} · `) : ''}${progress} · ${dimensions}`;
+  $('stage-name').textContent = t(boss ? bosses[boss.key].name : stage.name);
   $('crown').classList.toggle('boss-stage', Boolean(boss));
   $('boss').hidden = !boss;
-  if (boss) $('boss-rule').textContent = bossText(boss);
+  if (boss) $('boss-rule').textContent = displayBossRule(boss, bossText);
   countTo($('score'), points);
   $('goal').textContent = `/ ${run.goal}`;
   const ring = $('progress');
   ring.setAttribute('aria-valuemax', run.goal);
   ring.setAttribute('aria-valuenow', Math.min(run.goal, points));
-  ring.setAttribute('aria-valuetext', `${points} de ${run.goal} puntos`);
+  ring.setAttribute('aria-valuetext', message`${points} de ${run.goal} puntos`);
   $('medallion').style.setProperty('--p', Math.min(1, points / run.goal).toFixed(4));
   $('medallion').classList.toggle('reached', points >= run.goal);
-  $('turns').setAttribute('aria-label', `${run.turns} de ${run.maxTurns} turnos`);
+  $('turns').setAttribute('aria-label', message`${run.turns} de ${run.maxTurns} turnos`);
   $('turns').innerHTML = Array.from({ length: run.maxTurns }, (_, index) => `<i class="pip${index >= run.turns ? ' spent' : ''}"></i>`).join('');
   $('chisel-count').textContent = `×${run.chisels}`;
   $('chisel-glyph').classList.toggle('empty', !run.chisels);
@@ -348,30 +350,30 @@ function render() {
     if (count) lit++;
     const classes = [color && 'color-pattern', count && 'active'].filter(Boolean).join(' ');
     return `<li${classes ? ` class="${classes}"` : ''}><span class="glyphs ${color}" aria-hidden="true">${glyphs}</span>
-      <span class="pattern-name">${name}${count > 1 ? ` <em>×${count}</em>` : ''}${count ? '<span class="sr-only"> (activa)</span>' : ''}</span><strong>${value}</strong></li>`;
+      <span class="pattern-name">${t(name)}${count > 1 ? ` <em>×${count}</em>` : ''}${count ? `<span class="sr-only"> ${t('(activa)')}</span>` : ''}</span><strong>${language === 'en' ? value.replace(',', '.') : value}</strong></li>`;
   };
   $('patterns').innerHTML = entries.map(([name, faces, value, color]) => row(name, faces.map(face => `<i>${face}</i>`).join(''), value, color)).join('') +
     row('Panel completo', '<span class="panel-glyph"></span>', `+${comboPoints.panel}`);
   $('codex-count').textContent = lit || '';
   $('codex-count').hidden = !lit;
-  $('codex-toggle').setAttribute('aria-label', lit ? `Códice: ${lit} ${lit === 1 ? 'combinación activa' : 'combinaciones activas'}` : 'Códice de combinaciones y azulejos');
+  $('codex-toggle').setAttribute('aria-label', lit ? message`Códice: ${lit} ${lit === 1 ? t('combinación activa') : t('combinaciones activas')}` : t('Códice de combinaciones y azulejos'));
   const total = `+${score.total}`;
   if ($('preview').textContent !== total) {
     $('preview').textContent = total;
     if (!resolution && score.count) bump($('preview'));
   }
   $('breakdown').innerHTML = score.count ? `${chips(score.base, score.multiplier)}${score.gold ? `<span class="gold-note">+${coins(score.gold)}</span>` : ''}`
-    : run.lastScore ? `Última jugada: +${run.lastScore}` : 'Coloca un dado para ver sus puntos.';
+    : run.lastScore ? message`Última jugada: +${run.lastScore}` : t('Coloca un dado para ver sus puntos.');
   $('placed').innerHTML = Array.from({ length: 4 }, (_, index) => `<i class="slot${index < score.count ? ' filled' : ''}"></i>`).join('') +
-    `<span class="sr-only">${score.count}/4 dados colocados</span>`;
+    `<span class="sr-only">${message`${score.count}/4 dados colocados`}</span>`;
   $('tally').classList.toggle('has-play', score.count > 0);
   const order = orderAt(run.stage);
   $('order').hidden = !order;
   if (order) {
     const done = run.orders.includes(order.key);
     $('order').classList.toggle('fulfilled', done);
-    $('order-label').textContent = order.label;
-    $('order-reward').innerHTML = `${done ? icon('check') : ''}+${coins(order.gold)}<span class="sr-only"> de oro${done ? ', cumplido' : ''}</span>`;
+    $('order-label').textContent = t(order.label);
+    $('order-reward').innerHTML = `${done ? icon('check') : ''}+${coins(order.gold)}<span class="sr-only"> ${t('de oro')}${done ? t(', cumplido') : ''}</span>`;
   }
   $('play-layout').classList.toggle('scoring', Boolean(resolution));
   $('equipped-count').textContent = `${run.powers.length}/${tileLimit}`;
@@ -380,13 +382,13 @@ function render() {
     activePowers.dataset.equipped = equipped;
     activePowers.innerHTML = run.powers.map(key => {
       const power = powers[key], rarity = rarities[power.rarity];
-      return `<li class="tile-entry" style="--rarity:${rarity.color}"><img src="${tileArt(key).url}" alt=""><div><strong>${power.name}</strong><small>${rarity.name}</small><p>${power.text}</p></div></li>`;
+      return `<li class="tile-entry" style="--rarity:${rarity.color}"><img src="${tileArt(key).url}" alt=""><div><strong>${t(power.name)}</strong><small>${t(rarity.name)}</small><p>${t(power.text)}</p></div></li>`;
     }).join('') + '<li class="tile-empty" aria-hidden="true"></li>'.repeat(Math.max(0, tileLimit - run.powers.length)) +
-      (run.powers.length ? '' : '<li class="sr-only">Todavía no tienes azulejos equipados.</li>');
+      (run.powers.length ? '' : `<li class="sr-only">${t("Todavía no tienes azulejos equipados.")}</li>`);
   }
   const scorable = ready() && score.count > 0;
   $('confirm').disabled = !scorable;
-  $('confirm').setAttribute('aria-label', `Puntuar la jugada, ${total} puntos`);
+  $('confirm').setAttribute('aria-label', message`Puntuar la jugada, ${total} puntos`);
   $('pause').disabled = Boolean(resolution);
   $('collection-button').disabled = Boolean(resolution);
   $('recall').hidden = !ready() || selected < 0 || selected >= HAND || !isFresh(run.board[selected]);
@@ -398,19 +400,19 @@ function render() {
 }
 
 function hint(count) {
-  if (resolution) return 'Sumando la jugada…';
-  if (lockUntil && run.phase === 'play') return 'Reponiendo los dados jugados…';
-  if (armed >= 0 && run.board[armed]?.stone) return `Toca otra vez la piedra para cincelarla · ${run.chisels === 1 ? 'queda 1 carga' : `quedan ${run.chisels} cargas`}.`;
+  if (resolution) return t('Sumando la jugada…');
+  if (lockUntil && run.phase === 'play') return t('Reponiendo los dados jugados…');
+  if (armed >= 0 && run.board[armed]?.stone) return message`Toca otra vez la piedra para cincelarla · ${run.chisels === 1 ? t('queda 1 carga') : message`quedan ${run.chisels} cargas`}.`;
   if (movable(selected)) {
     const die = at(selected), spec = run.bag[die.id];
     const value = [die.value, hasFace(spec.boost, die.face) && '×2', hasFace(spec.wild, die.face) && '★'].filter(Boolean).join(' ');
-    return `${diceName(spec)} · ${value}. ${selected >= HAND ? 'Elige una casilla para colocarlo o sustituir otro.' : 'Recolócalo o devuélvelo a la bandeja.'}`;
+    return `${displayDie(spec)} · ${value}. ${selected >= HAND ? t('Elige una casilla para colocarlo o sustituir otro.') : t('Recolócalo o devuélvelo a la bandeja.')}`;
   }
-  if (hovered >= 0 && hovered < HAND && run.board[hovered]?.stone) return run.chisels ? 'Pulsa la piedra para cincelarla.' : 'Has agotado las cargas del cincel.';
-  if (run.board.every(Boolean) && !count && run.chisels) return 'Tablero lleno. Pulsa una piedra para liberar una casilla.';
-  if (count >= 4 || run.board.every(Boolean)) return 'Puntúa la jugada o recoloca un dado.';
-  if (count) return 'Arrastra para recolocar un dado o puntúa la jugada.';
-  return 'Arrastra un dado o toca el dado y la casilla.';
+  if (hovered >= 0 && hovered < HAND && run.board[hovered]?.stone) return run.chisels ? t('Pulsa la piedra para cincelarla.') : t('Has agotado las cargas del cincel.');
+  if (run.board.every(Boolean) && !count && run.chisels) return t('Tablero lleno. Pulsa una piedra para liberar una casilla.');
+  if (count >= 4 || run.board.every(Boolean)) return t('Puntúa la jugada o recoloca un dado.');
+  if (count) return t('Arrastra para recolocar un dado o puntúa la jugada.');
+  return t('Arrastra un dado o toca el dado y la casilla.');
 }
 
 function canTarget(cell) {
@@ -438,7 +440,7 @@ function applyCell(cell, direct = true) {
     const drawn = chip(run, cell);
     if (!drawn) return false;
     note('chip');
-    popup('¡Crac!', [cell], 'mult');
+    popup(t('¡Crac!'), [cell], 'mult');
     if (drawn.length && !reducedMotion.matches) lockUntil = now + ROLL_TIME;
     table.sync(run, now, { roll: new Set(reducedMotion.matches ? [] : drawn), dissolve: true });
   } else {
@@ -472,7 +474,7 @@ function showPower(index, pin = false) {
   if (!key) return;
   const power = powers[key], rarity = rarities[power.rarity];
   element.style.setProperty('--rarity', rarity.color);
-  element.innerHTML = `<small class="tooltip-kicker">${rarity.name}</small><strong>${power.name}</strong><span>${power.text}</span>`;
+  element.innerHTML = `<small class="tooltip-kicker">${t(rarity.name)}</small><strong>${t(power.name)}</strong><span>${t(power.text)}</span>`;
   positionPower();
 }
 
@@ -488,7 +490,7 @@ function showUnique() {
   element.hidden = !power;
   canvas.setAttribute('aria-describedby', power ? 'hint die-tooltip' : 'hint');
   if (power) {
-    element.innerHTML = `<small class="tooltip-kicker">Dado único · ${power.mark}</small><strong>${power.name}</strong><span>${power.text}</span>`;
+    element.innerHTML = `<small class="tooltip-kicker">${t('Dado único')} · ${power.mark}</small><strong>${t(power.name)}</strong><span>${t(power.text)}</span>`;
     positionPower();
   }
 }
@@ -518,7 +520,7 @@ function scoreTurn() {
     ...(score.order ? [{ name: score.order.label, phase: 'Encargo cumplido', reward: score.order.gold, time: 1050, cells: [] }] : []),
   ] };
   $('sequence').hidden = false;
-  $('sequence-phase').textContent = 'Dados';
+  $('sequence-phase').textContent = t('Dados');
   $('sequence-value').innerHTML = chips(0, 1);
   $('sequence-detail').textContent = '';
   render();
@@ -531,19 +533,19 @@ function scoringFrame(now) {
   if (step.points) resolution.base += step.points;
   if (step.add) resolution.multi += step.add / 100;
   if (step.factor) resolution.multi *= step.factor;
-  $('sequence-phase').textContent = step.phase;
+  $('sequence-phase').textContent = t(step.phase);
   $('sequence').dataset.phase = step.reward ? 'reward' : step.phase === 'Total' ? 'total' : step.phase === 'Multiplicador' ? 'color' : 'number';
   $('sequence-value').innerHTML = step.reward ? `<span class="sequence-total gold">+${coins(step.reward)}</span>`
     : step.phase === 'Total' ? `<span class="sequence-total">+${resolution.score.total}</span>`
     : chips(resolution.base, resolution.multi, Boolean(step.points), Boolean(step.add || step.factor));
   const bonus = step.points ? ` · +${step.points}` : step.add ? ` · +${decimal(step.add / 100)}×` : step.factor ? ` · ×${decimal(step.factor)}` : '';
   $('sequence-detail').textContent = step.phase === 'Total' ? `${resolution.score.base} × ${decimal(resolution.score.multiplier)}`
-    : step.reward ? step.name : `${step.name}${bonus}`;
+    : step.reward ? t(step.name) : `${scoreText(step.name)}${bonus}`;
   table.lightCells(step.cells);
   if (step.points) popup(`+${step.points}`, step.cells);
   else if (step.add) popup(`+${decimal(step.add / 100)}×`, step.cells, 'mult');
   else if (step.factor) popup(`×${decimal(step.factor)}`, step.cells, 'mult');
-  else if (step.reward) popup(`+${step.reward} oro`, [], 'gold');
+  else if (step.reward) popup(message`+${step.reward} oro`, [], 'gold');
   else if (step.phase === 'Total') { popup(`+${resolution.score.total}`, [], 'total'); shake(); }
   if (!reducedMotion.matches || step.phase === 'Total') note(step.phase === 'Total' ? 'score' : step.phase === 'Multiplicador' ? 'color' : 'count');
   resolution.next = now + step.time;
@@ -563,8 +565,8 @@ function finishScore(now = performance.now()) {
   render();
   if (run.phase === 'play') return;
   // Let the final board and the banner breathe before opening the next screen.
-  if (run.phase === 'lost') popup(run.board.every(Boolean) && run.turns ? '¡Tablero bloqueado!' : '¡Sin turnos!', [], 'banner defeat');
-  else popup(run.phase === 'won' ? '¡Campaña completada!' : '¡Mosaico completado!', [], 'banner');
+  if (run.phase === 'lost') popup(run.board.every(Boolean) && run.turns ? t('¡Tablero bloqueado!') : t('¡Sin turnos!'), [], 'banner defeat');
+  else popup(run.phase === 'won' ? t('¡Campaña completada!') : t('¡Mosaico completado!'), [], 'banner');
   pendingOutcome = now + (reducedMotion.matches ? 300 : 1500);
 }
 
@@ -622,28 +624,28 @@ function showWorkshop(mode, content) {
 }
 
 function help() {
-  showDialog('help', windowMarkup({ title: 'Cómo jugar', eyebrow: `${campaignLength} mosaicos · hasta 4 × 4`, emblem: 'moon',
-    body: `<p class="lede">Supera ${campaignLength} mosaicos alcanzando su meta de puntos antes de quedarte sin turnos. Al ganar puedes seguir en modo libre.</p>
+  showDialog('help', windowMarkup({ title: t('Cómo jugar'), eyebrow: message`${campaignLength} mosaicos · hasta 4 × 4`, emblem: 'moon',
+    body: `<p class="lede">${message`Supera ${campaignLength} mosaicos alcanzando su meta de puntos antes de quedarte sin turnos. Al ganar puedes seguir en modo libre.`}</p>
     <ol class="precepts">
-      <li><strong>Coloca.</strong> Arrastra dados de la bandeja al tablero, o toca un dado y luego una casilla. Puedes recolocarlos antes de puntuar.</li>
-      <li><strong>Puntúa.</strong> Los números dan puntos base (parejas, tríos, escaleras, líneas llenas) y los colores multiplican (monocolor o todos distintos). El panel lleno suma ${comboPoints.panel}.</li>
-      <li><strong>Cincela.</strong> Los dados puntuados se vuelven piedra. Toca una piedra para romperla y liberar la casilla; su número sigue contando mientras esté en la mesa.</li>
-      <li><strong>Encargos.</strong> Cada tres mosaicos hay un encargo opcional que paga oro una vez.</li>
-      <li><strong>Zoco y horno.</strong> Tras cada mosaico compras dados, equipas hasta ${tileLimit} azulejos de poder y usas el horno una vez para mejorar un dado.</li>
-      <li><strong>Bolsa inicial.</strong> Cada partida empieza eligiendo una bolsa de dados distinta.</li>
-      <li><strong>Jefes.</strong> Cada ${BOSS_EVERY} mosaicos llega un jefe con una regla especial. El zoco te avisa antes y vencerlo da ${BOSS_GOLD} de oro extra.</li>
-      <li><strong>Dados únicos.</strong> Cuentan como cualquier color. Selecciónalos para leer su poder.</li>
+      <li><strong>${t("Coloca.")}</strong> ${t("Arrastra dados de la bandeja al tablero, o toca un dado y luego una casilla. Puedes recolocarlos antes de puntuar.")}</li>
+      <li><strong>${t("Puntúa.")}</strong> ${message`Los números dan puntos base (parejas, tríos, escaleras, líneas llenas) y los colores multiplican (monocolor o todos distintos). El panel lleno suma ${comboPoints.panel}.`}</li>
+      <li><strong>${t("Cincela.")}</strong> ${t("Los dados puntuados se vuelven piedra. Toca una piedra para romperla y liberar la casilla; su número sigue contando mientras esté en la mesa.")}</li>
+      <li><strong>${t("Encargos.")}</strong> ${t("Cada tres mosaicos hay un encargo opcional que paga oro una vez.")}</li>
+      <li><strong>${t("Zoco y horno.")}</strong> ${message`Tras cada mosaico compras dados, equipas hasta ${tileLimit} azulejos de poder y usas el horno una vez para mejorar un dado.`}</li>
+      <li><strong>${t("Bolsa inicial.")}</strong> ${t("Cada partida empieza eligiendo una bolsa de dados distinta.")}</li>
+      <li><strong>${t("Jefes.")}</strong> ${message`Cada ${BOSS_EVERY} mosaicos llega un jefe con una regla especial. El zoco te avisa antes y vencerlo da ${BOSS_GOLD} de oro extra.`}</li>
+      <li><strong>${t("Dados únicos.")}</strong> ${t("Cuentan como cualquier color. Selecciónalos para leer su poder.")}</li>
     </ol>
-    <p class="keys"><kbd>1–4</kbd> elige dado · <kbd>flechas</kbd> e <kbd>Intro</kbd> colocan · <kbd>Espacio</kbd> puntúa · <kbd>Retroceso</kbd> retira · <kbd>V</kbd> cenital · <kbd>R</kbd> centra · <kbd>Esc</kbd> pausa</p>`,
-    actions: action('back', '¡Entendido!', 'check', 'gold') }));
+    <p class="keys"><kbd>1–4</kbd> ${t("elige dado ·")} <kbd>${t("flechas")}</kbd> ${language === "en" ? "and" : "e"} <kbd>${t("Intro")}</kbd> ${t("colocan ·")} <kbd>${t("Espacio")}</kbd> ${t("puntúa ·")} <kbd>${t("Retroceso")}</kbd> ${t("retira ·")} <kbd>V</kbd> ${t("cenital ·")} <kbd>R</kbd> ${t("centra ·")} <kbd>Esc</kbd> ${t("pausa")}</p>`,
+    actions: action('back', t('¡Entendido!'), 'check', 'gold') }));
 }
 
 function pause() {
   if (!playing || modal || resolution || pendingOutcome) return;
-  showDialog('pause', windowMarkup({ title: 'Pausa', eyebrow: `Mosaico ${run.stage + 1} · ${stageAt(run.stage).name}`, emblem: 'moon',
-    actions: action('back', 'Continuar', 'play', 'gold') + action('help', 'Cómo jugar', 'help') +
-      action('music', `Música: ${musicOn ? 'sí' : 'no'}`, musicOn ? 'music' : 'music-off') +
-      (document.fullscreenEnabled ? action('fullscreen', 'Pantalla completa', 'expand') : '') + action('title', 'Volver al patio', 'door') }));
+  showDialog('pause', windowMarkup({ title: t('Pausa'), eyebrow: `${message`Mosaico ${run.stage + 1}`} · ${t(stageAt(run.stage).name)}`, emblem: 'moon',
+    actions: action('back', t('Continuar'), 'play', 'gold') + action('help', t('Cómo jugar'), 'help') +
+      action('music', message`Música: ${musicOn ? t('sí') : t('no')}`, musicOn ? 'music' : 'music-off') +
+      (document.fullscreenEnabled ? action('fullscreen', t('Pantalla completa'), 'expand') : '') + action('title', t('Volver al patio'), 'door') }));
 }
 
 function showOutcome() {
@@ -653,16 +655,16 @@ function showOutcome() {
   const stat = (value, label) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`;
   if (run.phase === 'won') {
     setMusicMood('title');
-    showDialog('outcome', windowMarkup({ title: '¡Campaña completada!', eyebrow: `${campaignLength} de ${campaignLength} mosaicos · ${decks[run.deck].name}`,
-      body: `<div class="stats">${stat(total, 'Puntos')}${stat(run.orders.length, 'Encargos')}</div>`,
-      actions: action('endless', 'Modo libre', 'play', 'gold') + action('collection', 'Ver bolsa y azulejos', 'bag') + action('title', 'Volver al patio', 'door') }), 'victory');
+    showDialog('outcome', windowMarkup({ title: t('¡Campaña completada!'), eyebrow: `${message`${campaignLength} de ${campaignLength} mosaicos`} · ${t(decks[run.deck].name)}`,
+      body: `<div class="stats">${stat(total, t('Puntos'))}${stat(run.orders.length, t('Encargos'))}</div>`,
+      actions: action('endless', t('Modo libre'), 'play', 'gold') + action('collection', t('Ver bolsa y azulejos'), 'bag') + action('title', t('Volver al patio'), 'door') }), 'victory');
     return;
   }
-  const heading = run.turns && run.board.every(Boolean) ? 'Tablero bloqueado' : 'Sin turnos';
+  const heading = run.turns && run.board.every(Boolean) ? t('Tablero bloqueado') : t('Sin turnos');
   const boss = bossAt(run);
-  showDialog('outcome', windowMarkup({ title: heading, eyebrow: `Mosaico ${run.stage + 1}${run.endless ? '' : ` de ${campaignLength}`} · ${boss ? `Jefe: ${bosses[boss.key].name}` : stageAt(run.stage).name}`,
-    body: `<div class="stats">${stat(`${run.points}/${run.goal}`, 'Este mosaico')}${stat(total + run.points, 'Total partida')}</div>`,
-    actions: action('restart', 'Volver a jugar', 'refresh', 'gold') + action('collection', 'Ver bolsa y azulejos', 'bag') + action('title', 'Volver al patio', 'door') }), 'defeat');
+  showDialog('outcome', windowMarkup({ title: heading, eyebrow: `${run.endless ? message`Mosaico ${run.stage + 1}` : `${t('Mosaico')} ${run.stage + 1}/${campaignLength}`} · ${boss ? message`Jefe: ${t(bosses[boss.key].name)}` : t(stageAt(run.stage).name)}`,
+    body: `<div class="stats">${stat(`${run.points}/${run.goal}`, t('Este mosaico'))}${stat(total + run.points, t('Total partida'))}</div>`,
+    actions: action('restart', t('Volver a jugar'), 'refresh', 'gold') + action('collection', t('Ver bolsa y azulejos'), 'bag') + action('title', t('Volver al patio'), 'door') }), 'defeat');
 }
 
 function back() {
@@ -687,7 +689,7 @@ dialog.addEventListener('click', event => {
     case 'help': help(); break;
     case 'music':
       toggleMusic();
-      button.innerHTML = `${icon(musicOn ? 'music' : 'music-off')}Música: ${musicOn ? 'sí' : 'no'}`;
+      button.innerHTML = `${icon(musicOn ? 'music' : 'music-off')}${message`Música: ${musicOn ? t('sí') : t('no')}`}`;
       break;
     case 'fullscreen':
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -792,7 +794,7 @@ canvas.addEventListener('pointerup', event => {
         note('pick');
       }
       render();
-      if (!run.chisels) $('hint').textContent = 'Has agotado las cargas del cincel.';
+      if (!run.chisels) $('hint').textContent = t('Has agotado las cargas del cincel.');
     } else if (gesture.target >= HAND && !gesture.movable && selected < HAND) {
       returnDie();
     } else if (gesture.target < HAND && selected >= HAND && canTarget(gesture.target)) {
@@ -869,9 +871,9 @@ document.addEventListener('keydown', event => {
 $('play').addEventListener('click', () => {
   if (ongoing()) { save(); enter(); } else chooseBag();
 });
-$('new').addEventListener('click', () => showDialog('restart', windowMarkup({ title: '¿Empezar de nuevo?', emblem: 'star',
-  body: '<p class="lede">La partida actual se perderá y volverás al primer mosaico.</p>',
-  actions: action('restart', 'Nueva partida', 'refresh', 'danger') + action('back', 'Cancelar') }), 'defeat'));
+$('new').addEventListener('click', () => showDialog('restart', windowMarkup({ title: t('¿Empezar de nuevo?'), emblem: 'star',
+  body: `<p class="lede">${t('La partida actual se perderá y volverás al primer mosaico.')}</p>`,
+  actions: action('restart', t('Nueva partida'), 'refresh', 'danger') + action('back', t('Cancelar')) }), 'defeat'));
 document.querySelector('[data-help]').addEventListener('click', help);
 $('pause').addEventListener('click', pause);
 $('top').addEventListener('click', topCamera);
@@ -931,7 +933,7 @@ try {
   requestAnimationFrame(frame);
 } catch (error) {
   console.error('No se pudo iniciar la mesa 3D', error);
-  $('play-label').textContent = 'Mesa 3D no disponible';
-  $('boot').textContent = 'Prueba a recargar la página en un navegador con WebGL 2.';
+  $('play-label').textContent = t('Mesa 3D no disponible');
+  $('boot').textContent = t('Prueba a recargar la página en un navegador con WebGL 2.');
   $('boot').hidden = false;
 }

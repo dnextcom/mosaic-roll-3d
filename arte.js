@@ -1,12 +1,59 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { glazes, hasFace, powers, rarities } from './catalogo.js?v=alhambra-3';
-import { uniqueDice } from './unicos.js?v=alhambra-3';
+import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-1';
 
 const pips = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const stoneGlaze = { color: '#65737c', light: '#a7adb1', darkPips: true };
 const rainbow = ['#ef8a76', '#f1c563', '#a0cf9d', '#69a7db', '#9874c1', '#de8aaf'];
-const uniqueGlaze = { color: '#242137', light: '#635376' };
+// The devices correspond to the powers and stay legible on every face.
+const relics = {
+  bud:     { light: '#edf5d6', color: '#9ad187', ink: '#184e35', trim: '#34784d', cut: .16, device: 'M64 35V26 M64 33Q46 33 39 17Q57 16 64 30Q71 16 89 17Q82 33 64 33 M29 94Q16 83 17 66 M99 94Q112 83 111 66' },
+  matrix:  { light: '#f4cbdc', color: '#dd8eaa', ink: '#5b193d', trim: '#993c69', cut: .105, device: 'M40 17H88 M35 25H93 M42 33H86 M13 52H27 M13 61H27 M101 52H115 M101 61H115 M24 102H104' },
+  glass:   { light: '#e0f6f8', color: '#8fcbe1', ink: '#193f65', trim: '#347c9c', cut: .23, device: 'M64 12 103 51 110 44 79 13 M49 13 18 44 25 51 64 12 M13 65 42 94 28 108 M115 65 86 94 100 108 M42 94 64 113 86 94' },
+  twin:    { light: '#f7eadd', color: '#d9a9aa', ink: '#4e2948', trim: '#8c4d73', cut: .15, device: 'M64 24 49 13 34 24 49 35Z M64 24 79 13 94 24 79 35Z M25 47V87 M31 47V87 M97 47V87 M103 47V87' },
+  steps:   { light: '#e5e3fe', color: '#b0a9e0', ink: '#352568', trim: '#6356a1', cut: .075, device: 'M36 31H49V25H61V19H73V13H91 M18 75H28V60H38V45 M90 86H100V71H110V56 M34 105H49V99H63V93' },
+  seal:    { light: '#fcf0cb', color: '#e5bd66', ink: '#5f3a1b', trim: '#8e5932', cut: .19, device: 'M64 12 69 21 78 26 69 31 64 40 59 31 50 26 59 21Z M31 19H38 M90 19H97 M31 109H38 M90 109H97 M16 47V81 M112 47V81' },
+  kiln:    { light: '#ffddd0', color: '#ed9b70', ink: '#6c2a20', trim: '#aa422e', cut: .12, device: 'M64 12Q55 21 57 29Q46 25 48 36H80Q86 25 71 17Q75 26 67 29Q69 19 64 12 M21 87Q20 69 30 56 M107 87Q108 69 98 56 M34 107Q64 97 94 107' },
+  compass: { light: '#dbf2e7', color: '#83c8b3', ink: '#14524e', trim: '#258477', cut: .215, device: 'M64 11 69 22 80 27 69 32 64 43 59 32 48 27 59 22Z M18 61V76 M14 68H24 M110 61V76 M104 68H114 M64 98V113 M54 105H74' },
+  invert:  { light: '#f4ecc9', color: '#d4c284', ink: '#48461f', trim: '#6d7737', cut: .09, device: 'M81 18H47L54 12 M47 18 54 24 M47 33H81L74 27 M81 33 74 39 M16 50 27 43 M16 77 27 70 M101 63 112 56 M101 90 112 83' },
+  bridge:  { light: '#f6dfcf', color: '#d4a08b', ink: '#582e32', trim: '#974b47', cut: .175, device: 'M34 36V32Q64 0 94 32V36 M48 36V33Q64 16 80 33V36 M35 100Q43 94 51 100T67 100T83 100T99 100 M35 108Q43 102 51 108T67 108T83 108T99 108' },
+};
+
+function relicFace(ctx, spec, face, stone) {
+  const art = relics[spec.unique];
+  const glaze = stone ? stoneGlaze : spec.tint == null ? art : glazes[spec.tint];
+  const pale = stone ? '#d7d5c8' : spec.tint == null ? art.light : '#edf1f4';
+  const trim = stone ? '#45545c' : spec.echo ? '#157769' : spec.tint == null ? art.trim : '#1c467b';
+  const ink = stone ? '#26323a' : art.ink;
+  const wash = ctx.createLinearGradient(7, 0, 118, 123);
+  wash.addColorStop(0, glaze.light);
+  wash.addColorStop(1, glaze.color);
+  ctx.fillStyle = wash;
+  ctx.fillRect(0, 0, 128, 128);
+  ctx.beginPath();
+  ctx.roundRect(9, 9, 110, 110, 14);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = trim;
+  ctx.stroke();
+  ctx.fillStyle = pale;
+  ctx.beginPath();
+  ctx.roundRect(33, 39, 62, 59, 17);
+  ctx.fill();
+  ctx.stroke();
+  ctx.lineWidth = 4.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke(new Path2D(art.device));
+  ctx.font = 'bold 54px Georgia';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = ink;
+  ctx.fillText(spec.faces[face], 64, 70);
+  if (spec.sealed && !stone) {
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('×2', 98, 103);
+  }
+}
 
 function texture(canvas) {
   const map = new THREE.CanvasTexture(canvas);
@@ -19,11 +66,15 @@ function dieFace(spec, face, stone) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 128;
   const ctx = canvas.getContext('2d');
+  if (spec.unique) {
+    relicFace(ctx, spec, face, stone);
+    return canvas;
+  }
   const tinted = !stone && spec.tint != null;
   const gilded = !stone && !tinted && hasFace(spec.gild, face);
-  const glaze = stone ? stoneGlaze : tinted ? glazes[spec.tint] : spec.unique ? uniqueGlaze : gilded ? glazes[6] : glazes[spec.glaze];
+  const glaze = stone ? stoneGlaze : tinted ? glazes[spec.tint] : gilded ? glazes[6] : glazes[spec.glaze];
   const wash = ctx.createLinearGradient(5, 7, 124, 115);
-  if (spec.rainbow && !spec.unique && !tinted && !stone && !gilded) rainbow.forEach((color, i) => wash.addColorStop(i / (rainbow.length - 1), color));
+  if (spec.rainbow && !tinted && !stone && !gilded) rainbow.forEach((color, i) => wash.addColorStop(i / (rainbow.length - 1), color));
   else {
     wash.addColorStop(0, glaze.light);
     if (spec.second != null && !stone && !gilded && !tinted) {
@@ -34,7 +85,7 @@ function dieFace(spec, face, stone) {
   }
   ctx.fillStyle = wash;
   ctx.fillRect(0, 0, 128, 128);
-  ctx.strokeStyle = spec.echo ? '#c4fded' : spec.unique || spec.numberChanged || spec.sealed ? '#efc9ff' : stone ? '#d0d0cba0' : spec.eternal ? '#15171e' : gilded ? '#ffe392' : '#f6e7c7b9';
+  ctx.strokeStyle = spec.numberChanged || spec.sealed ? '#efc9ff' : stone ? '#d0d0cba0' : spec.eternal ? '#15171e' : gilded ? '#ffe392' : '#f6e7c7b9';
   ctx.lineWidth = spec.eternal && !stone ? 3 : 1.8;
   ctx.beginPath();
   ctx.roundRect(11, 11, 106, 106, 11);
@@ -48,18 +99,9 @@ function dieFace(spec, face, stone) {
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
   }
-  const dark = glaze.darkPips || spec.rainbow && !spec.unique && !tinted;
-  const ink = stone || dark ? '#212f3e' : spec.unique ? '#f8e7ff' : '#fff1d4';
-  if (spec.unique) {
-    ctx.font = 'bold 59px Georgia';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = ink;
-    ctx.fillText(spec.faces[face], 64, 67);
-    ctx.font = 'bold 25px Segoe UI Symbol';
-    ctx.fillStyle = stone ? '#344254' : spec.echo ? '#c4fded' : '#efc9ff';
-    ctx.fillText(uniqueDice[spec.unique].mark, 64, 24);
-  } else if (!stone && hasFace(spec.wild, face) && !spec.numberChanged) {
+  const dark = glaze.darkPips || spec.rainbow && !tinted;
+  const ink = stone || dark ? '#212f3e' : '#fff1d4';
+  if (!stone && hasFace(spec.wild, face) && !spec.numberChanged) {
     ctx.font = '54px Georgia';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -120,7 +162,7 @@ export function diePortrait(spec) {
 export class DiceArt {
   constructor() {
     this.geometry = new RoundedBoxGeometry(.86, .86, .86, 3, .106);
-    this.uniqueGeometry = new RoundedBoxGeometry(.86, .86, .86, 3, .195);
+    this.relicGeometry = Object.fromEntries(Object.entries(relics).map(([key, art]) => [key, new RoundedBoxGeometry(.86, .86, .86, 3, art.cut)]));
     this.cache = new Map();
   }
 
@@ -134,7 +176,7 @@ export class DiceArt {
       this.cache.set(key, item);
     }
     item.count++;
-    const mesh = new THREE.Mesh(spec.unique ? this.uniqueGeometry : this.geometry, item.materials);
+    const mesh = new THREE.Mesh(spec.unique ? this.relicGeometry[spec.unique] : this.geometry, item.materials);
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.userData.art = key;
     return mesh;
@@ -166,34 +208,63 @@ const tileMotifs = {
   alhambra: 'M33 97V62Q33 45 64 29Q95 45 95 62V97Z M48 97V67Q48 57 64 47Q80 57 80 67V97 M23 97H105 M64 68V97',
 };
 
+const tilePalettes = {
+  chisel: ['#27527e', '#9ab8c5', '#efe2bf'], midas: ['#86441c', '#d49b42', '#fff0c5'],
+  aces: ['#8e3744', '#c5665e', '#f9dfca'], colonnade: ['#34566a', '#7ca897', '#e7efe0'],
+  acanthus: ['#205b3d', '#79a454', '#edf1ce'], cobalt: ['#1c408c', '#507bbf', '#dbeafa'],
+  frieze: ['#6a3d73', '#b87ca2', '#f0ddeb'], prism: ['#1f5b69', '#579ba3', '#dcefe5'],
+  patience: ['#715436', '#bc9666', '#f1e5be'], mortar: ['#584556', '#c08653', '#f3e0cf'],
+  basalt: ['#383f52', '#8b9ca2', '#e2e7e4'], alhambra: ['#6e3030', '#c99553', '#f6e0b2'],
+};
+
 export function tileArt(key) {
   if (tiles.has(key)) return tiles.get(key);
   const { rarity } = powers[key];
-  const { ink, color } = rarities[rarity];
+  const { color } = rarities[rarity];
+  const [ink, accent, clay] = tilePalettes[key];
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 128;
   const ctx = canvas.getContext('2d');
   const glaze = ctx.createLinearGradient(8, 6, 117, 126);
   glaze.addColorStop(0, '#fff8e8');
-  glaze.addColorStop(1, '#d5c4a4');
+  glaze.addColorStop(1, clay);
   ctx.fillStyle = glaze;
   ctx.fillRect(0, 0, 128, 128);
   ctx.strokeStyle = ink;
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 8;
   ctx.strokeRect(5, 5, 118, 118);
-  ctx.lineWidth = 1.7;
-  ctx.strokeRect(13, 13, 102, 102);
-  ctx.fillStyle = color;
-  for (const x of [20, 108]) for (const y of [20, 108]) {
-    const diamond = new Path2D();
-    diamond.moveTo(x - 4, y); diamond.lineTo(x, y - 4); diamond.lineTo(x + 4, y); diamond.lineTo(x, y + 4); diamond.closePath();
-    ctx.fill(diamond);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = rarity ? color : accent;
+  ctx.strokeRect(5, 5, 118, 118);
+  const rosette = new Path2D();
+  for (let point = 0; point < 16; point++) {
+    const angle = point * Math.PI / 8;
+    const radius = point % 2 ? 43 : 56;
+    const x = 64 + radius * Math.cos(angle), y = 64 + radius * Math.sin(angle);
+    if (point === 0) rosette.moveTo(x, y); else rosette.lineTo(x, y);
   }
-  if (rarity >= 2) {
-    ctx.beginPath();
-    ctx.strokeStyle = color;
-    ctx.arc(64, 64, 46, 0, Math.PI * 2);
-    ctx.stroke();
+  rosette.closePath();
+  ctx.fillStyle = accent;
+  ctx.fill(rosette);
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = 1.6;
+  ctx.stroke(rosette);
+  ctx.beginPath();
+  ctx.arc(64, 64, 44, 0, Math.PI * 2);
+  ctx.fillStyle = glaze;
+  ctx.fill();
+  ctx.stroke();
+  const corner = new Path2D('M16 17Q24 16 32 17Q26 20 24 25Q20 26 17 32Q16 24 16 17Z M20 20Q26 27 30 30');
+  ctx.fillStyle = ink;
+  ctx.strokeStyle = accent;
+  for (let quadrant = 0; quadrant < 4; quadrant++) {
+    ctx.save();
+    ctx.translate(64, 64);
+    ctx.rotate(quadrant * Math.PI / 2);
+    ctx.translate(-64, -64);
+    ctx.fill(corner);
+    ctx.stroke(corner);
+    ctx.restore();
   }
   const motif = new Path2D(tileMotifs[key]);
   ctx.lineCap = 'round';
@@ -201,7 +272,7 @@ export function tileArt(key) {
   ctx.lineWidth = 8;
   ctx.strokeStyle = '#fff7e3';
   ctx.stroke(motif);
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 5.5;
   ctx.strokeStyle = ink;
   ctx.stroke(motif);
   const result = { map: texture(canvas), url: canvas.toDataURL() };

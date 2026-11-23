@@ -1,6 +1,7 @@
+import { t } from './idioma.js?v=esmaltes-1';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { rarities } from './catalogo.js?v=alhambra-3';
+import { rarities } from './catalogo.js?v=esmaltes-1';
 
 // Dice in the workshop are a little smaller than on the table so the whole scene fits on phones.
 const DIE_SCALE = .8;
