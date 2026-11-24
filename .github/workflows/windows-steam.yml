@@ -54,7 +54,7 @@ jobs:
             'index.html', 'estilo.css', 'juego.js', 'mesa.js', 'reglas.js',
             'catalogo.js', 'arte.js', 'mercado.js', 'taller.js', 'unicos.js',
             'coleccion.js', 'idioma.js', 'valenciano.js', 'ingles.js', 'frances.js',
-            'iconos.js', 'musica.js', 'portada.jpg', 'mesa.jpg', 'azulejo.jpg', 'partida.webp'
+            'iconos.js', 'musica.js', 'musica-umbria.mp3', 'portada.jpg', 'mesa.jpg', 'azulejo.jpg', 'partida.webp'
           )
           foreach ($f in $files) {
             Copy-Item $f -Destination build-win/app/

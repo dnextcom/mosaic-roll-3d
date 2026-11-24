@@ -594,4 +594,6 @@ export default {
   "Meter al horno": "Mettre au four",
   "Sacar del horno": "Retirer du four",
   "toca para examinar o arrastra al horno": "touchez pour examiner ou glissez au four",
+  "Música: Umbría": "Musique : Umbría",
+  "Música de fondo:": "Musique :",
 };

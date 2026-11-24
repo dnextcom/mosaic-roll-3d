@@ -510,4 +510,6 @@ export default {
   "Meter al horno": "Put in kiln",
   "Sacar del horno": "Remove from kiln",
   "toca para examinar o arrastra al horno": "tap to inspect or drag to kiln",
+  "Música: Umbría": "Music: Umbría",
+  "Música de fondo:": "Music:",
 };
