@@ -1,5 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-3';
-import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-3';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-4';
+import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-4';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 const campaignGoals = [48, 76, 94, 112, 128, 138, 168, 190, 212, 237, 270, 300];

@@ -1375,18 +1375,27 @@ dialog[data-kind="options"] { --w: min(480px, calc(100vw - 20px)); }
   margin: 0 0 20px; font-size: 14px; color: var(--ivory-3); font-style: italic;
 }
 .shelf-rack {
-  position: relative; background: linear-gradient(180deg, #2c1a11 0%, #1a0f0a 100%);
-  border: 1px solid #5a3820; border-radius: 12px; padding: 26px 12px 18px; margin: 0 auto 20px;
+  display: flex; flex-direction: column; gap: 20px;
+  background: linear-gradient(180deg, #24140d 0%, #160c07 100%);
+  border: 1px solid #5a3820; border-radius: 14px; padding: 18px 14px 16px; margin: 0 auto 20px;
   box-shadow: inset 0 4px 14px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.5);
 }
+.shelf-tier {
+  position: relative; padding: 4px 6px 14px;
+}
+.shelf-tier-label {
+  display: block; text-align: left; font: 700 10px/1 var(--font-kufi); letter-spacing: .18em;
+  text-transform: uppercase; color: var(--gold-3); margin: 0 0 12px 6px; opacity: 0.9;
+}
 .shelf-lip {
-  position: absolute; bottom: 36px; left: 10px; right: 10px; height: 5px;
+  position: absolute; bottom: 33px; left: 4px; right: 4px; height: 5px;
   background: linear-gradient(90deg, #6b4d1b, #d4af37, #fff4ce, #d4af37, #6b4d1b);
   border-radius: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.8);
 }
 .shelf-items {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: 8px;
+  display: flex; justify-content: center; gap: 10px;
   list-style: none; margin: 0; padding: 0; position: relative; z-index: 2;
+  flex-wrap: wrap;
 }
 .shelf-item {
   display: flex; flex-direction: column; align-items: center; position: relative;

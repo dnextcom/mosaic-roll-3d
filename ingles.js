@@ -454,4 +454,6 @@ export default {
   "Plato de maestría": "Mastery plate",
   "Ver repisa de platos": "View plate shelf",
   "Repisa de platos": "Plate shelf",
+  "Combinaciones de Dados": "Dice Combinations",
+  "Patrones y Esmaltes": "Patterns & Glazes",
 };

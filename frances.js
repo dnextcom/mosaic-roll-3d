@@ -538,4 +538,6 @@ export default {
   "Plato de maestría": "Assiette de maîtrise",
   "Ver repisa de platos": "Voir l'étagère d'assiettes",
   "Repisa de platos": "Étagère d'assiettes",
+  "Combinaciones de Dados": "Combinaisons de dés",
+  "Patrones y Esmaltes": "Motifs et émaux",
 };

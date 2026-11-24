@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-3';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-3';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-3';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-3';
-import { Workshop } from './taller.js?v=esmaltes-3';
-import { uniqueDice } from './unicos.js?v=esmaltes-3';
-import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-3';
-import { icon } from './iconos.js?v=esmaltes-3';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-4';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-4';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-4';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-4';
+import { Workshop } from './taller.js?v=esmaltes-4';
+import { uniqueDice } from './unicos.js?v=esmaltes-4';
+import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-4';
+import { icon } from './iconos.js?v=esmaltes-4';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -547,9 +547,30 @@ export class MarketUI {
   }
 
   showPlateShelfCelebration(upgradedKey, oldLevel, newLevel) {
-    const comboKeys = ['pair', 'trio', 'quartet', 'straight', 'longStraight', 'line', 'mono', 'chromatic', 'panel'];
+    const valueKeys = ['pair', 'trio', 'quartet', 'straight', 'longStraight'];
+    const patternKeys = ['line', 'mono', 'chromatic', 'panel'];
     const spec = upgradedKey ? comboCatalog[upgradedKey] : null;
     const gainText = upgradedKey ? (displayComboGain(upgradedKey, newLevel) || spec.text(newLevel)) : '';
+
+    const renderTier = (keys, label) => `
+      <div class="shelf-tier">
+        <span class="shelf-tier-label">${label}</span>
+        <div class="shelf-lip"></div>
+        <ul class="shelf-items">
+          ${keys.map(key => {
+            const item = comboCatalog[key];
+            const level = this.run.comboLevels[key] || 1;
+            const isUpgraded = key === upgradedKey;
+            const portrait = platePortrait({ combo: key, level });
+            return `<li class="shelf-item${isUpgraded ? ' upgraded' : ''}">
+              <img class="shelf-plate-img" src="${portrait}" alt="${t(item.name)}">
+              <span class="shelf-name">${t(item.name)}</span>
+              <span class="shelf-level-tag">${message`Niv. ${level}`}</span>
+            </li>`;
+          }).join('')}
+        </ul>
+      </div>
+    `;
 
     const dialog = document.createElement('div');
     dialog.className = 'plate-shelf-dialog-backdrop';
@@ -561,20 +582,8 @@ export class MarketUI {
         <p class="shelf-subtitle">${t('Cada plato perfecciona una técnica de mosaico en el taller.')}</p>
 
         <div class="shelf-rack">
-          <div class="shelf-lip"></div>
-          <ul class="shelf-items">
-            ${comboKeys.map(key => {
-              const item = comboCatalog[key];
-              const level = this.run.comboLevels[key] || 1;
-              const isUpgraded = key === upgradedKey;
-              const portrait = platePortrait({ combo: key, level });
-              return `<li class="shelf-item${isUpgraded ? ' upgraded' : ''}">
-                <img class="shelf-plate-img" src="${portrait}" alt="${t(item.name)}">
-                <span class="shelf-name">${t(item.name)}</span>
-                <span class="shelf-level-tag">${message`Niv. ${level}`}</span>
-              </li>`;
-            }).join('')}
-          </ul>
+          ${renderTier(patternKeys, t('Patrones y Esmaltes'))}
+          ${renderTier(valueKeys, t('Combinaciones de Dados'))}
         </div>
 
         ${upgradedKey ? `

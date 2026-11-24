@@ -1,9 +1,9 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-3';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-4';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-3';
-import { projectBoard } from './unicos.js?v=esmaltes-3';
-import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-3';
+import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-4';
+import { projectBoard } from './unicos.js?v=esmaltes-4';
+import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-4';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -254,7 +254,9 @@ export class Table {
       });
     }
 
-    // Plate shelf (stands behind the power shelf)
+    // Plate shelf: two-tier Spanish alacena in cobalt and brass
+    // Lower tier: 5 value combos (pair, trio, quartet, straight, longStraight)
+    // Upper tier: 4 pattern/color combos (line, mono, chromatic, panel) with open center for HUD
     for (const piece of this.plateShelf.children) {
       piece.traverse(child => {
         if (child.geometry) child.geometry.dispose();
@@ -264,32 +266,71 @@ export class Table {
     this.plateShelf.clear();
     this.plateMeshes = [];
 
-    const zPlate = zPower - 0.76;
-    const gap = 0.60;
-    const shelfWidth = comboKeys.length * gap + 0.40;
-    this.plateShelf.add(mesh(new RoundedBoxGeometry(shelfWidth, .36, .64, 2, .06), this.wood, 0, .05, zPlate));
-    this.plateShelf.add(mesh(new RoundedBoxGeometry(shelfWidth - .04, .04, .60, 1, .02), this.brass, 0, .24, zPlate));
-    this.plateShelf.add(mesh(new THREE.BoxGeometry(shelfWidth - .06, .05, .04), this.brass, 0, .26, zPlate + .27));
+    const zLower = zPower - 0.74;
+    const zUpper = zLower - 0.52;
+    const shelfWidth = 5.24;
+    const upperWidth = 4.60;
+
+    // Lower tier shelf: wide sturdy base holding 5 plates (cobalt with brass inlay and retaining lip)
+    this.plateShelf.add(mesh(new RoundedBoxGeometry(shelfWidth, .22, .56, 2, .05), this.cobalt, 0, .05, zLower));
+    this.plateShelf.add(mesh(new RoundedBoxGeometry(shelfWidth - .04, .025, .50, 1, .015), this.brass, 0, .165, zLower));
+    this.plateShelf.add(mesh(new THREE.BoxGeometry(shelfWidth - .06, .026, .02), this.brass, 0, .185, zLower + .23));
+
+    // Upper tier shelf: stepped back holding 4 plates (cobalt with brass inlay and retaining lip)
+    this.plateShelf.add(mesh(new RoundedBoxGeometry(upperWidth, .15, .50, 2, .04), this.cobalt, 0, .36, zUpper));
+    this.plateShelf.add(mesh(new RoundedBoxGeometry(upperWidth - .04, .025, .44, 1, .015), this.brass, 0, .44, zUpper));
+    this.plateShelf.add(mesh(new THREE.BoxGeometry(upperWidth - .06, .026, .02), this.brass, 0, .46, zUpper + .21));
+
+    // Side pillars connecting the tiers
+    const midZ = (zLower + zUpper) / 2;
+    for (const side of [-1, 1]) {
+      const posX = side * (shelfWidth * 0.44 - 0.08);
+      this.plateShelf.add(mesh(new RoundedBoxGeometry(.16, .48, .44, 2, .035), this.cobalt, posX, .26, midZ));
+      this.plateShelf.add(mesh(new RoundedBoxGeometry(.18, .03, .46, 1, .015), this.brass, posX, .505, midZ));
+    }
+
+    // Backboard and gilded crown molding behind the upper tier
+    const backZ = zUpper - 0.24;
+    this.plateShelf.add(mesh(new RoundedBoxGeometry(upperWidth + .10, .54, .05, 2, .02), this.cobalt, 0, .56, backZ));
+    this.plateShelf.add(mesh(new THREE.BoxGeometry(upperWidth + .12, .04, .07), this.brass, 0, .835, backZ));
+
+    // Mount 9 mastery plates:
+    // Lower tier (indices 0..4, 5 plates): pair, trio, quartet, straight, longStraight
+    // Upper tier (indices 5..8, 4 plates): line, mono, chromatic, panel
+    const radius = 0.38;
+    const height = 0.048;
+    const plateGeom = new THREE.CylinderGeometry(radius, radius * 0.90, height, 32);
+    const sideMat = this.brass;
+    const backMat = this.clay;
+
+    // X positions for upper 4 plates: left pair (-1.62, -0.66) and right pair (+0.66, +1.62)
+    // Leaves a clear central corridor for the HUD badge
+    const upperX = [-1.62, -0.66, 0.66, 1.62];
 
     comboKeys.forEach((comboKey, index) => {
       const level = comboLevels[comboKey] || 1;
-      const x = (index - (comboKeys.length - 1) / 2) * gap;
+      const isLower = index < 5;
+      const x = isLower ? (index - 2) * 0.96 : upperX[index - 5];
+      const y = isLower ? 0.48 : 0.74;
+      const z = (isLower ? zLower : zUpper) + 0.04;
+
       const plateArtObj = plateArt(comboKey, level);
-      const radius = 0.26;
-      const height = 0.045;
-      const plateGeom = new THREE.CylinderGeometry(radius, radius * 0.9, height, 28);
-      const sideMat = this.brass;
       const topMat = new THREE.MeshStandardMaterial({
         map: plateArtObj.map,
         roughness: 0.25,
         metalness: 0.15
       });
-      const backMat = this.clay;
-      const piece = mesh(plateGeom, [sideMat, topMat, backMat], x, 0.36, zPlate + 0.04);
-      piece.rotation.x = Math.PI / 2 - 0.38;
+      const piece = mesh(plateGeom, [sideMat, topMat, backMat], x, y, z);
+      piece.rotation.x = Math.PI / 2 - 0.32;
       piece.userData.id = PLATE + index;
       piece.userData.combo = comboKey;
       piece.userData.level = level;
+
+      // Small brass easel support behind plate
+      const easel = mesh(new THREE.BoxGeometry(0.035, 0.24, 0.14), this.brass, x, y - 0.05, z - 0.07);
+      easel.rotation.x = -0.32;
+      this.plateShelf.add(easel);
+
       this.plateMeshes.push(piece);
       this.plateShelf.add(piece);
     });
@@ -348,7 +389,7 @@ export class Table {
     const pitch = angle(this.elevation);
     const yaw = angle(this.azimuth);
     const distance = (10.35 + (this.rows - 2) * 1.47 + (this.cols - 3) * .71) * this.zoom;
-    const target = new THREE.Vector3(0, -.03, 1.19 - (this.rows - 2) * .60);
+    const target = new THREE.Vector3(0, -.03, .42 - (this.rows - 2) * .60);
     this.camera.position.set(Math.sin(yaw) * Math.cos(pitch) * distance, Math.sin(pitch) * distance,
       Math.cos(yaw) * Math.cos(pitch) * distance).add(target);
     this.camera.lookAt(target);
