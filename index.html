@@ -11,9 +11,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Reem+Kufi:wght@400..700&display=swap">
-  <link rel="stylesheet" href="estilo.css?v=esmaltes-14">
+  <link rel="stylesheet" href="estilo.css?v=esmaltes-15">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=esmaltes-14"></script>
+  <script type="module" src="juego.js?v=esmaltes-15"></script>
 </head>
 <body data-screen="title">
   <main class="patio" id="start">
@@ -168,7 +168,10 @@
         </header>
         <div class="codex-body">
           <section class="codex-section" aria-labelledby="patterns-title">
-            <h3 id="patterns-title">Combinaciones</h3>
+            <div class="codex-section-head">
+              <h3 id="patterns-title">Combinaciones</h3>
+              <button class="codex-plates-btn" type="button" id="codex-plates"><i data-icon="plate"></i>Ver platos</button>
+            </div>
             <ul class="patterns" id="patterns"></ul>
           </section>
           <section class="codex-section" aria-labelledby="equipped-label">

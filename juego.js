@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-14';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-14';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-14';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-14';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-15';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-15';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-15';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-15';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-14';
-import { uniqueDice } from './unicos.js?v=esmaltes-14';
-import { MarketUI } from './mercado.js?v=esmaltes-14';
-import { collectionMarkup } from './coleccion.js?v=esmaltes-14';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-14';
-import { Music } from './musica.js?v=esmaltes-14';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-15';
+import { uniqueDice } from './unicos.js?v=esmaltes-15';
+import { MarketUI } from './mercado.js?v=esmaltes-15';
+import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-15';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-15';
+import { Music } from './musica.js?v=esmaltes-15';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -698,12 +698,14 @@ function render() {
     const classes = [item.color && 'color-pattern', count && 'active'].filter(Boolean).join(' ');
     const glyphs = item.glyph ?? item.faces.map(face => `<i>${face}</i>`).join('');
     const lvl = run?.comboLevels?.[item.key] ?? 1;
+    const uses = run?.comboCounts?.[item.key] ?? 0;
     const val = (item.key === 'mono' || item.key === 'chromatic')
       ? `+${decimal(getComboValue(run, item.key) / 100)}×`
       : `+${getComboValue(run, item.key)}`;
     const lvlTag = lvl > 1 ? ` <span class="combo-lvl-tag">N.${lvl}</span>` : '';
+    const usesTag = ` <span class="combo-uses-tag">${comboUsesLabel(uses)}</span>`;
     return `<li${classes ? ` class="${classes}"` : ''}><span class="glyphs ${item.color || ''}" aria-hidden="true">${glyphs}</span>
-      <span class="pattern-name">${t(item.name)}${lvlTag}${count > 1 ? ` <em>×${count}</em>` : ''}${count ? `<span class="sr-only"> ${t('(activa)')}</span>` : ''}</span><strong>${language === 'en' ? val.replace(',', '.') : val}</strong></li>`;
+      <span class="pattern-name">${t(item.name)}${lvlTag}${usesTag}${count > 1 ? ` <em>×${count}</em>` : ''}${count ? `<span class="sr-only"> ${t('(activa)')}</span>` : ''}</span><strong>${language === 'en' ? val.replace(',', '.') : val}</strong></li>`;
   };
   $('patterns').innerHTML = pList.map(row).join('');
   $('codex-count').textContent = lit || '';
@@ -854,6 +856,7 @@ function showPlate(index, pin = false) {
   element.hidden = false;
   const combo = comboCatalog[key];
   const level = run?.comboLevels?.[key] || 1;
+  const uses = run?.comboCounts?.[key] || 0;
   const portraitUrl = plateArt(key, level).url;
   const val = (key === 'mono' || key === 'chromatic')
     ? `+${decimal(getComboValue(run, key) / 100)}×`
@@ -862,12 +865,26 @@ function showPlate(index, pin = false) {
   element.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">
     <img src="${portraitUrl}" style="width:46px;height:46px;border-radius:50%;border:1px solid #d4af37;flex-shrink:0;" alt="">
     <div style="min-width:0;">
-      <small class="tooltip-kicker">${t('Plato de maestría')} · Niv. ${level}</small>
+      <small class="tooltip-kicker">${t('Plato de maestría')} · ${message`Niv. ${level}`} · ${comboUsesLabel(uses)}</small>
       <strong style="display:block;margin:1px 0 3px;">${t(combo.name)}</strong>
       <span>${val} · ${t(combo.text(level))}</span>
     </div>
   </div>`;
   positionPower();
+}
+
+function openPlatesList(focusKey = null) {
+  if (!run || modal) return;
+  showPower(-1);
+  showPlate(-1);
+  modal = 'plates';
+  openPlateShelf(run, {
+    host: $('play-layout') || document.body,
+    focusKey,
+    onClose: () => {
+      if (modal === 'plates') modal = null;
+    },
+  });
 }
 
 function positionPower() {
@@ -1435,17 +1452,17 @@ canvas.addEventListener('pointerdown', event => {
   if (!playing || modal || pointer || event.button !== 0 && event.button !== 2) return;
   const target = table.pick(event.clientX, event.clientY);
   if (target >= POWER && target < UNIQUE && event.button === 0) { showPlate(-1); showPower(target - POWER, true); return; }
-  if (target >= PLATE && target < PLATE + 9 && event.button === 0) { showPower(-1); showPlate(target - PLATE, true); return; }
   showPower(-1);
   showPlate(-1);
+  const plateHit = target >= PLATE && target < PLATE + 9 && event.button === 0 ? target - PLATE : null;
   const touch = event.pointerType !== 'mouse';
   const orbit = event.button === 2 || touch && target < 0;
   if (armed >= 0 && target !== armed) { armed = -1; render(); }
-  if (!orbit && (!ready() || target < 0)) return;
+  if (!orbit && plateHit == null && (!ready() || target < 0)) return;
   canvas.focus({ preventScroll: true });
   focused = -1;
   hovered = target;
-  pointer = { id: event.pointerId, orbit, touch, target, movable: !orbit && movable(target), x: event.clientX, y: event.clientY, drag: false, moved: false };
+  pointer = { id: event.pointerId, orbit, touch, target, plate: plateHit, movable: !orbit && plateHit == null && movable(target), x: event.clientX, y: event.clientY, drag: false, moved: false };
   canvas.setPointerCapture(event.pointerId);
   if (orbit) canvas.style.cursor = 'grabbing';
   updateFocus();
@@ -1496,7 +1513,9 @@ canvas.addEventListener('pointerup', event => {
   const gesture = pointer;
   pointer = null;
   if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-  if (!gesture.orbit && !gesture.moved && ready()) {
+  if (!gesture.orbit && !gesture.moved && gesture.plate != null) {
+    openPlatesList(comboKeys[gesture.plate]);
+  } else if (!gesture.orbit && !gesture.moved && ready()) {
     const stone = gesture.target >= 0 && gesture.target < HAND && Boolean(run.board[gesture.target]?.stone);
     const wasArmed = armed;
     const confirmed = wasArmed === gesture.target;
@@ -1607,6 +1626,7 @@ $('skip-score').addEventListener('click', () => finishScore());
 $('confirm').addEventListener('click', scoreTurn);
 $('codex-toggle').addEventListener('click', () => setCodex(!codexOpen));
 $('codex-close').addEventListener('click', () => { setCodex(false); $('codex-toggle').focus({ preventScroll: true }); });
+$('codex-plates')?.addEventListener('click', () => { setCodex(false); openPlatesList(); });
 $('sound').addEventListener('click', () => {
   muted = !muted;
   write(soundStorage, muted ? 'off' : 'on');

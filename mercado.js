@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-14';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-14';
-import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-14';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-14';
-import { Workshop } from './taller.js?v=esmaltes-14';
-import { uniqueDice } from './unicos.js?v=esmaltes-14';
-import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-14';
-import { icon } from './iconos.js?v=esmaltes-14';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-15';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-15';
+import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-15';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-15';
+import { Workshop } from './taller.js?v=esmaltes-15';
+import { uniqueDice } from './unicos.js?v=esmaltes-15';
+import { dieFaces, dieTraits, openPlateShelf, comboUsesLabel, comboUsesSentence } from './coleccion.js?v=esmaltes-15';
+import { icon } from './iconos.js?v=esmaltes-15';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -114,7 +114,7 @@ export class MarketUI {
         <h2 id="workshop-title" tabindex="-1">${this.mode === 'shop' ? t('El zoco') : t('El horno')}</h2></div>
       <nav class="zoco-tabs" aria-label="${t("Secciones del taller")}">${tab('shop', 'store', t('Puestos'))}${tab('oven', 'flame', t('Horno'), oven)}</nav>
       <div class="zoco-tools">
-        <button class="orb orb-small" type="button" data-market="plates" aria-label="${t("Ver repisa de platos")}" title="${t("Repisa de platos")}">${icon('star-fill')}</button>
+        <button class="orb orb-small" type="button" data-market="plates" aria-label="${t("Ver repisa de platos")}" title="${t("Repisa de platos")}">${icon('plate')}</button>
         <button class="orb orb-small" type="button" data-market="collection" aria-label="${t("Ver bolsa y azulejos")}" title="${t("Bolsa y azulejos")}">${icon('bag')}</button>
         <div class="purse" id="workshop-gold">${this.purseMarkup()}</div>
       </div></header>`;
@@ -155,11 +155,14 @@ export class MarketUI {
           const sold = market.purchased.includes(index);
           const price = spec.price ?? rarity.price;
           const isCombo = Boolean(spec.combo);
+          const uses = isCombo ? (this.run.comboCounts?.[spec.combo] || 0) : 0;
           const title = isCombo ? t(spec.name) : displayDie(spec);
           const kicker = isCombo ? message`Niv. ${spec.level} → ${spec.nextLevel}` : t(rarity.name);
+          const comboMeta = isCombo ? `<span class="exhibit-combo-meta">${kicker} · ${comboUsesLabel(uses)}</span>` : '';
+          const ariaExtra = isCombo ? `${kicker}, ${comboUsesSentence(uses)}` : kicker;
           return `<button type="button" class="exhibit${!sold && gold < price ? ' dear' : ''}" data-tip="${isCombo ? 'combo' : 'die'}" data-key="${index}" data-anchor="inspect/${index}"
-            aria-haspopup="dialog" aria-expanded="false" aria-label="${title}, ${kicker}, ${sold ? (isCombo ? t('mejorado') : t('comprado')) : message`${price} de oro`}" style="--rarity:${rarity.color}"${sold ? ' disabled' : ''}>
-            <span class="exhibit-plate"><strong>${title}</strong><small><span class="rarity-name">${kicker}</span>${sold ? `${icon('check')}${isCombo ? t('Mejorado') : t('Comprado')}` : coins(price)}</small></span></button>`;
+            aria-haspopup="dialog" aria-expanded="false" aria-label="${title}, ${ariaExtra}, ${sold ? (isCombo ? t('mejorado') : t('comprado')) : message`${price} de oro`}" style="--rarity:${rarity.color}"${sold ? ' disabled' : ''}>
+            <span class="exhibit-plate"><strong>${title}</strong>${comboMeta}<small>${isCombo ? '' : `<span class="rarity-name">${kicker}</span>`}${sold ? `${icon('check')}${isCombo ? t('Mejorado') : t('Comprado')}` : coins(price)}</small></span></button>`;
         }).join('')}</div></div>
       </section>
       <section class="wall" aria-label="${t("Azulejos de poder")}">${this.wallMarkup()}</section>`;
@@ -196,7 +199,14 @@ export class MarketUI {
       button.disabled = sold;
       button.classList.toggle('dear', !sold && gold < price);
       if (sold) {
-        button.querySelector('small').innerHTML = `<span class="rarity-name">${isCombo ? message`Niv. ${spec.nextLevel}` : t(rarities[spec.rarity].name)}</span>${icon('check')}${isCombo ? t('Mejorado') : t('Comprado')}`;
+        if (isCombo) {
+          const uses = this.run.comboCounts?.[spec.combo] || 0;
+          const meta = button.querySelector('.exhibit-combo-meta');
+          if (meta) meta.textContent = `${message`Niv. ${spec.nextLevel}`} · ${comboUsesLabel(uses)}`;
+          button.querySelector('small').innerHTML = `${icon('check')}${t('Mejorado')}`;
+        } else {
+          button.querySelector('small').innerHTML = `<span class="rarity-name">${t(rarities[spec.rarity].name)}</span>${icon('check')}${t('Comprado')}`;
+        }
         button.setAttribute('aria-label', `${isCombo ? t(spec.name) : displayDie(spec)}, ${isCombo ? t('mejorado') : t('comprado')}`);
       }
     }
@@ -217,6 +227,7 @@ export class MarketUI {
     if (kind === 'combo') {
       const spec = run.market.dice[key];
       const combo = comboCatalog[spec.combo];
+      const uses = run.comboCounts?.[spec.combo] || 0;
       const sold = run.market.purchased.includes(key);
       const price = spec.price;
       const label = sold ? t('Mejorado') : run.gold < price ? message`Te faltan ${price - run.gold} de oro` : message`Mejorar · ${coins(price)}`;
@@ -224,9 +235,9 @@ export class MarketUI {
       return {
         color: rarities[spec.rarity].color,
         html: `<div class="ztip-card"><img class="ztip-plate" src="${platePortrait(spec)}" alt=""><div class="ztip-text">
-          <small class="ztip-kicker">${t('Plato de maestría')} · ${message`Nivel ${spec.level}`}</small><strong id="ztip-title">${t(spec.name)}</strong>
+          <small class="ztip-kicker">${t('Plato de maestría')} · ${message`Nivel ${spec.level}`} · ${comboUsesLabel(uses)}</small><strong id="ztip-title">${t(spec.name)}</strong>
           <p class="ztip-combo-gain">${displayComboGain(spec.combo, spec.nextLevel) || combo.text(spec.nextLevel)}</p>
-          <p class="ztip-plain">${message`Sube el efecto de ${t(spec.name)} a Nivel ${spec.nextLevel}.`}</p>
+          <p class="ztip-plain">${comboUsesSentence(uses)}</p>
         </div></div>${action}`
       };
     }
@@ -573,80 +584,7 @@ export class MarketUI {
   }
 
   showPlateShelfCelebration(upgradedKey, oldLevel, newLevel) {
-    const valueKeys = ['pair', 'trio', 'quartet', 'straight', 'longStraight'];
-    const patternKeys = ['line', 'mono', 'chromatic', 'panel'];
-    const spec = upgradedKey ? comboCatalog[upgradedKey] : null;
-    const gainText = upgradedKey ? (displayComboGain(upgradedKey, newLevel) || spec.text(newLevel)) : '';
-
-    const renderTier = (keys, label) => `
-      <div class="shelf-tier">
-        <span class="shelf-tier-label">${label}</span>
-        <div class="shelf-lip"></div>
-        <ul class="shelf-items">
-          ${keys.map(key => {
-            const item = comboCatalog[key];
-            const level = this.run.comboLevels[key] || 1;
-            const isUpgraded = key === upgradedKey;
-            const portrait = platePortrait({ combo: key, level });
-            return `<li class="shelf-item${isUpgraded ? ' upgraded' : ''}">
-              <img class="shelf-plate-img" src="${portrait}" alt="${t(item.name)}">
-              <span class="shelf-name">${t(item.name)}</span>
-              <span class="shelf-level-tag">${message`Niv. ${level}`}</span>
-            </li>`;
-          }).join('')}
-        </ul>
-      </div>
-    `;
-
-    const dialog = document.createElement('div');
-    dialog.className = 'plate-shelf-dialog-backdrop';
-    dialog.id = 'plate-shelf-modal';
-    dialog.innerHTML = `
-      <div class="plate-shelf-dialog" role="dialog" aria-modal="true" aria-labelledby="rack-title">
-        <span class="shelf-kicker">${t('Alacena del Alfarero')}</span>
-        <h2 class="shelf-title" id="rack-title">${t('Colección de Platos de Maestría')}</h2>
-        <p class="shelf-subtitle">${t('Cada plato perfecciona una técnica de mosaico en el taller.')}</p>
-
-        <div class="shelf-rack">
-          ${renderTier(patternKeys, t('Patrones y Esmaltes'))}
-          ${renderTier(valueKeys, t('Combinaciones de Dados'))}
-        </div>
-
-        ${upgradedKey ? `
-        <div class="shelf-celebration-banner">
-          <span class="banner-icon">✨</span>
-          <div class="banner-text">
-            <strong>${message`¡${t(spec.name)} ha ascendido a Nivel ${newLevel}!`}</strong>
-            <span>${gainText}</span>
-          </div>
-        </div>` : ''}
-
-        <button type="button" class="btn btn-gold btn-continue" data-action="close-plate-shelf">${t('Continuar')} ▷</button>
-      </div>
-    `;
-
-    const close = () => {
-      window.removeEventListener('keydown', onKeyDown);
-      dialog.classList.add('closing');
-      setTimeout(() => dialog.remove(), 180);
-    };
-
-    const onKeyDown = event => {
-      if (event.key === 'Escape' || event.key === ' ' || event.key === 'Enter') {
-        event.preventDefault();
-        close();
-      }
-    };
-
-    dialog.addEventListener('click', event => {
-      if (event.target === dialog || event.target.closest('[data-action="close-plate-shelf"]')) {
-        close();
-      }
-    });
-
-    window.addEventListener('keydown', onKeyDown);
-    this.element.append(dialog);
-    setTimeout(() => dialog.querySelector('.btn-continue')?.focus(), 50);
+    openPlateShelf(this.run, { host: this.element, upgradedKey, oldLevel, newLevel });
   }
 
   purchase(kind, key, replaceIndex = null) {

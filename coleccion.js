@@ -1,9 +1,9 @@
-import { t, message, language, displayDie, displayItem } from './idioma.js?v=esmaltes-14';
-import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes } from './catalogo.js?v=esmaltes-14';
-import { diePortrait, tileArt } from './arte.js?v=esmaltes-14';
-import { tileLimit, decks, deckSample, bosses, BOSS_EVERY } from './reglas.js?v=esmaltes-14';
-import { uniqueDice } from './unicos.js?v=esmaltes-14';
-import { icon } from './iconos.js?v=esmaltes-14';
+import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-15';
+import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-15';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-15';
+import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-15';
+import { uniqueDice } from './unicos.js?v=esmaltes-15';
+import { icon } from './iconos.js?v=esmaltes-15';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);
@@ -104,4 +104,110 @@ export function collectionMarkup(run) {
       <h2 id="dialog-title">${run ? t('Bolsa y azulejos') : t('Catálogo')}</h2></div>
       <button class="btn btn-quiet btn-small" type="button" data-action="close-collection" autofocus>${icon('close')}${t('Cerrar')}</button></header>
     <div class="book-body">${owned}${run ? `<details class="chapter chapter-catalog"><summary><span class="chapter-mark" aria-hidden="true"></span><span class="chapter-title">${t("Catálogo")}</span></summary><div class="chapter-nest">${catalog}</div></details>` : catalog}</div></div>`;
+}
+
+export const comboUsesLabel = count => count === 1 ? t('1 uso') : message`${count} usos`;
+export const comboUsesSentence = count => count === 1 ? t('Usado 1 vez en esta partida.') : message`Usado ${count} veces en esta partida.`;
+
+export function openPlateShelf(run, { host = document.body, upgradedKey = null, oldLevel = 0, newLevel = 0, focusKey = null, onClose = null } = {}) {
+  document.getElementById('plate-shelf-modal')?.remove();
+
+  const patternKeys = ['line', 'mono', 'chromatic', 'panel'];
+  const valueKeys = ['pair', 'trio', 'quartet', 'straight', 'longStraight'];
+  const spec = upgradedKey ? comboCatalog[upgradedKey] : null;
+  const gainText = upgradedKey ? (displayComboGain(upgradedKey, newLevel) || spec.text(newLevel)) : '';
+  const fmtValue = key => (key === 'mono' || key === 'chromatic')
+    ? `+${(getComboValue(run, key) / 100).toFixed(2).replace('.', language === 'en' ? '.' : ',')}×`
+    : `+${getComboValue(run, key)}`;
+
+  const renderTier = (keys, label) => `
+    <section class="plate-tier" aria-label="${label}">
+      <h3 class="shelf-tier-label">${label}</h3>
+      <ul class="plate-list">
+        ${keys.map(key => {
+          const item = comboCatalog[key];
+          const level = run?.comboLevels?.[key] || 1;
+          const uses = run?.comboCounts?.[key] || 0;
+          const isUpgraded = key === upgradedKey;
+          const isFocused = !isUpgraded && key === focusKey;
+          const portrait = platePortrait({ combo: key, level });
+          const levelText = isUpgraded ? message`Niv. ${oldLevel} → ${newLevel}` : message`Niv. ${level}`;
+          return `<li class="plate-row${isUpgraded ? ' upgraded' : ''}${isFocused ? ' focused' : ''}" data-combo="${key}">
+            <img class="plate-row-img" src="${portrait}" alt="">
+            <div class="plate-row-info">
+              <div class="plate-row-top">
+                <strong class="plate-row-name">${t(item.name)}</strong>
+                <span class="plate-row-val">${fmtValue(key)}</span>
+              </div>
+              <p class="plate-row-desc">${displayComboGain(key, level) || item.text(level)}</p>
+            </div>
+            <div class="plate-row-badges">
+              <span class="plate-level-tag">${levelText}</span>
+              <span class="plate-uses-tag${uses > 0 ? ' used' : ''}" aria-label="${comboUsesSentence(uses)}">${comboUsesLabel(uses)}</span>
+            </div>
+          </li>`;
+        }).join('')}
+      </ul>
+    </section>
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.className = 'plate-shelf-dialog-backdrop';
+  dialog.id = 'plate-shelf-modal';
+  dialog.innerHTML = `
+    <div class="plate-shelf-dialog" role="dialog" aria-modal="true" aria-labelledby="rack-title">
+      <div class="plate-shelf-head">
+        <span class="shelf-kicker">${t('Alacena del Alfarero')}</span>
+        <h2 class="shelf-title" id="rack-title">${t('Colección de Platos de Maestría')}</h2>
+        <p class="shelf-subtitle">${t('Cada plato perfecciona una técnica de mosaico en el taller.')}</p>
+      </div>
+
+      ${upgradedKey ? `
+      <div class="shelf-celebration-banner">
+        <span class="banner-icon">✨</span>
+        <div class="banner-text">
+          <strong>${message`¡${t(spec.name)} ha ascendido a Nivel ${newLevel}!`}</strong>
+          <span>${gainText}</span>
+        </div>
+      </div>` : ''}
+
+      <div class="plate-shelf-body">
+        ${renderTier(patternKeys, t('Patrones y Esmaltes'))}
+        ${renderTier(valueKeys, t('Combinaciones de Dados'))}
+      </div>
+
+      <div class="plate-shelf-foot">
+        <button type="button" class="btn btn-gold btn-continue" data-action="close-plate-shelf">${t('Continuar')} ▷</button>
+      </div>
+    </div>
+  `;
+
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    window.removeEventListener('keydown', onKeyDown, true);
+    dialog.classList.add('closing');
+    setTimeout(() => dialog.remove(), 180);
+    onClose?.();
+  };
+
+  const onKeyDown = event => {
+    if (event.key === 'Escape' || event.key === ' ' || event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    }
+  };
+
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog || event.target.closest('[data-action="close-plate-shelf"]')) close();
+  });
+
+  window.addEventListener('keydown', onKeyDown, true);
+  host.append(dialog);
+  const targetKey = upgradedKey || focusKey;
+  if (targetKey) dialog.querySelector(`[data-combo="${targetKey}"]`)?.scrollIntoView({ block: 'nearest' });
+  setTimeout(() => dialog.querySelector('.btn-continue')?.focus(), 50);
+  return close;
 }

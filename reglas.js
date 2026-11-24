@@ -1,5 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-14';
-import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-14';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-15';
+import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-15';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 const campaignGoals = [55, 88, 110, 150, 170, 185, 225, 260, 290, 330, 375, 420];
@@ -167,6 +167,9 @@ function startStage(state, random) {
   return [...replenish(state, random), ...uniqueRolls];
 }
 
+const defaultComboLevels = () => ({ pair: 1, trio: 1, quartet: 1, straight: 1, longStraight: 1, line: 1, mono: 1, chromatic: 1, panel: 1 });
+const defaultComboCounts = () => ({ pair: 0, trio: 0, quartet: 0, straight: 0, longStraight: 0, line: 0, mono: 0, chromatic: 0, panel: 0 });
+
 export function newRun(deck = 'classic', difficulty = 0, random = Math.random) {
   if (typeof difficulty === 'function') {
     random = difficulty;
@@ -185,8 +188,9 @@ export function newRun(deck = 'classic', difficulty = 0, random = Math.random) {
   const die = (id, face, slot) => ({ id, slot, face, value: bag[id].faces[face], stone: false, fixed: false });
   const hand = deck === 'classic' ? [[0, 2], [1, 3], [4, 4], [2, 5]].map(([id, value], slot) => die(id, bag[id].faces.indexOf(value), slot))
     : Array(handSize).fill(null);
-  const comboLevels = { pair: 1, trio: 1, quartet: 1, straight: 1, longStraight: 1, line: 1, mono: 1, chromatic: 1, panel: 1 };
-  const state = { version: 7, deck, difficulty, stage: 0, gold: 0, powers: [], results: [], orders: [], history: [], endless: false, bag, hand, bosses: [], comboLevels, uniques, uniqueRack: [null, null, null] };
+  const comboLevels = defaultComboLevels();
+  const comboCounts = defaultComboCounts();
+  const state = { version: 7, deck, difficulty, stage: 0, gold: 0, powers: [], results: [], orders: [], history: [], endless: false, bag, hand, bosses: [], comboLevels, comboCounts, uniques, uniqueRack: [null, null, null] };
   for (let stage = BOSS_EVERY - 1; stage < campaignLength; stage += BOSS_EVERY) ensureBoss(state, stage, random);
   startStage(state, random);
   return state;
@@ -304,10 +308,10 @@ function numericPatterns(state, board, cells, column) {
         }))) straight = Math.max(straight, count);
       }
       if (repetitions) {
-        const [name, points] = repetitions === 4 ? ['Cuarteto', getComboValue(state, 'quartet')] : repetitions === 3 ? ['Trío', getComboValue(state, 'trio')] : ['Pareja', getComboValue(state, 'pair')];
-        candidates.push({ name, points: points + colonnade, cells: segment });
+        const [combo, name, points] = repetitions === 4 ? ['quartet', 'Cuarteto', getComboValue(state, 'quartet')] : repetitions === 3 ? ['trio', 'Trío', getComboValue(state, 'trio')] : ['pair', 'Pareja', getComboValue(state, 'pair')];
+        candidates.push({ combo, name, points: points + colonnade, cells: segment });
       }
-      if (straight) candidates.push({ name: straight === 4 ? 'Escalera larga' : 'Escalera',
+      if (straight) candidates.push({ combo: straight === 4 ? 'longStraight' : 'straight', name: straight === 4 ? 'Escalera larga' : 'Escalera',
         points: (straight === 4 ? getComboValue(state, 'longStraight') : getComboValue(state, 'straight')) + colonnade + acanthus, cells: segment });
     }
   }
@@ -324,7 +328,7 @@ function evaluateLine(state, board, cells, column, axis, score, stones) {
   if (!dice.some(isFresh)) return;
   const numeric = numericPatterns(state, board, cells, column);
   const full = dice.every(Boolean);
-  const numbers = full ? [{ name: 'Línea llena', points: getComboValue(state, 'line'), cells }, ...numeric] : numeric;
+  const numbers = full ? [{ combo: 'line', name: 'Línea llena', points: getComboValue(state, 'line'), cells }, ...numeric] : numeric;
   const highlighted = new Set(numbers.flatMap(item => item.cells));
   numeric.flatMap(item => item.cells).filter(cell => board[cell].stone).forEach(cell => stones.add(cell));
   score.numberSteps.push(...numbers);
@@ -335,9 +339,9 @@ function evaluateLine(state, board, cells, column, axis, score, stones) {
       return die.extra == null ? [choices] : [choices, choices];
     });
     if (options[0].some(shade => options.every(list => list.includes(shade)))) {
-      color = { name: 'Monocolor', add: getComboValue(state, 'mono') + (has(state, 'frieze') ? 25 : 0), cells };
+      color = { combo: 'mono', name: 'Monocolor', add: getComboValue(state, 'mono') + (has(state, 'frieze') ? 25 : 0), cells };
     } else if (distinct(options)) {
-      color = { name: 'Colores distintos', add: getComboValue(state, 'chromatic') + (has(state, 'prism') ? 15 : 0), cells };
+      color = { combo: 'chromatic', name: 'Colores distintos', add: getComboValue(state, 'chromatic') + (has(state, 'prism') ? 15 : 0), cells };
     }
     if (color) { score.colorSteps.push(color); cells.forEach(cell => highlighted.add(cell)); }
   }
@@ -394,7 +398,7 @@ export function preview(state) {
   if (cobalt.length && has(state, 'cobalt') && bossKey(state) !== 'whitewash') score.colorSteps.push({ name: 'Resonancia cobalto', add: cobalt.length * 15, cells: [...new Set(cobalt)] });
   if (board.every(Boolean)) {
     const cells = board.map((_, index) => index);
-    score.numberSteps.push({ name: 'Panel completo', points: getComboValue(state, 'panel'), cells });
+    score.numberSteps.push({ combo: 'panel', name: 'Panel completo', points: getComboValue(state, 'panel'), cells });
     if (has(state, 'alhambra')) score.colorSteps.push({ name: 'Gran Alhambra', factor: 1.35, cells });
   }
   const order = orderAt(state.stage);
@@ -431,6 +435,10 @@ export function commit(state, random = Math.random) {
   state.lastScore = score.total;
   state.gold += score.gold;
   if (score.order) state.orders.push(score.order.key);
+  if (!state.comboCounts || typeof state.comboCounts !== 'object') state.comboCounts = defaultComboCounts();
+  for (const step of [...score.numberSteps, ...score.colorSteps]) {
+    if (step.combo) state.comboCounts[step.combo] = (state.comboCounts[step.combo] || 0) + 1;
+  }
 
   const { board } = projectBoard(state);
   for (let cell = 0; cell < state.board.length; cell++) {
@@ -619,7 +627,9 @@ export function validSave(state) {
       !Array.isArray(state.history) || !state.history.every(entry => entry && Number.isSafeInteger(entry.stage) && entry.stage >= 0 &&
         typeof entry.action === 'string' && typeof entry.item === 'string' && Number.isSafeInteger(entry.gold) &&
         (entry.faces == null || Array.isArray(entry.faces) && entry.faces.length === 6 && entry.faces.every(value => Number.isInteger(value) && value >= 1 && value <= 6))) ||
-      !state.comboLevels || typeof state.comboLevels !== 'object' || !Array.isArray(state.uniques) || state.uniques.length > 3) return false;
+      !state.comboLevels || typeof state.comboLevels !== 'object' ||
+      !state.comboCounts || typeof state.comboCounts !== 'object' ||
+      !Array.isArray(state.uniques) || state.uniques.length > 3) return false;
   const active = [...state.board, ...state.hand].filter(Boolean);
   return state.bag.every(spec => spec === null || validSpec(spec)) &&
     (state.phase !== 'shop' || (Array.isArray(state.market?.dice) && state.market.dice.every(validSpec) && Array.isArray(state.market.tiles) &&
@@ -632,7 +642,8 @@ export function restoreRun(old, random = Math.random) {
   if (validSave(old)) return old;
   if (old?.version === 6 || old?.version === 7) {
     const difficulty = Number.isInteger(old.difficulty) && old.difficulty >= 0 && old.difficulty <= 5 ? old.difficulty : 0;
-    const comboLevels = old.comboLevels || { pair: 1, trio: 1, quartet: 1, straight: 1, longStraight: 1, line: 1, mono: 1, chromatic: 1, panel: 1 };
+    const comboLevels = { ...defaultComboLevels(), ...(old.comboLevels || {}) };
+    const comboCounts = { ...defaultComboCounts(), ...(old.comboCounts || {}) };
     const uniques = Array.isArray(old.uniques) ? old.uniques : [];
     const uniqueRack = Array.isArray(old.uniqueRack) ? old.uniqueRack : Array(3).fill(null);
     let market = old.market;
@@ -641,7 +652,7 @@ export function restoreRun(old, random = Math.random) {
         ? market.oven : ovenOffers(random);
       market = { ...market, forged: Boolean(market.forged), oven };
     }
-    const state = { ...old, version: 7, difficulty, comboLevels, uniques, uniqueRack, market };
+    const state = { ...old, version: 7, difficulty, comboLevels, comboCounts, uniques, uniqueRack, market };
     return validSave(state) ? state : null;
   }
   // Runs from before bags and bosses keep the classic bag and get their bosses now.
