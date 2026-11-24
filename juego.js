@@ -1,18 +1,19 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-6';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-6';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-6';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-6';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-7';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-7';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-7';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-7';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=esmaltes-6';
-import { uniqueDice } from './unicos.js?v=esmaltes-6';
-import { MarketUI } from './mercado.js?v=esmaltes-6';
-import { collectionMarkup } from './coleccion.js?v=esmaltes-6';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-6';
-import { Music } from './musica.js?v=esmaltes-6';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-7';
+import { uniqueDice } from './unicos.js?v=esmaltes-7';
+import { MarketUI } from './mercado.js?v=esmaltes-7';
+import { collectionMarkup } from './coleccion.js?v=esmaltes-7';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-7';
+import { Music } from './musica.js?v=esmaltes-7';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
 const storage = 'mosaic-roll/3d-web-v2';
+const progressionStorage = `${storage}/progression`;
 const soundStorage = `${storage}/sound`;
 const musicStorage = `${storage}/music`;
 const musicVolumeStorage = `${storage}/music-volume`;
@@ -242,7 +243,7 @@ function title() {
   const label = !table ? t('Cargando…') : run?.phase === 'won' ? t('Ver victoria') : ongoing() ? t('Continuar') : t('Jugar');
   $('play-label').textContent = label;
   $('play-note').textContent = !table ? '' : !ongoing() ? t('Elige tu bolsa inicial')
-    : run.phase === 'shop' ? message`Zoco · tras el mosaico ${run.stage + 1}` : `${message`Mosaico ${run.stage + 1}`} · ${t(stageAt(run.stage).name)}`;
+    : run.phase === 'shop' ? message`Zoco · tras el mosaico ${run.stage + 1}` : `${message`Mosaico ${run.stage + 1}`} · ${t(stageAt(run.stage, run.difficulty ?? 0).name)}`;
   $('new').hidden = !table || !ongoing();
   if (table) button.focus({ preventScroll: true });
 }
@@ -308,19 +309,106 @@ function enter(roll = []) {
   else if (bossAt(run)) popup(message`Jefe: ${t(bosses[bossAt(run).key].name)}`, [], 'banner boss');
 }
 
-function startRun(deck) { run = newRun(deck); save(); enter(run.hand.filter(Boolean).map(die => die.id)); }
+const DECK_ORDER = ['classic', 'saffron', 'even', 'relics'];
+const bagDifficulties = { classic: 0, saffron: 0, even: 0, relics: 0 };
+
+function getProgression() {
+  try {
+    const raw = JSON.parse(read(progressionStorage));
+    if (raw && typeof raw === 'object') {
+      const unlocked = Array.isArray(raw.unlocked) ? raw.unlocked : ['classic'];
+      if (!unlocked.includes('classic')) unlocked.unshift('classic');
+      if (run?.deck && !unlocked.includes(run.deck)) unlocked.push(run.deck);
+      const completed = (raw.completed && typeof raw.completed === 'object') ? raw.completed : {};
+      return { unlocked, completed };
+    }
+  } catch {}
+  const unlocked = ['classic'];
+  if (run?.deck && !unlocked.includes(run.deck)) unlocked.push(run.deck);
+  return { unlocked, completed: {} };
+}
+
+function saveProgression(prog) {
+  write(progressionStorage, JSON.stringify(prog));
+}
+
+function recordVictory(run) {
+  const prog = getProgression();
+  const deck = run.deck || 'classic';
+  const diff = run.difficulty ?? 0;
+  let newlyUnlockedDeck = null;
+  const currentIndex = DECK_ORDER.indexOf(deck);
+  if (currentIndex >= 0 && currentIndex < DECK_ORDER.length - 1) {
+    const nextDeck = DECK_ORDER[currentIndex + 1];
+    if (!prog.unlocked.includes(nextDeck)) {
+      prog.unlocked.push(nextDeck);
+      newlyUnlockedDeck = nextDeck;
+    }
+  }
+  const prevMax = prog.completed[deck] ?? -1;
+  let newlyUnlockedDiff = false;
+  if (diff > prevMax) {
+    prog.completed[deck] = diff;
+    if (diff < 5) newlyUnlockedDiff = true;
+  }
+  saveProgression(prog);
+  return { newlyUnlockedDeck, newlyUnlockedDiff };
+}
+
+function startRun(deck, difficulty = 0) {
+  run = newRun(deck, difficulty);
+  save();
+  enter(run.hand.filter(Boolean).map(die => die.id));
+}
 
 // New runs begin by choosing a starting bag, like the decks of a deck-builder.
 function chooseBag() {
+  const prog = getProgression();
+  const cards = DECK_ORDER.map((key, index) => {
+    const deck = decks[key];
+    const isUnlocked = prog.unlocked.includes(key);
+    if (!isUnlocked) {
+      const prevKey = DECK_ORDER[index - 1] ?? 'classic';
+      const prevName = decks[prevKey]?.name ?? '';
+      return `<div class="bag-card locked" tabindex="-1">
+        <div class="bag-lock">${icon('lock')}</div>
+        <strong class="bag-name">${t(deck.name)}</strong>
+        <span class="bag-lock-text">${message`Supera la campaña con la ${t(prevName)} para desbloquear.`}</span>
+      </div>`;
+    }
+    const maxCompleted = prog.completed[key] ?? -1;
+    const maxAvailable = Math.min(5, maxCompleted + 1);
+    bagDifficulties[key] = Math.min(maxAvailable, Math.max(0, bagDifficulties[key] ?? (maxCompleted >= 0 ? maxCompleted + 1 : 0)));
+    const currDiff = bagDifficulties[key];
+    const diffDef = difficulties[currDiff] || difficulties[0];
+    return `<div class="bag-card unlocked" data-bag="${key}">
+      <span class="bag-dice" aria-hidden="true">${deckSample(key).map(spec => `<img src="${diePortrait(spec)}" alt="">`).join('')}</span>
+      <strong class="bag-name">${t(deck.name)}</strong>
+      <span class="bag-text">${t(deck.text)}</span>
+      <div class="bag-diff-box">
+        <div class="bag-diff-row">
+          <button type="button" class="diff-btn" data-action="diff-prev" data-bag="${key}" ${currDiff <= 0 ? 'disabled' : ''} aria-label="${t('Dificultad anterior')}">◀</button>
+          <div class="bag-diff-info">
+            <span class="diff-badge">${message`Nivel ${currDiff}`}</span>
+            <strong class="diff-name">${t(diffDef.name)}</strong>
+          </div>
+          <button type="button" class="diff-btn" data-action="diff-next" data-bag="${key}" ${currDiff >= maxAvailable ? 'disabled' : ''} aria-label="${t('Dificultad siguiente')}">▶</button>
+        </div>
+        <p class="diff-rule"><strong>${t(diffDef.title)}</strong> · ${t(diffDef.text)}</p>
+      </div>
+      <button type="button" class="btn btn-gold btn-block bag-start-btn" data-action="bag" data-bag="${key}">
+        ${icon('play')}<span>${currDiff > 0 ? message`Jugar · Niv. ${currDiff}` : t('Jugar')}</span>
+      </button>
+    </div>`;
+  }).join('');
+
   showDialog('bags', `<div class="book bags">
     <header class="book-head"><div class="book-heading"><span class="book-kicker">${message`Nueva partida · ${campaignLength} mosaicos`}</span>
       <h2 id="dialog-title">${t('Elige tu bolsa')}</h2></div>
       <button class="btn btn-quiet btn-small" type="button" data-action="back">${icon('close')}${t('Cancelar')}</button></header>
-    <div class="bag-grid">${Object.entries(decks).map(([key, deck]) => `<button class="bag-card" type="button" data-action="bag" data-bag="${key}">
-      <span class="bag-dice" aria-hidden="true">${deckSample(key).map(spec => `<img src="${diePortrait(spec)}" alt="">`).join('')}</span>
-      <strong class="bag-name">${t(deck.name)}</strong><span class="bag-text">${t(deck.text)}</span></button>`).join('')}</div>
+    <div class="bag-grid">${cards}</div>
     <p class="bag-foot">${icon('crown')}${message`Cada ${BOSS_EVERY} mosaicos te espera un jefe con una regla especial. Vencerlo da ${BOSS_GOLD} de oro extra.`}</p></div>`);
-  dialog.querySelector('.bag-card').focus({ preventScroll: true });
+  dialog.querySelector('.bag-card.unlocked .bag-start-btn')?.focus({ preventScroll: true });
 }
 
 function nextMosaic() {
@@ -330,14 +418,14 @@ function nextMosaic() {
 }
 
 function render() {
-  const stage = stageAt(run.stage);
+  const stage = stageAt(run.stage, run.difficulty ?? 0);
   const score = resolution?.score ?? preview(run);
   const points = resolution ? run.points - score.total : run.points;
   const dimensions = run.cols === 4 ? `${run.cols} × ${run.rows}` : `${run.rows} × ${run.cols}`;
   const progress = run.endless ? message`Modo libre · Mosaico ${run.stage + 1}` : message`Mosaico ${run.stage + 1}/${campaignLength}`;
   const boss = bossAt(run);
   const finalBoss = boss && !run.endless && run.stage === campaignLength - 1;
-  $('stage-label').textContent = `${boss ? (finalBoss ? `${t('Jefe final')} · ` : `${t('Jefe')} · `) : ''}${progress} · ${dimensions}`;
+  $('stage-label').textContent = `${boss ? (finalBoss ? `${t('Jefe final')} · ` : `${t('Jefe')} · `) : ''}${progress} · ${dimensions}${run.difficulty ? ` · Niv. ${run.difficulty}` : ''}`;
   $('stage-name').textContent = t(boss ? bosses[boss.key].name : stage.name);
   $('crown').classList.toggle('boss-stage', Boolean(boss));
   $('boss').hidden = !boss;
@@ -719,7 +807,8 @@ function help() {
 
 function pause() {
   if (!playing || modal || resolution || pendingOutcome) return;
-  showDialog('pause', windowMarkup({ title: t('Pausa'), eyebrow: `${message`Mosaico ${run.stage + 1}`} · ${t(stageAt(run.stage).name)}`, emblem: 'moon',
+  const diffName = run.difficulty ? ` · ${t(difficulties[run.difficulty].name)}` : '';
+  showDialog('pause', windowMarkup({ title: t('Pausa'), eyebrow: `${message`Mosaico ${run.stage + 1}`} · ${t(stageAt(run.stage, run.difficulty ?? 0).name)}${diffName}`, emblem: 'moon',
     actions: action('back', t('Continuar'), 'play', 'gold') +
       action('options', t('Ajustes'), 'settings') +
       action('help', t('Cómo jugar'), 'help') +
@@ -978,15 +1067,24 @@ function showOutcome() {
   const total = run.results.reduce((sum, points) => sum + points, 0);
   const stat = (value, label) => `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`;
   if (run.phase === 'won') {
+    const { newlyUnlockedDeck, newlyUnlockedDiff } = recordVictory(run);
     setMusicMood('title');
-    showDialog('outcome', windowMarkup({ title: t('¡Campaña completada!'), eyebrow: `${message`${campaignLength} de ${campaignLength} mosaicos`} · ${t(decks[run.deck].name)}`,
-      body: `<div class="stats">${stat(total, t('Puntos'))}${stat(run.orders.length, t('Encargos'))}</div>`,
+    let extraPraise = '';
+    if (newlyUnlockedDeck) {
+      extraPraise += `<p class="victory-unlock">${icon('lock')}${message`¡Has desbloqueado la ${t(decks[newlyUnlockedDeck].name)}!`}</p>`;
+    }
+    if (newlyUnlockedDiff) {
+      extraPraise += `<p class="victory-unlock">${icon('crown')}${message`¡Nueva dificultad desbloqueada para ${t(decks[run.deck].name)}!`}</p>`;
+    }
+    const diffName = difficulties[run.difficulty ?? 0]?.name ?? 'Normal';
+    showDialog('outcome', windowMarkup({ title: t('¡Campaña completada!'), eyebrow: `${message`${campaignLength} de ${campaignLength} mosaicos`} · ${t(decks[run.deck].name)} · ${t(diffName)}`,
+      body: `<div class="stats">${stat(total, t('Puntos'))}${stat(run.orders.length, t('Encargos'))}</div>${extraPraise}`,
       actions: action('endless', t('Modo libre'), 'play', 'gold') + action('collection', t('Ver bolsa y azulejos'), 'bag') + action('title', t('Volver al patio'), 'door') }), 'victory');
     return;
   }
   const heading = run.turns && run.board.every(Boolean) ? t('Tablero bloqueado') : t('Sin turnos');
   const boss = bossAt(run);
-  showDialog('outcome', windowMarkup({ title: heading, eyebrow: `${run.endless ? message`Mosaico ${run.stage + 1}` : `${t('Mosaico')} ${run.stage + 1}/${campaignLength}`} · ${boss ? message`Jefe: ${t(bosses[boss.key].name)}` : t(stageAt(run.stage).name)}`,
+  showDialog('outcome', windowMarkup({ title: heading, eyebrow: `${run.endless ? message`Mosaico ${run.stage + 1}` : `${t('Mosaico')} ${run.stage + 1}/${campaignLength}`} · ${boss ? message`Jefe: ${t(bosses[boss.key].name)}` : t(stageAt(run.stage, run.difficulty ?? 0).name)}`,
     body: `<div class="stats">${stat(`${run.points}/${run.goal}`, t('Este mosaico'))}${stat(total + run.points, t('Total partida'))}</div>`,
     actions: action('restart', t('Volver a jugar'), 'refresh', 'gold') + action('collection', t('Ver bolsa y azulejos'), 'bag') + action('title', t('Volver al patio'), 'door') }), 'defeat');
 }
@@ -1032,7 +1130,25 @@ dialog.addEventListener('click', event => {
       else document.documentElement.requestFullscreen().catch(() => {});
       break;
     case 'restart': chooseBag(); break;
-    case 'bag': startRun(button.dataset.bag); break;
+    case 'bag': {
+      const bagKey = button.dataset.bag;
+      startRun(bagKey, bagDifficulties[bagKey] || 0);
+      break;
+    }
+    case 'diff-prev': {
+      const bagKey = button.dataset.bag;
+      bagDifficulties[bagKey] = Math.max(0, (bagDifficulties[bagKey] || 0) - 1);
+      chooseBag();
+      break;
+    }
+    case 'diff-next': {
+      const bagKey = button.dataset.bag;
+      const prog = getProgression();
+      const maxAvailable = Math.min(5, (prog.completed[bagKey] ?? -1) + 1);
+      bagDifficulties[bagKey] = Math.min(maxAvailable, (bagDifficulties[bagKey] || 0) + 1);
+      chooseBag();
+      break;
+    }
   }
 });
 

@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-6';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-6';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-6';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-6';
-import { Workshop } from './taller.js?v=esmaltes-6';
-import { uniqueDice } from './unicos.js?v=esmaltes-6';
-import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-6';
-import { icon } from './iconos.js?v=esmaltes-6';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-7';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-7';
+import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-7';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-7';
+import { Workshop } from './taller.js?v=esmaltes-7';
+import { uniqueDice } from './unicos.js?v=esmaltes-7';
+import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-7';
+import { icon } from './iconos.js?v=esmaltes-7';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -129,16 +129,15 @@ export class MarketUI {
     const boss = bossAt(this.run, next);
     // The next boss is announced here, with its rule one tap away.
     const goal = boss ? `<button type="button" class="boss-pill" data-tip="boss" data-key="${next}" aria-haspopup="dialog" aria-expanded="false">
-        ${icon('crown')}<span class="boss-pill-name">${t(bosses[boss.key].name)}</span><small>${message`Meta ${stageAt(next).goal}`}</small></button>`
-      : `<span class="goal-pill">${icon('star')}${t('Meta')} <strong>${stageAt(next).goal}</strong></span>`;
+        ${icon('crown')}<span class="boss-pill-name">${t(bosses[boss.key].name)}</span><small>${message`Meta ${stageAt(next, this.run.difficulty ?? 0).goal}`}</small></button>`
+      : `<span class="goal-pill">${icon('star')}${t('Meta')} <strong>${stageAt(next, this.run.difficulty ?? 0).goal}</strong></span>`;
 
     let nextBtn;
     if (this.mode === 'shop') {
       nextBtn = `<button type="button" class="btn btn-gold btn-big" data-market="to-oven"><span>${t("Ir al horno")}</span>${icon('flame')}</button>`;
-    } else if (!this.run.market.forged) {
-      nextBtn = `<button type="button" class="btn btn-gold btn-big" disabled title="${t("Horno obligatorio")}"><span>${t("Horno obligatorio")}</span>${icon('flame')}</button>`;
     } else {
-      nextBtn = `<button type="button" class="btn btn-gold btn-big${boss ? ' btn-boss' : ''}" data-market="advance"><span>${message`Mosaico ${next + 1}`}</span>${icon('arrow')}</button>`;
+      const skipHint = !this.run.market.forged ? ` title="${t('Avanzar al siguiente mosaico sin usar el horno')}"` : '';
+      nextBtn = `<button type="button" class="btn btn-gold btn-big${boss ? ' btn-boss' : ''}" data-market="advance"${skipHint}><span>${message`Mosaico ${next + 1}`}</span>${icon('arrow')}</button>`;
     }
 
     return `<footer class="zoco-foot">
@@ -213,7 +212,7 @@ export class MarketUI {
       const boss = bossAt(run, key);
       return { color: '#f0a184', html: `<div class="ztip-card"><span class="ztip-emblem" aria-hidden="true">${icon('crown')}</span><div class="ztip-text">
         <small class="ztip-kicker">${message`Jefe · mosaico ${key + 1}`}</small><strong id="ztip-title">${t(bosses[boss.key].name)}</strong><p>${displayBossRule(boss, bossText)}</p>
-        <p class="ztip-plain">${message`Meta ${stageAt(key).goal}. Vencerlo da ${BOSS_GOLD} de oro extra.`}</p></div></div>` };
+        <p class="ztip-plain">${message`Meta ${stageAt(key, this.run.difficulty ?? 0).goal}. Vencerlo da ${BOSS_GOLD} de oro extra.`}</p></div></div>` };
     }
     if (kind === 'combo') {
       const spec = run.market.dice[key];
@@ -338,29 +337,33 @@ export class MarketUI {
   ovenMarkup() {
     const { market, gold } = this.run;
     const forged = market.forged;
+    const cost = ovenCost(this.run);
     if (!this.recipe || !market.oven.includes(this.recipe)) this.recipe = market.oven[0];
     this.forgeCandidates = this.run.forgeHand.filter(id => this.run.bag[id] && !this.run.bag[id].unique);
     this.slots = Array(upgrades[this.recipe].slots).fill(null);
     this.color = basicColors[0];
     const recipes = market.oven.map(key => {
       const recipe = upgrades[key];
+      const costBadge = cost > 0 ? `${icon('coin')}${message`${cost} oro`}` : `${icon('flame')}${t('Gratis')}`;
       return `<button type="button" class="recipe" data-market="recipe" data-key="${key}" aria-pressed="${key === this.recipe}"${forged ? ' disabled' : ''}>
-        <span class="recipe-top"><span class="recipe-name">${t(recipe.name)}</span><span class="recipe-free">${icon('flame')}${t('Gratis')}</span></span>
+        <span class="recipe-top"><span class="recipe-name">${t(recipe.name)}</span><span class="recipe-free">${costBadge}</span></span>
         <span class="recipe-desc">${t(recipe.text)}</span></button>`;
     }).join('');
     const candidates = this.forgeCandidates.map(id => `<button type="button" class="candidate" data-market="candidate" data-tip="candidate" data-key="${id}" aria-pressed="false"
       aria-label="${message`${displayDie(this.run.bag[id])}, caras ${this.run.bag[id].faces.join(' ')}`}"${forged ? ' disabled' : ''}><img src="${diePortrait(this.run.bag[id])}" alt=""><span class="candidate-slot" aria-hidden="true"></span></button>`).join('');
     const swatches = basicColors.map(id => `<label class="swatch" style="--glaze:${glazes[id].color};--glaze-light:${glazes[id].light}" title="${t(glazes[id].name)}">
       <input type="radio" name="dye" value="${id}"${id === this.color ? ' checked' : ''}><span class="sr-only">${t(glazes[id].name)}</span></label>`).join('');
+    const ovenStateText = forged ? `${icon('moon')}${t('Horno en reposo')}` : (cost > 0 ? `${icon('flame')}${message`Horno encendido · ${cost} oro`}` : `${icon('flame')}${t('Horno encendido · Gratis')}`);
+    const recipeSubtitle = cost > 0 ? message`mejora opcional · ${cost} oro` : t('mejora opcional y gratis');
     return `<section class="stall kiln-stall" aria-label="${t("Horno")}">
         <div class="workshop-stage kiln-stage" id="kiln-scene">
-          <span class="kiln-state" id="kiln-state">${forged ? `${icon('moon')}${t('Horno en reposo')}` : `${icon('flame')}${t('Horno encendido · Gratis')}`}</span>
+          <span class="kiln-state" id="kiln-state">${ovenStateText}</span>
           <fieldset class="dye-bar" id="dye-bar" hidden><legend>${t("Segundo color")}</legend><div class="swatches">${swatches}</div></fieldset>
           <div class="kiln-result" id="kiln-result" hidden></div>
         </div>
       </section>
       <section class="kiln-panel" aria-label="${t("Recetas del horno")}">
-        <h3 class="panel-label">${t('Recetas de hoy')} <small>${t('mejora obligatoria y gratis')}</small></h3>
+        <h3 class="panel-label">${t('Recetas de hoy')} <small>${recipeSubtitle}</small></h3>
         <div class="recipes" role="group" aria-label="${t("Recetas")}">${recipes}</div>
         <p class="recipe-text" id="recipe-text" aria-hidden="true"></p>
         <h3 class="panel-label">${t('Dados del banco')} <small>${this.forgeCandidates.length ? t('toca o arrastra al horno') : t('sin dados disponibles')}</small></h3>
@@ -412,21 +415,26 @@ export class MarketUI {
 
   forgeState() {
     const run = this.run, recipe = upgrades[this.recipe];
+    const cost = ovenCost(run);
     const ids = this.slots.filter(id => id != null);
     if (run.market.forged) return { text: t('El horno ya coció en este taller. Puedes avanzar al siguiente mosaico.') };
     if (ids.length < this.slots.length) {
       return { text: t('Elige un dado del banco para meterlo en el horno.') };
     }
+    if (cost > 0 && run.gold < cost) {
+      return { text: message`Necesitas ${cost} de oro para usar el horno (tienes ${run.gold}). Puedes avanzar al siguiente mosaico sin cocer.`, warn: true };
+    }
     if (!canForge(run, this.recipe, ids, this.color)) {
       const spec = run.bag[ids[0]];
       return { text: this.recipe === 'dye' && spec.rainbow ? t('Un dado multicolor no admite otro esmalte.') : refusals[this.recipe] ?? t('Este dado ya tiene el máximo de mejoras de este tipo.'), warn: true };
     }
-    return { ready: true, text: message`${displayDie(run.bag[ids[0]])} listo para cocer gratis. Pulsa «Cocer» para aplicar la receta.` };
+    return { ready: true, text: cost > 0 ? message`${displayDie(run.bag[ids[0]])} listo para cocer por ${cost} de oro. Pulsa «Cocer» para aplicar la receta.` : message`${displayDie(run.bag[ids[0]])} listo para cocer gratis. Pulsa «Cocer» para aplicar la receta.` };
   }
 
   refreshForge() {
     if (this.mode !== 'oven') return;
     const recipe = upgrades[this.recipe];
+    const cost = ovenCost(this.run);
     for (const button of this.element.querySelectorAll('[data-market="recipe"]')) button.setAttribute('aria-pressed', String(button.dataset.key === this.recipe));
     this.element.querySelector('#recipe-text').textContent = t(recipe.text);
     for (const button of this.element.querySelectorAll('[data-market="candidate"]')) {
@@ -448,7 +456,7 @@ export class MarketUI {
     status.classList.toggle('ready', Boolean(state.ready));
     const fire = this.element.querySelector('[data-market="forge"]');
     fire.disabled = !state.ready;
-    fire.querySelector('.fire-label').innerHTML = this.run.market.forged ? t('Horno usado') : t('Cocer gratis');
+    fire.querySelector('.fire-label').innerHTML = this.run.market.forged ? t('Horno usado') : (cost > 0 ? message`Cocer (${cost} oro)` : t('Cocer gratis'));
     this.scene?.socketsFor(this.slots);
   }
 

@@ -1,8 +1,17 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-6';
-import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-6';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-7';
+import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-7';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
-const campaignGoals = [48, 76, 94, 112, 128, 138, 168, 190, 212, 237, 270, 300];
+const campaignGoals = [55, 88, 110, 150, 170, 185, 225, 260, 290, 330, 375, 420];
+
+export const difficulties = [
+  { level: 0, name: 'Barro cocido', title: 'Normal', text: 'Reglas estándar del alfarero.' },
+  { level: 1, name: 'Esmalte de cobre', title: 'Puntos +20%', text: 'La exigencia aumenta: necesitas un 20% más de puntuación en cada mosaico.' },
+  { level: 2, name: 'Esmalte de plata', title: 'Economía austera', text: 'Menos oro en el zoco (recompensa base y jefes a la mitad; turnos sobrantes no pagan sin Paciencia).' },
+  { level: 3, name: 'Esmalte de oro', title: 'Horno de pago', text: 'Cocer una mejora en el horno cuesta 6 de oro. El horno se puede saltar.' },
+  { level: 4, name: 'Lapislázuli imperial', title: 'Puntos +44%', text: 'La exigencia de puntuación vuelve a subir otro 20% acumulativo.' },
+  { level: 5, name: 'Rubí del Sultán', title: 'Juicio del Sultán', text: 'Solo 1 cincel inicial por mosaico y los jefes exigen un +15% de puntos adicional.' },
+];
 const orders = [
   { key: 'straight', label: 'Puntúa una escalera', combos: ['Escalera', 'Escalera larga'], gold: 2 },
   { key: 'mono', label: 'Puntúa una línea monocolor', combos: ['Monocolor'], gold: 3 },
@@ -88,11 +97,14 @@ export function getComboValue(state, key) {
   return def.basePoints + (level - 1) * def.gainPerLevel;
 }
 
-export function stageAt(index) {
+export function stageAt(index, difficulty = 0) {
   const group = Math.floor(index / 3);
   const cols = group < 2 ? 3 : 4;
   const rows = group === 0 ? 2 : group < 3 ? 3 : 4;
-  const goal = campaignGoals[index] ?? 325 + (index - campaignLength) * 25;
+  let goal = campaignGoals[index] ?? 460 + (index - campaignLength) * 45;
+  if (difficulty >= 1) goal = Math.round(goal * 1.20);
+  if (difficulty >= 4) goal = Math.round(goal * 1.20);
+  if (difficulty >= 5 && isBossStage(index)) goal = Math.round(goal * 1.15);
   return { name: names[index % names.length], cols, rows, goal, turns: index < 6 ? 4 : 5 };
 }
 
@@ -117,7 +129,7 @@ function replenish(state, random) {
 }
 
 function startStage(state, random) {
-  const stage = stageAt(state.stage);
+  const stage = stageAt(state.stage, state.difficulty ?? 0);
   ensureBoss(state, state.stage, random);
   state.phase = 'play';
   state.cols = stage.cols;
@@ -125,7 +137,8 @@ function startStage(state, random) {
   state.goal = stage.goal;
   state.points = state.lastScore = 0;
   state.turns = state.maxTurns = stage.turns - (bossKey(state) === 'hourglass' ? 1 : 0);
-  state.chisels = has(state, 'chisel') ? 3 : 2;
+  const baseChisels = (state.difficulty ?? 0) >= 5 ? 1 : 2;
+  state.chisels = baseChisels + (has(state, 'chisel') ? 1 : 0);
   // The short-handed boss sends the fourth die of the tray back to the bag.
   if (handLimit(state) < handSize) state.hand = state.hand.map((die, slot) => slot < handLimit(state) ? die : null);
   state.board = Array(state.rows * state.cols).fill(null);
@@ -154,8 +167,13 @@ function startStage(state, random) {
   return [...replenish(state, random), ...uniqueRolls];
 }
 
-export function newRun(deck = 'classic', random = Math.random) {
+export function newRun(deck = 'classic', difficulty = 0, random = Math.random) {
+  if (typeof difficulty === 'function') {
+    random = difficulty;
+    difficulty = 0;
+  }
   if (!Object.hasOwn(decks, deck)) deck = 'classic';
+  difficulty = Math.max(0, Math.min(5, Number(difficulty) || 0));
   let uniques = [];
   let bag;
   if (deck === 'relics') {
@@ -168,7 +186,7 @@ export function newRun(deck = 'classic', random = Math.random) {
   const hand = deck === 'classic' ? [[0, 2], [1, 3], [4, 4], [2, 5]].map(([id, value], slot) => die(id, bag[id].faces.indexOf(value), slot))
     : Array(handSize).fill(null);
   const comboLevels = { pair: 1, trio: 1, quartet: 1, straight: 1, longStraight: 1, line: 1, mono: 1, chromatic: 1, panel: 1 };
-  const state = { version: 7, deck, stage: 0, gold: 0, powers: [], results: [], orders: [], history: [], endless: false, bag, hand, bosses: [], comboLevels, uniques, uniqueRack: [null, null, null] };
+  const state = { version: 7, deck, difficulty, stage: 0, gold: 0, powers: [], results: [], orders: [], history: [], endless: false, bag, hand, bosses: [], comboLevels, uniques, uniqueRack: [null, null, null] };
   for (let stage = BOSS_EVERY - 1; stage < campaignLength; stage += BOSS_EVERY) ensureBoss(state, stage, random);
   startStage(state, random);
   return state;
@@ -392,7 +410,11 @@ export function preview(state) {
 
 function openShop(state, random) {
   state.phase = 'shop';
-  state.gold += 10 + Math.min(6, Math.floor(state.stage / 4)) + state.turns * (has(state, 'patience') ? 2 : 1) + (bossAt(state) ? BOSS_GOLD : 0);
+  const diff = state.difficulty ?? 0;
+  const baseGold = diff >= 2 ? 5 + Math.min(3, Math.floor(state.stage / 8)) : 10 + Math.min(6, Math.floor(state.stage / 4));
+  const turnGold = diff >= 2 ? (has(state, 'patience') ? state.turns : 0) : state.turns * (has(state, 'patience') ? 2 : 1);
+  const bossGold = bossAt(state) ? (diff >= 2 ? Math.floor(BOSS_GOLD / 2) : BOSS_GOLD) : 0;
+  state.gold += baseGold + turnGold + bossGold;
   state.market = market(state.stage, state.powers, random, state.bag, state.uniques, state.comboLevels);
   ensureBoss(state, state.stage + 1, random);
   const held = state.hand.filter(die => die && !state.bag[die.id]?.unique).map(die => die.id);
@@ -540,26 +562,33 @@ export function sellTile(state, key) {
   return true;
 }
 
+export const OVEN_COST = 6;
+export const ovenCost = state => ((state?.difficulty ?? 0) >= 3 ? OVEN_COST : 0);
+
 export function canForge(state, key, ids, color) {
   const upgrade = upgrades[key];
+  const cost = ovenCost(state);
   return state.phase === 'shop' && !state.market.forged && state.market.oven.includes(key) &&
+    state.gold >= cost &&
     ids.length === 1 && ids.every(id => state.forgeHand.includes(id) && state.bag[id] && !state.bag[id].unique) &&
     canEnchant(state.bag[ids[0]], key, color);
 }
 
 export function forge(state, key, ids, color, random = Math.random) {
   if (!canForge(state, key, ids, color)) return null;
+  const cost = ovenCost(state);
+  state.gold -= cost;
   const [first] = ids;
   const spec = enchant(state.bag[first], key, color, random);
   state.market.forged = true;
   state.bag[first] = spec;
   for (const die of [...state.board, ...state.hand]) if (die?.id === first) die.value = spec.faces[die.face];
-  state.history.push({ stage: state.stage, action: upgrades[key].name, item: diceName(spec), faces: [...spec.faces], gold: 0 });
+  state.history.push({ stage: state.stage, action: upgrades[key].name, item: diceName(spec), faces: [...spec.faces], gold: -cost });
   return spec;
 }
 
 export function advance(state, random = Math.random) {
-  if (state.phase !== 'shop' || !state.market?.forged) return [];
+  if (state.phase !== 'shop') return [];
   state.stage++;
   return startStage(state, random);
 }
@@ -577,7 +606,9 @@ function validSpec(spec) {
 const validBoss = boss => Boolean(boss && Object.hasOwn(bosses, boss.key) && (boss.key !== 'eclipse' || basicColors.includes(boss.color)));
 
 export function validSave(state) {
-  if (state?.version !== 7 || !Object.hasOwn(decks, state.deck) || !Array.isArray(state.bosses) || !state.bosses.every(validBoss) || !['play', 'shop', 'won', 'lost'].includes(state.phase) || !Number.isSafeInteger(state.goal) || state.goal < 1 ||
+  if (state?.version !== 7 || !Object.hasOwn(decks, state.deck) ||
+      (state.difficulty != null && (!Number.isInteger(state.difficulty) || state.difficulty < 0 || state.difficulty > 5)) ||
+      !Array.isArray(state.bosses) || !state.bosses.every(validBoss) || !['play', 'shop', 'won', 'lost'].includes(state.phase) || !Number.isSafeInteger(state.goal) || state.goal < 1 ||
       ![state.stage, state.points, state.turns, state.maxTurns, state.gold, state.chisels].every(value => Number.isSafeInteger(value) && value >= 0) ||
       ![3, 4].includes(state.cols) || ![2, 3, 4].includes(state.rows) || !Array.isArray(state.board) || state.board.length !== state.rows * state.cols ||
       !Array.isArray(state.hand) || state.hand.length !== handSize || !Array.isArray(state.bag) || !Array.isArray(state.powers) ||
@@ -600,6 +631,7 @@ export function validSave(state) {
 export function restoreRun(old, random = Math.random) {
   if (validSave(old)) return old;
   if (old?.version === 6 || old?.version === 7) {
+    const difficulty = Number.isInteger(old.difficulty) && old.difficulty >= 0 && old.difficulty <= 5 ? old.difficulty : 0;
     const comboLevels = old.comboLevels || { pair: 1, trio: 1, quartet: 1, straight: 1, longStraight: 1, line: 1, mono: 1, chromatic: 1, panel: 1 };
     const uniques = Array.isArray(old.uniques) ? old.uniques : [];
     const uniqueRack = Array.isArray(old.uniqueRack) ? old.uniqueRack : Array(3).fill(null);
@@ -609,7 +641,7 @@ export function restoreRun(old, random = Math.random) {
         ? market.oven : ovenOffers(random);
       market = { ...market, forged: Boolean(market.forged), oven };
     }
-    const state = { ...old, version: 7, comboLevels, uniques, uniqueRack, market };
+    const state = { ...old, version: 7, difficulty, comboLevels, uniques, uniqueRack, market };
     return validSave(state) ? state : null;
   }
   // Runs from before bags and bosses keep the classic bag and get their bosses now.
