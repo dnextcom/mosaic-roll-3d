@@ -507,4 +507,7 @@ export default {
   "Metas de puntuación aumentan otro +20% acumulativo (+44% sobre base).": "Score requirements rise another +20% cumulatively (+44% over base).",
   "El Juicio del Sultán: empiezas con solo 1 cincel por mosaico (-1) y los jefes exigen +15% de puntos adicional.": "Sultan's Judgment: you start with only 1 chisel per mosaic (-1) and bosses demand +15% extra score.",
   "Nivel {0} de 6": "Level {0} of 6",
+  "Meter al horno": "Put in kiln",
+  "Sacar del horno": "Remove from kiln",
+  "toca para examinar o arrastra al horno": "tap to inspect or drag to kiln",
 };

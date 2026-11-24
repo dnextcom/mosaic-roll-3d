@@ -591,4 +591,7 @@ export default {
   "Metas de puntuación aumentan otro +20% acumulativo (+44% sobre base).": "Objectifs de score augmentent encore de +20% de manière cumulative (+44% par rapport à la base).",
   "El Juicio del Sultán: empiezas con solo 1 cincel por mosaico (-1) y los jefes exigen +15% de puntos adicional.": "Jugement du Sultan : vous commencez avec seulement 1 burin par mosaïque (-1) et les boss exigent +15% de score supplémentaire.",
   "Nivel {0} de 6": "Niveau {0} sur 6",
+  "Meter al horno": "Mettre au four",
+  "Sacar del horno": "Retirer du four",
+  "toca para examinar o arrastra al horno": "touchez pour examiner ou glissez au four",
 };

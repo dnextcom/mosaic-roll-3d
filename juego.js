@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-12';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-12';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-12';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-12';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-13';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-13';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-13';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-13';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-12';
-import { uniqueDice } from './unicos.js?v=esmaltes-12';
-import { MarketUI } from './mercado.js?v=esmaltes-12';
-import { collectionMarkup } from './coleccion.js?v=esmaltes-12';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-12';
-import { Music } from './musica.js?v=esmaltes-12';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-13';
+import { uniqueDice } from './unicos.js?v=esmaltes-13';
+import { MarketUI } from './mercado.js?v=esmaltes-13';
+import { collectionMarkup } from './coleccion.js?v=esmaltes-13';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-13';
+import { Music } from './musica.js?v=esmaltes-13';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -106,26 +106,64 @@ function resetCounters() {
   for (const id of ['score', 'gold-count']) delete $(id).dataset.value;
 }
 
-function popup(text, cells = [], kind = '') {
+function popup(text, cells = [], kind = '', extra = null) {
   if (reducedMotion.matches || !table?.width) return;
   const anchors = cells.map(cell => table.dieAnchor(cell)).filter(Boolean);
   const x = anchors.length ? anchors.reduce((sum, point) => sum + point.x, 0) / anchors.length : table.width / 2;
   const y = anchors.length ? anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length : table.height * .42;
   const element = document.createElement('span');
   element.className = `popup ${kind}`.trim();
-  element.textContent = text;
   element.style.left = `${Math.round(x)}px`;
   element.style.top = `${Math.round(y)}px`;
+  if (extra?.fire != null) element.style.setProperty('--fire', extra.fire.toFixed(3));
+  if (extra?.heat >= 1) {
+    element.dataset.heat = String(extra.heat);
+    const flames = document.createElement('span');
+    flames.className = 'popup-flames';
+    flames.setAttribute('aria-hidden', 'true');
+    const tongue = (cls) => `<svg class="pf ${cls}" viewBox="0 0 32 48" preserveAspectRatio="none"><path d="M16 1C20 13 30 21 30 34C30 43 24 47 16 47C8 47 2 43 2 34C2 23 10 17 12 8C14 14 15 11 16 1Z"/></svg>`;
+    flames.innerHTML = `${tongue('outer p1')}${tongue('mid p2')}${tongue('inner p3')}${tongue('mid p4')}${tongue('outer p5')}<i class="ps s1"></i><i class="ps s2"></i><i class="ps s3"></i><i class="ps s4"></i>`;
+    const label = document.createElement('span');
+    label.className = 'popup-num';
+    label.textContent = text;
+    element.append(flames, label);
+  } else {
+    element.textContent = text;
+  }
   element.addEventListener('animationend', () => element.remove(), { once: true });
   $('popups').append(element);
 }
 
-function shake() {
+function shake(heavy = false) {
   if (reducedMotion.matches) return;
   const world = $('world');
-  world.classList.remove('shake');
+  world.classList.remove('shake', 'shake-big');
   void world.offsetWidth;
-  world.classList.add('shake');
+  world.classList.add(heavy ? 'shake-big' : 'shake');
+}
+
+function scoreHeat(points) {
+  const goal = Math.max(1, run?.goal || 1);
+  const ratio = points / goal;
+  const fire = Math.max(0, Math.min(1, ratio / 1.15));
+  const heat = ratio >= 1.25 ? 4 : ratio >= 0.85 ? 3 : ratio >= 0.5 ? 2 : ratio >= 0.25 ? 1 : 0;
+  return { fire, heat };
+}
+
+function setSequenceHeat(points) {
+  const seq = $('sequence');
+  const { fire, heat } = scoreHeat(points);
+  seq.dataset.heat = String(heat);
+  seq.style.setProperty('--fire', fire.toFixed(3));
+  return { fire, heat };
+}
+
+function hideSequence() {
+  const seq = $('sequence');
+  seq.hidden = true;
+  delete seq.dataset.phase;
+  delete seq.dataset.heat;
+  seq.style.removeProperty('--fire');
 }
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
@@ -233,7 +271,7 @@ function title() {
   lockUntil = 0;
   pendingOutcome = 0;
   resolution = null;
-  $('sequence').hidden = true;
+  hideSequence();
   $('popups').replaceChildren();
   $('game').hidden = true;
   $('start').hidden = false;
@@ -287,7 +325,7 @@ function enter(roll = []) {
   $('start').hidden = true;
   $('game').hidden = false;
   document.body.dataset.screen = 'game';
-  $('sequence').hidden = true;
+  hideSequence();
   $('popups').replaceChildren();
   window.scrollTo(0, 0);
   table.clear();
@@ -878,6 +916,7 @@ function scoreTurn() {
     ...(score.order ? [{ name: score.order.label, phase: 'Encargo cumplido', reward: score.order.gold, time: Math.round(1050 * speedMult), cells: [] }] : []),
   ] };
   $('sequence').hidden = false;
+  setSequenceHeat(0);
   $('sequence-phase').textContent = t('Dados');
   $('sequence-value').innerHTML = chips(0, 1);
   $('sequence-detail').textContent = '';
@@ -891,6 +930,8 @@ function scoringFrame(now) {
   if (step.points) resolution.base += step.points;
   if (step.add) resolution.multi += step.add / 100;
   if (step.factor) resolution.multi *= step.factor;
+  const projected = step.phase === 'Total' || step.reward ? resolution.score.total : Math.round(resolution.base * resolution.multi);
+  const { fire, heat } = setSequenceHeat(projected);
   $('sequence-phase').textContent = t(step.phase);
   $('sequence').dataset.phase = step.reward ? 'reward' : step.phase === 'Total' ? 'total' : step.phase === 'Multiplicador' ? 'color' : 'number';
   $('sequence-value').innerHTML = step.reward ? `<span class="sequence-total gold">+${coins(step.reward)}</span>`
@@ -904,7 +945,7 @@ function scoringFrame(now) {
   else if (step.add) popup(`+${decimal(step.add / 100)}×`, step.cells, 'mult');
   else if (step.factor) popup(`×${decimal(step.factor)}`, step.cells, 'mult');
   else if (step.reward) popup(message`+${step.reward} oro`, [], 'gold');
-  else if (step.phase === 'Total') { popup(`+${resolution.score.total}`, [], 'total'); shake(); }
+  else if (step.phase === 'Total') { popup(`+${resolution.score.total}`, [], 'total', { heat, fire }); shake(heat >= 3); }
   if (!reducedMotion.matches || step.phase === 'Total') note(step.phase === 'Total' ? 'score' : step.phase === 'Multiplicador' ? 'color' : 'count');
   resolution.next = now + step.time;
 }
@@ -913,8 +954,7 @@ function finishScore(now = performance.now()) {
   if (!resolution) return;
   const rolled = resolution.score.drawn;
   resolution = null;
-  $('sequence').hidden = true;
-  delete $('sequence').dataset.phase;
+  hideSequence();
   table.lightCells([]);
   const animate = rolled.length > 0 && !reducedMotion.matches;
   lockUntil = animate ? now + ROLL_TIME : 0;

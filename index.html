@@ -11,9 +11,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Reem+Kufi:wght@400..700&display=swap">
-  <link rel="stylesheet" href="estilo.css?v=esmaltes-12">
+  <link rel="stylesheet" href="estilo.css?v=esmaltes-13">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=esmaltes-12"></script>
+  <script type="module" src="juego.js?v=esmaltes-13"></script>
 </head>
 <body data-screen="title">
   <main class="patio" id="start">
@@ -135,6 +135,20 @@
             <p class="tally-placed" id="placed"></p>
           </section>
           <div class="sequence" id="sequence" hidden>
+            <div class="score-flames" aria-hidden="true">
+              <svg class="flame outer f1" viewBox="0 0 32 48" preserveAspectRatio="none"><path d="M16 1C20 13 30 21 30 34C30 43 24 47 16 47C8 47 2 43 2 34C2 23 10 17 12 8C14 14 15 11 16 1Z"/></svg>
+              <svg class="flame outer f2" viewBox="0 0 32 48" preserveAspectRatio="none"><path d="M15 2C21 15 29 22 29 34C29 43 23 47 16 47C9 47 3 43 3 34C3 22 9 14 15 2Z"/></svg>
+              <svg class="flame mid f3" viewBox="0 0 32 48" preserveAspectRatio="none"><path d="M16 1C20 13 30 21 30 34C30 43 24 47 16 47C8 47 2 43 2 34C2 23 10 17 12 8C14 14 15 11 16 1Z"/></svg>
+              <svg class="flame inner f4" viewBox="0 0 32 48" preserveAspectRatio="none"><path d="M16 3C21 15 28 22 28 35C28 43 23 47 16 47C9 47 4 43 4 35C4 23 11 16 16 3Z"/></svg>
+              <svg class="flame mid f5" viewBox="0 0 32 48" preserveAspectRatio="none"><path d="M15 2C21 15 29 22 29 34C29 43 23 47 16 47C9 47 3 43 3 34C3 22 9 14 15 2Z"/></svg>
+              <svg class="flame outer f6" viewBox="0 0 32 48" preserveAspectRatio="none"><path d="M16 1C20 13 30 21 30 34C30 43 24 47 16 47C8 47 2 43 2 34C2 23 10 17 12 8C14 14 15 11 16 1Z"/></svg>
+              <svg class="flame outer f7" viewBox="0 0 32 48" preserveAspectRatio="none"><path d="M15 2C21 15 29 22 29 34C29 43 23 47 16 47C9 47 3 43 3 34C3 22 9 14 15 2Z"/></svg>
+              <span class="spark s1"></span>
+              <span class="spark s2"></span>
+              <span class="spark s3"></span>
+              <span class="spark s4"></span>
+              <span class="spark s5"></span>
+            </div>
             <span class="sequence-phase" id="sequence-phase"></span>
             <div class="sequence-value" id="sequence-value"></div>
             <small class="sequence-detail" id="sequence-detail"></small>

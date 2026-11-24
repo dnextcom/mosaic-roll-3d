@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-12';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-12';
-import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-12';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-12';
-import { Workshop } from './taller.js?v=esmaltes-12';
-import { uniqueDice } from './unicos.js?v=esmaltes-12';
-import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-12';
-import { icon } from './iconos.js?v=esmaltes-12';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-13';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-13';
+import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-13';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-13';
+import { Workshop } from './taller.js?v=esmaltes-13';
+import { uniqueDice } from './unicos.js?v=esmaltes-13';
+import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-13';
+import { icon } from './iconos.js?v=esmaltes-13';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -240,6 +240,11 @@ export class MarketUI {
         const atCapacity = spec.unique && (run.uniques?.length || 0) >= 3;
         const label = sold ? t('Comprado') : owned ? t('Ya tienes este dado') : atCapacity ? (run.gold < rarity.price ? message`Te faltan ${rarity.price - run.gold} de oro` : message`Comprar y cambiar · ${coins(rarity.price)}`) : run.gold < rarity.price ? message`Te faltan ${rarity.price - run.gold} de oro` : message`Comprar · ${coins(rarity.price)}`;
         action = `<button class="btn btn-gold ztip-action" type="button" data-market="die" data-key="${key}"${canBuy(run, 'die', key) ? '' : ' disabled'}>${label}</button>`;
+      } else {
+        const inKiln = this.slots.indexOf(key) >= 0;
+        const btnClass = inKiln ? 'btn btn-quiet ztip-action' : 'btn btn-gold ztip-action';
+        const btnLabel = inKiln ? t('Sacar del horno') : t('Meter al horno');
+        action = `<button class="${btnClass}" type="button" data-market="candidate-slot" data-key="${key}"${run.market.forged ? ' disabled' : ''}>${icon('flame')}${btnLabel}</button>`;
       }
       return { color: rarity.color, html: `<div class="ztip-card"><img class="ztip-die" src="${diePortrait(spec)}" alt=""><div class="ztip-text">
         <small class="ztip-kicker">${t(rarity.name)}${unique ? ` · ${unique.mark}` : ''}</small><strong id="ztip-title">${displayDie(spec)}</strong>${dieFaces(spec)}
@@ -366,7 +371,7 @@ export class MarketUI {
         <h3 class="panel-label">${t('Recetas de hoy')} <small>${recipeSubtitle}</small></h3>
         <div class="recipes" role="group" aria-label="${t("Recetas")}">${recipes}</div>
         <p class="recipe-text" id="recipe-text" aria-hidden="true"></p>
-        <h3 class="panel-label">${t('Dados del banco')} <small>${this.forgeCandidates.length ? t('toca o arrastra al horno') : t('sin dados disponibles')}</small></h3>
+        <h3 class="panel-label">${t('Dados del banco')} <small>${this.forgeCandidates.length ? t('toca para examinar o arrastra al horno') : t('sin dados disponibles')}</small></h3>
         <div class="candidates" role="group" aria-label="${t("Dados del banco")}">${candidates}</div>
         <p class="kiln-status" id="forge-status" role="status"></p>
         <button class="btn btn-gold btn-big kiln-fire" type="button" data-market="forge" disabled>${icon('flame')}<span class="fire-label"></span></button>
@@ -378,8 +383,20 @@ export class MarketUI {
     // After firing, the finished die waits on the hearth instead of on the bench.
     const bench = this.forgeCandidates.filter(id => !forged || id !== this.lastForged?.id);
     this.scene.kiln(bench, this.run.bag, this.slots.length, !forged,
-      id => this.pickForge(id), (id, slot) => this.pickForge(id, slot));
+      id => this.inspectCandidate(id), (id, slot) => this.pickForge(id, slot));
     if (forged && this.lastForged) this.scene.display(this.lastForged.spec);
+  }
+
+  // Opens the die inspection tooltip before committing a bench die to the kiln.
+  inspectCandidate(id) {
+    if (this.mode !== 'oven' || this.result || this.run.market.forged) return;
+    const button = this.element.querySelector(`.candidate[data-key="${id}"]`);
+    if (!button) return;
+    if (this.tip?.anchor === button && this.tip.pinned) {
+      this.closeTip();
+      return;
+    }
+    this.showTip(button, true);
   }
 
   selectRecipe(key) {
@@ -513,7 +530,7 @@ export class MarketUI {
     const actionButton = event.target.closest('[data-market]');
     const tipButton = event.target.closest('[data-tip]');
     if (!this.mode) return;
-    if (tipButton && tipButton.dataset.tip !== 'candidate') {
+    if (tipButton) {
       if (tipButton.disabled) return;
       if (this.tip?.anchor === tipButton && this.tip.pinned) { this.closeTip(); return; }
       this.showTip(tipButton, true);
@@ -533,6 +550,7 @@ export class MarketUI {
     else if (market === 'sell') this.sell(key);
     else if (market === 'view') { if (key !== this.mode) this.show(key); }
     else if (market === 'recipe') this.selectRecipe(key);
+    else if (market === 'candidate-slot') { this.pickForge(Number(key)); this.closeTip(); }
     else if (market === 'candidate') this.pickForge(Number(key));
     else if (market === 'forge') this.apply();
     else if (market === 'collection') { this.closeTip(); this.callbacks.collection(); }

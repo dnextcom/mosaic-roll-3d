@@ -504,4 +504,7 @@ export default {
   "Metas de puntuación aumentan otro +20% acumulativo (+44% sobre base).": "Metes de puntuació augmenten un altre +20% acumulatiu (+44% sobre base).",
   "El Juicio del Sultán: empiezas con solo 1 cincel por mosaico (-1) y los jefes exigen +15% de puntos adicional.": "El Judici del Sultà: comences amb només 1 cisell per mosaic (-1) i els caps exigeixen +15% de punts addicional.",
   "Nivel {0} de 6": "Nivell {0} de 6",
+  "Meter al horno": "Posar al forn",
+  "Sacar del horno": "Treure del forn",
+  "toca para examinar o arrastra al horno": "toca per a examinar o arrossega al forn",
 };
