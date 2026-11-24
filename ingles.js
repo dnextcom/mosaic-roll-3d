@@ -505,7 +505,7 @@ export default {
   "Reglas activas en este nivel:": "Active rules at this level:",
   "Comenzar partida": "Start run",
   "Comenzar partida · Niv. {0}": "Start run · Lvl {0}",
-  "Reglas estándar del alfarero: metas base de 55 a 420 puntos.": "Standard potter's rules: base goals from 55 to 420 points.",
+  "Reglas estándar del alfarero: metas base de 55 a 350 puntos.": "Standard potter's rules: base goals from 55 to 350 points.",
   "Metas de puntuación +20% en cada mosaico.": "Score requirements +20% on every mosaic.",
   "Economía austera: oro base del zoco y de jefes a la mitad; turnos sobrantes no pagan sin Paciencia.": "Austere economy: base bazaar and boss gold halved; unused turns pay nothing without Patience.",
   "Horno de pago: cocer una mejora cuesta 6 de oro (el horno es saltable).": "Paid kiln: firing an upgrade costs 6 gold (kiln can be skipped).",

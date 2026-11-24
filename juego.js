@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-15';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-15';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-15';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-15';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-16';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-16';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-16';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-16';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-15';
-import { uniqueDice } from './unicos.js?v=esmaltes-15';
-import { MarketUI } from './mercado.js?v=esmaltes-15';
-import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-15';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-15';
-import { Music } from './musica.js?v=esmaltes-15';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-16';
+import { uniqueDice } from './unicos.js?v=esmaltes-16';
+import { MarketUI } from './mercado.js?v=esmaltes-16';
+import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-16';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-16';
+import { Music } from './musica.js?v=esmaltes-16';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -502,7 +502,7 @@ function updateDifficultyDetails(level, maxAvailable) {
   const rulesList = $('diff-rules-list');
   if (rulesList) {
     const rules = [
-      { text: t('Reglas estándar del alfarero: metas base de 55 a 420 puntos.'), lvl: 0 },
+      { text: t('Reglas estándar del alfarero: metas base de 55 a 350 puntos.'), lvl: 0 },
       { text: t('Metas de puntuación +20% en cada mosaico.'), lvl: 1 },
       { text: t('Economía austera: oro base del zoco y de jefes a la mitad; turnos sobrantes no pagan sin Paciencia.'), lvl: 2 },
       { text: t('Horno de pago: cocer una mejora cuesta 6 de oro (el horno es saltable).'), lvl: 3 },

@@ -1,8 +1,8 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-15';
-import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-15';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-16';
+import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-16';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
-const campaignGoals = [55, 88, 110, 150, 170, 185, 225, 260, 290, 330, 375, 420];
+const campaignGoals = [55, 88, 110, 150, 170, 185, 198, 217, 242, 275, 312, 350];
 
 export const difficulties = [
   { level: 0, name: 'Barro cocido', title: 'Normal', text: 'Reglas estándar del alfarero.' },
@@ -101,7 +101,7 @@ export function stageAt(index, difficulty = 0) {
   const group = Math.floor(index / 3);
   const cols = group < 2 ? 3 : 4;
   const rows = group === 0 ? 2 : group < 3 ? 3 : 4;
-  let goal = campaignGoals[index] ?? 460 + (index - campaignLength) * 45;
+  let goal = campaignGoals[index] ?? 385 + (index - campaignLength) * 38;
   if (difficulty >= 1) goal = Math.round(goal * 1.20);
   if (difficulty >= 4) goal = Math.round(goal * 1.20);
   if (difficulty >= 5 && isBossStage(index)) goal = Math.round(goal * 1.15);

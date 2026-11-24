@@ -589,7 +589,7 @@ export default {
   "Reglas activas en este nivel:": "Règles actives à ce niveau :",
   "Comenzar partida": "Commencer la partie",
   "Comenzar partida · Niv. {0}": "Commencer la partie · Niv. {0}",
-  "Reglas estándar del alfarero: metas base de 55 a 420 puntos.": "Règles standard du potier : objectifs de base de 55 à 420 points.",
+  "Reglas estándar del alfarero: metas base de 55 a 350 puntos.": "Règles standard du potier : objectifs de base de 55 à 350 points.",
   "Metas de puntuación +20% en cada mosaico.": "Objectifs de score +20% sur chaque mosaïque.",
   "Economía austera: oro base del zoco y de jefes a la mitad; turnos sobrantes no pagan sin Paciencia.": "Économie austère : or de base du souk et des boss réduit de moitié ; tours restants ne rapportent rien sans Patience.",
   "Horno de pago: cocer una mejora cuesta 6 de oro (el horno es saltable).": "Four payant : cuire une amélioration coûte 6 pièces d'or (le four peut être passé).",

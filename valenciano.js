@@ -502,7 +502,7 @@ export default {
   "Reglas activas en este nivel:": "Regles actives en aquest nivell:",
   "Comenzar partida": "Començar partida",
   "Comenzar partida · Niv. {0}": "Començar partida · Niv. {0}",
-  "Reglas estándar del alfarero: metas base de 55 a 420 puntos.": "Regles estàndard del terrisser: metes base de 55 a 420 punts.",
+  "Reglas estándar del alfarero: metas base de 55 a 350 puntos.": "Regles estàndard del terrisser: metes base de 55 a 350 punts.",
   "Metas de puntuación +20% en cada mosaico.": "Metes de puntuació +20% en cada mosaic.",
   "Economía austera: oro base del zoco y de jefes a la mitad; turnos sobrantes no pagan sin Paciencia.": "Economia austera: or base del soc i de caps a la meitat; torns sobrants no paguen sense Paciència.",
   "Horno de pago: cocer una mejora cuesta 6 de oro (el horno es saltable).": "Forn de pagament: coure una millora costa 6 d'or (el forn és saltable).",
