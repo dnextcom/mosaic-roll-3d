@@ -212,18 +212,23 @@ jobs:
           content = re.sub(r'versionCode\s+\d+', f'versionCode {v_code}', content)
           content = re.sub(r'versionName\s+"[^"]+"', f'versionName "{v_name}"', content)
 
-          signing_block = '''    signingConfigs {
-                  release {
-                      storeFile file("release.keystore")
-                      storePassword System.getenv("KEYSTORE_PASSWORD")
-                      keyAlias System.getenv("KEY_ALIAS")
-                      keyPassword System.getenv("KEY_PASSWORD")
-                  }
-              }
-              buildTypes {'''
+          signing_block = (
+              '    signingConfigs {\n'
+              '        release {\n'
+              '            storeFile file("release.keystore")\n'
+              '            storePassword System.getenv("KEYSTORE_PASSWORD")\n'
+              '            keyAlias System.getenv("KEY_ALIAS")\n'
+              '            keyPassword System.getenv("KEY_PASSWORD")\n'
+              '        }\n'
+              '    }\n'
+              '    buildTypes {\n'
+              '        release {\n'
+              '            signingConfig signingConfigs.release\n'
+          )
 
-          content = content.replace('    buildTypes {', signing_block, 1)
-          content = content.replace('        release {\n', '        release {\n            signingConfig signingConfigs.release\n', 1)
+          target = '    buildTypes {\n        release {\n'
+          assert target in content, 'No se encontró bloque buildTypes.release en build.gradle'
+          content = content.replace(target, signing_block, 1)
 
           with open(gradle_path, 'w') as f:
               f.write(content)
