@@ -1,5 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-5';
-import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-5';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-6';
+import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-6';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 const campaignGoals = [48, 76, 94, 112, 128, 138, 168, 190, 212, 237, 270, 300];
@@ -209,13 +209,19 @@ export function move(state, from, to) {
 export function recall(state, cell) {
   const die = state.board[cell];
   if (state.phase !== 'play' || !isFresh(die)) return false;
+  delete die.extra;
+  delete die.numberChanged;
   if (die.isUnique) {
     if (state.uniqueRack[die.uniqueIndex]) return false;
+    const spec = state.uniques?.[die.uniqueIndex];
+    if (spec && die.face != null) die.value = spec.faces[die.face];
     state.uniqueRack[die.uniqueIndex] = die;
     state.board[cell] = null;
     return true;
   }
   if (state.hand[die.slot]) return false;
+  const spec = state.bag?.[die.id];
+  if (spec && die.face != null) die.value = spec.faces[die.face];
   state.hand[die.slot] = die;
   state.board[cell] = null;
   return true;
@@ -403,6 +409,25 @@ export function commit(state, random = Math.random) {
   state.lastScore = score.total;
   state.gold += score.gold;
   if (score.order) state.orders.push(score.order.key);
+
+  const { board } = projectBoard(state);
+  for (let cell = 0; cell < state.board.length; cell++) {
+    const projected = board[cell];
+    const actual = state.board[cell];
+    if (actual && projected) {
+      if (projected.numberChanged) {
+        actual.value = projected.value;
+        actual.numberChanged = true;
+        const spec = getDieSpec(state, actual);
+        const matchFace = spec?.faces?.indexOf(actual.value);
+        if (matchFace != null && matchFace >= 0) actual.face = matchFace;
+      }
+      if (projected.extra != null) {
+        actual.extra = projected.extra;
+      }
+    }
+  }
+
   for (const die of state.board) if (isFresh(die)) {
     const spec = getDieSpec(state, die);
     die.fixed = true;

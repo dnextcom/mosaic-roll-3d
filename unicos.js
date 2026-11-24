@@ -26,12 +26,12 @@ export function projectBoard(state) {
   const setNumber = (target, value) => {
     if (!target) return;
     target.value = value;
-    if (target.extra != null) target.extra = value;
+    if (target.extra != null) target.extra = (value % 6) + 1;
     target.numberChanged = true;
   };
 
   for (const { die, cell, key } of sources) {
-    if (key === 'twin') board[cell].extra = die.value + 1;
+    if (key === 'twin') board[cell].extra = (die.value % 6) + 1;
     if (key !== 'bud') continue;
     for (const neighbor of adjacent(Math.floor(cell / cols), cell % cols)) {
       if (neighbor >= 0 && !board[neighbor]) board[neighbor] = { ...die, echo: true };
@@ -45,7 +45,7 @@ export function projectBoard(state) {
         for (let x = 0; x < cols; x++) setNumber(board[index(row, x)], die.value);
         break;
       case 'steps':
-        for (let y = 0; y < rows; y++) setNumber(board[index(y, col)], (die.value + y - row + 5) % 6 + 1);
+        for (let y = 0; y < rows; y++) setNumber(board[index(y, col)], ((die.value - 1 + (y - row)) % 6 + 6) % 6 + 1);
         break;
       case 'invert':
         for (const neighbor of adjacent(row, col)) {

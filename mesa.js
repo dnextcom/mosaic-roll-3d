@@ -1,9 +1,9 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-5';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-6';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-5';
-import { projectBoard } from './unicos.js?v=esmaltes-5';
-import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-5';
+import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-6';
+import { projectBoard } from './unicos.js?v=esmaltes-6';
+import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-6';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -526,7 +526,7 @@ export class Table {
     for (const [die, id] of live) {
       const seen = id < HAND ? board[id] : die;
       const spec = getDieSpec(state, die);
-      const extraValue = id >= HAND && spec.unique === 'twin' ? die.value + 1 : seen.extra;
+      const extraValue = id >= HAND && spec.unique === 'twin' ? (die.value % 6) + 1 : seen.extra;
       const paired = extraValue != null;
       const size = paired ? twinSize : 1;
       const variant = appearanceKey(seen);
