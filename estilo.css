@@ -230,8 +230,6 @@ kbd {
 .music-toggle[aria-pressed="false"] { opacity: .6; }
 .language-picker { min-height: 30px; padding: 3px 6px; color: var(--ivory-3); background: #0e1731; border: 1px solid #b69b5b70; border-radius: 4px; font: inherit; }
 .language-picker:focus-visible { outline: 2px solid var(--gold-3); }
-.download { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; color: var(--ivory-3); text-decoration: none; }
-.download:hover { color: var(--gold-3); }
 
 /* =====================================================================
    Game: full-bleed 3D stage with floating overlays

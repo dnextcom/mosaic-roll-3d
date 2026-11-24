@@ -75,7 +75,6 @@ jobs:
 
           mkdir -p build-app/www
           cp -r index.html estilo.css juego.js mesa.js reglas.js catalogo.js arte.js mercado.js taller.js unicos.js coleccion.js idioma.js valenciano.js ingles.js frances.js iconos.js musica.js portada.jpg mesa.jpg azulejo.jpg partida.webp vendor build-app/www/
-          printf '\n/* Ocultar descarga de Windows dentro de la app Android */\n.download { display: none !important; }\n' >> build-app/www/estilo.css
 
       - name: Inicializar proyecto Capacitor Android
         working-directory: build-app

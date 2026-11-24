@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-11';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-11';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-11';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-11';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-12';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-12';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-12';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-12';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-11';
-import { uniqueDice } from './unicos.js?v=esmaltes-11';
-import { MarketUI } from './mercado.js?v=esmaltes-11';
-import { collectionMarkup } from './coleccion.js?v=esmaltes-11';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-11';
-import { Music } from './musica.js?v=esmaltes-11';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-12';
+import { uniqueDice } from './unicos.js?v=esmaltes-12';
+import { MarketUI } from './mercado.js?v=esmaltes-12';
+import { collectionMarkup } from './coleccion.js?v=esmaltes-12';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-12';
+import { Music } from './musica.js?v=esmaltes-12';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
