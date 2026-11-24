@@ -1,9 +1,9 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-4';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-5';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-4';
-import { projectBoard } from './unicos.js?v=esmaltes-4';
-import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-4';
+import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-5';
+import { projectBoard } from './unicos.js?v=esmaltes-5';
+import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-5';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -158,9 +158,18 @@ export class Table {
       1.055 + (Math.floor(index / this.cols) + 1 - this.rows) * spacing);
   }
 
+  isPortrait() {
+    const width = this.canvas?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1);
+    const height = this.canvas?.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 1);
+    return (width / height) < 0.88;
+  }
+
   slot(index) { return new THREE.Vector3((index - 1.5) * 1.105, .052, 2.83); }
 
   uniqueSlot(index) {
+    if (this.isPortrait()) {
+      return new THREE.Vector3((index - 1) * 1.105, .052, 4.08);
+    }
     const leftX = -(this.cols * spacing / 2 + 1.28);
     const z = -0.31 + index * spacing;
     return new THREE.Vector3(leftX, .052, z);
@@ -175,6 +184,45 @@ export class Table {
     const at = id >= HAND ? this.slot(id - HAND) : this.cell(id);
     at.y += .43;
     return at;
+  }
+
+  rebuildUniqueRack() {
+    if (!this.uniqueRackGroup) return;
+    this.uniqueRackGroup.clear();
+    this.uniqueTray = [];
+    const portrait = this.isPortrait();
+    this.rackIsPortrait = portrait;
+
+    if (portrait) {
+      const uWidth = 3.65;
+      const zRack = 4.08;
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(uWidth, .22, 1.15, 2, .09), this.cobalt, 0, -.23, zRack));
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(uWidth - .14, .07, 1.02, 1, .03), this.brass, 0, -.088, zRack));
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(uWidth - .24, .08, .92, 1, .03), this.slates, 0, -.048, zRack));
+      const socketGeometry = new RoundedBoxGeometry(.95, .102, .88, 2, .045);
+      for (let slot = 0; slot < 3; slot++) {
+        const loc = this.uniqueSlot(slot);
+        const socket = mesh(socketGeometry, this.slates, loc.x, -.002, loc.z, false);
+        socket.userData.id = UNIQUE + slot;
+        this.uniqueTray.push(socket);
+        this.uniqueRackGroup.add(socket);
+      }
+    } else {
+      const leftX = -(this.cols * spacing / 2 + 1.28);
+      const rackCenterZ = 1.055;
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.28, .24, 3 * spacing + .22, 2, .1), this.cobalt, leftX, -.22, rackCenterZ));
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.15, .073, 3 * spacing + .1, 1, .035), this.brass, leftX, -.083, rackCenterZ));
+      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.05, .086, 3 * spacing, 1, .036), this.slates, leftX, -.044, rackCenterZ));
+      const socketGeometry = new RoundedBoxGeometry(.95, .102, .95, 2, .045);
+      for (let slot = 0; slot < 3; slot++) {
+        const loc = this.uniqueSlot(slot);
+        const socket = mesh(socketGeometry, this.slates, loc.x, -.002, loc.z, false);
+        socket.userData.id = UNIQUE + slot;
+        this.uniqueTray.push(socket);
+        this.uniqueRackGroup.add(socket);
+      }
+    }
+    this.dirty = true;
   }
 
   configure(rows, cols) {
@@ -206,23 +254,7 @@ export class Table {
     this.board.add(set.group);
     this.cells = set.cells;
 
-    if (this.uniqueRackGroup) {
-      this.uniqueRackGroup.clear();
-      this.uniqueTray = [];
-      const leftX = -(cols * spacing / 2 + 1.28);
-      const rackCenterZ = 1.055;
-      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.28, .24, 3 * spacing + .22, 2, .1), this.cobalt, leftX, -.22, rackCenterZ));
-      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.15, .073, 3 * spacing + .1, 1, .035), this.brass, leftX, -.083, rackCenterZ));
-      this.uniqueRackGroup.add(mesh(new RoundedBoxGeometry(1.05, .086, 3 * spacing, 1, .036), this.slates, leftX, -.044, rackCenterZ));
-      const socketGeometry = new RoundedBoxGeometry(.95, .102, .95, 2, .045);
-      for (let slot = 0; slot < 3; slot++) {
-        const loc = this.uniqueSlot(slot);
-        const socket = mesh(socketGeometry, this.slates, loc.x, -.002, loc.z, false);
-        socket.userData.id = UNIQUE + slot;
-        this.uniqueTray.push(socket);
-        this.uniqueRackGroup.add(socket);
-      }
-    }
+    this.rebuildUniqueRack();
 
     this.reset();
   }
@@ -359,18 +391,31 @@ export class Table {
   resize() {
     const { clientWidth: width, clientHeight: height } = this.canvas;
     if (!width || !height) return;
+    const aspect = width / height;
+    const isPort = aspect < 0.88;
+    if (this.rackIsPortrait !== undefined && this.rackIsPortrait !== isPort) {
+      this.rebuildUniqueRack();
+      for (const [die, piece] of this.models) {
+        if (piece.id >= UNIQUE) {
+          const to = this.destination(piece.id);
+          piece.to.copy(to);
+          if (!piece.dragged) piece.mesh.position.copy(to);
+        }
+      }
+    }
     if (width !== this.width || height !== this.height) this.renderer.setSize(width, height, false);
     this.width = width;
     this.height = height;
-    this.camera.aspect = width / height;
+    this.camera.aspect = aspect;
     this.camera.fov = Math.max(33, 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(angle(22)) / this.camera.aspect)));
     this.camera.updateProjectionMatrix();
     this.updateCamera();
   }
 
   reset() {
-    this.azimuth = this.canvas.clientWidth < 580 ? 9 : 16;
-    this.elevation = this.canvas.clientWidth < 580 ? 65 : 59;
+    const portrait = this.isPortrait();
+    this.azimuth = portrait ? 9 : 16;
+    this.elevation = portrait ? 65 : 59;
     this.zoom = 1;
     this.updateCamera();
   }
