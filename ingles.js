@@ -1,7 +1,7 @@
 export default {
   "Alhambra de noche": "Alhambra by Night",
   "Combina dados de cerámica bajo la luna y mejora tu bolsa en el zoco.": "Combine ceramic dice by moonlight and upgrade your bag at the bazaar.",
-  "Mosaic Roll 3D · Alhambra de noche. Combina dados de cerámica bajo la luna, compra en el zoco y forja quimeras entre mosaicos.": "Mosaic Roll 3D · Alhambra by Night. Combine ceramic dice by moonlight, shop at the bazaar and fuse dice between mosaics.",
+  "Bescuit: Dau i Forn · Alhambra de noche. Combina dados de cerámica bajo la luna, compra en el zoco y forja quimeras entre mosaicos.": "Bescuit: Dau i Forn · Alhambra by Night. Combine ceramic dice by moonlight, shop at the bazaar and fuse dice between mosaics.",
   "Menú principal": "Main menu",
   "Cómo jugar": "How to play",
   "Cargando…": "Loading…",
@@ -53,7 +53,7 @@ export default {
   "cenital ·": "top view ·",
   "centrar ·": "reset ·",
   "puntuar": "score",
-  "Activa JavaScript en el navegador para jugar a Mosaic Roll 3D.": "Enable JavaScript in your browser to play Mosaic Roll 3D.",
+  "Activa JavaScript en el navegador para jugar a Bescuit: Dau i Forn.": "Enable JavaScript in your browser to play Bescuit: Dau i Forn.",
   "Patio de cal": "Limewashed Courtyard",
   "Claustro azul": "Blue Cloister",
   "El mirador": "The Lookout",

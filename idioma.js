@@ -1,14 +1,16 @@
-import english from './ingles.js?v=esmaltes-10';
-import french from './frances.js?v=esmaltes-10';
-import { diceName, glazes } from './catalogo.js?v=esmaltes-10';
+import english from './ingles.js?v=esmaltes-11';
+import french from './frances.js?v=esmaltes-11';
+import valencian from './valenciano.js?v=esmaltes-11';
+import { diceName, glazes } from './catalogo.js?v=esmaltes-11';
 
 const preferenceKey = 'mosaic-roll/language';
-export const supported = value => value === 'es' || value === 'en' || value === 'fr';
+export const supported = value => value === 'es' || value === 'ca' || value === 'en' || value === 'fr';
 
 function detectBrowserLanguage() {
   const list = (navigator.languages?.length ? navigator.languages : [navigator.language || ''])
     .map(l => (l || '').toLowerCase());
   for (const l of list) {
+    if (l.startsWith('ca') || l.startsWith('va')) return 'ca';
     if (l.startsWith('fr')) return 'fr';
     if (l.startsWith('es')) return 'es';
     if (l.startsWith('en')) return 'en';
@@ -32,6 +34,7 @@ export let language = supported(requested)
 export const isLanguageAutoDetected = !supported(requested) && !supported(preference);
 
 export const t = text => {
+  if (language === 'ca' && Object.hasOwn(valencian, text)) return valencian[text];
   if (language === 'en' && Object.hasOwn(english, text)) return english[text];
   if (language === 'fr' && Object.hasOwn(french, text)) return french[text];
   return text;
@@ -76,6 +79,9 @@ export function displayItem(name) {
   if (!name.startsWith('Quimera de ')) return t(name);
   const colors = name.slice('Quimera de '.length).split(' y ');
   const translate = color => t(glazes.find(glaze => glaze.name.toLowerCase() === color)?.name ?? color);
+  if (language === 'ca') {
+    return `Quimera de ${colors.map(translate).join(' i ')}`;
+  }
   if (language === 'en') {
     return `${colors.map(translate).join(' & ')} Chimera`;
   }

@@ -1,4 +1,4 @@
-name: Deploy Mosaic Roll 3D to GitHub Pages
+name: "Deploy Bescuit: Dau i Forn to GitHub Pages"
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ jobs:
       - name: Preparar archivos del juego
         run: |
           mkdir -p _site
-          cp -r .nojekyll index.html estilo.css juego.js mesa.js reglas.js catalogo.js arte.js mercado.js taller.js unicos.js coleccion.js idioma.js ingles.js frances.js iconos.js musica.js portada.jpg mesa.jpg azulejo.jpg partida.webp Mosaic-Roll-3D.zip vendor v1 v2 v3 _site/
+          cp -r .nojekyll index.html estilo.css juego.js mesa.js reglas.js catalogo.js arte.js mercado.js taller.js unicos.js coleccion.js idioma.js valenciano.js ingles.js frances.js iconos.js musica.js portada.jpg mesa.jpg azulejo.jpg partida.webp Mosaic-Roll-3D.zip vendor v1 v2 v3 _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

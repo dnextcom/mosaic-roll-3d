@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-10';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-10';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-10';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-10';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-11';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-11';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-11';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-11';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-10';
-import { uniqueDice } from './unicos.js?v=esmaltes-10';
-import { MarketUI } from './mercado.js?v=esmaltes-10';
-import { collectionMarkup } from './coleccion.js?v=esmaltes-10';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-10';
-import { Music } from './musica.js?v=esmaltes-10';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-11';
+import { uniqueDice } from './unicos.js?v=esmaltes-11';
+import { MarketUI } from './mercado.js?v=esmaltes-11';
+import { collectionMarkup } from './coleccion.js?v=esmaltes-11';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-11';
+import { Music } from './musica.js?v=esmaltes-11';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -994,7 +994,7 @@ function help() {
       <li><strong>${t("Jefes.")}</strong> ${message`Cada ${BOSS_EVERY} mosaicos llega un jefe con una regla especial. El zoco te avisa antes y vencerlo da ${BOSS_GOLD} de oro extra.`}</li>
       <li><strong>${t("Dados únicos.")}</strong> ${t("Cuentan como cualquier color. Selecciónalos para leer su poder.")}</li>
     </ol>
-    <p class="keys"><kbd>1–4</kbd> ${t("elige dado ·")} <kbd>${t("flechas")}</kbd> ${language === "en" ? "and" : "e"} <kbd>${t("Intro")}</kbd> ${t("colocan ·")} <kbd>${t("Espacio")}</kbd> ${t("puntúa ·")} <kbd>${t("Retroceso")}</kbd> ${t("retira ·")} <kbd>V</kbd> ${t("cenital ·")} <kbd>R</kbd> ${t("centra ·")} <kbd>Esc</kbd> ${t("pausa")}</p>`,
+    <p class="keys"><kbd>1–4</kbd> ${t("elige dado ·")} <kbd>${t("flechas")}</kbd> ${language === "en" ? "and" : language === "ca" ? "i" : language === "fr" ? "et" : "e"} <kbd>${t("Intro")}</kbd> ${t("colocan ·")} <kbd>${t("Espacio")}</kbd> ${t("puntúa ·")} <kbd>${t("Retroceso")}</kbd> ${t("retira ·")} <kbd>V</kbd> ${t("cenital ·")} <kbd>R</kbd> ${t("centra ·")} <kbd>Esc</kbd> ${t("pausa")}</p>`,
     actions: action('back', t('¡Entendido!'), 'check', 'gold') }));
 }
 
@@ -1039,7 +1039,7 @@ function optionsMarkup() {
       <div class="window-crown">
         <span class="emblem emblem-moon" aria-hidden="true">${icon('settings')}</span>
         <h2 id="dialog-title">${t('Ajustes')}</h2>
-        <p class="eyebrow">${t('Mosaic Roll 3D')}</p>
+        <p class="eyebrow">${t('Bescuit: Dau i Forn')}</p>
       </div>
       <div class="window-body options-body">
         
@@ -1048,15 +1048,19 @@ function optionsMarkup() {
           <h3 class="opt-heading">${icon('codex')} ${t('Idioma')}</h3>
           <div class="opt-lang-picker" role="radiogroup" aria-label="${t('Idioma')}">
             <button type="button" class="opt-lang-btn ${language === 'es' ? 'active' : ''}" data-lang="es">
-              <span class="flag">🇪🇸</span>
+              <span class="lang-badge">ES</span>
               <span>Español</span>
             </button>
+            <button type="button" class="opt-lang-btn ${language === 'ca' ? 'active' : ''}" data-lang="ca">
+              <span class="lang-badge">VA</span>
+              <span>Valencià</span>
+            </button>
             <button type="button" class="opt-lang-btn ${language === 'en' ? 'active' : ''}" data-lang="en">
-              <span class="flag">🇬🇧</span>
+              <span class="lang-badge">EN</span>
               <span>English</span>
             </button>
             <button type="button" class="opt-lang-btn ${language === 'fr' ? 'active' : ''}" data-lang="fr">
-              <span class="flag">🇫🇷</span>
+              <span class="lang-badge">FR</span>
               <span>Français</span>
             </button>
           </div>

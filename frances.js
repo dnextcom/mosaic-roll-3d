@@ -1,7 +1,7 @@
 export default {
   "Alhambra de noche": "Alhambra de nuit",
   "Combina dados de cerámica bajo la luna y mejora tu bolsa en el zoco.": "Combinez des dés en céramique sous la lune et améliorez votre sac au souk.",
-  "Mosaic Roll 3D · Alhambra de noche. Combina dados de cerámica bajo la luna, compra en el zoco y forja quimeras entre mosaicos.": "Mosaic Roll 3D · Alhambra de nuit. Combinez des dés en céramique sous la lune, achetez au souk et forgez des chimères entre les panneaux.",
+  "Bescuit: Dau i Forn · Alhambra de noche. Combina dados de cerámica bajo la luna, compra en el zoco y forja quimeras entre mosaicos.": "Bescuit: Dau i Forn · Alhambra de nuit. Combinez des dés en céramique sous la lune, achetez au souk et forgez des chimères entre les panneaux.",
   "Menú principal": "Menu principal",
   "Cómo jugar": "Comment jouer",
   "Cargando…": "Chargement…",
@@ -45,7 +45,7 @@ export default {
   "Cerrar el códice": "Fermer le codex",
   "Combinaciones": "Combinaisons",
   "Azulejos equipados": "Faïences équipées",
-  "Activa JavaScript en el navegador para jugar a Mosaic Roll 3D.": "Activez JavaScript dans le navigateur pour jouer à Mosaic Roll 3D.",
+  "Activa JavaScript en el navegador para jugar a Bescuit: Dau i Forn.": "Activez JavaScript dans le navigateur pour jouer à Bescuit: Dau i Forn.",
   "¡Entendido!": "Compris !",
   "Continuar": "Continuer",
   "Volver al patio": "Retour à la cour",

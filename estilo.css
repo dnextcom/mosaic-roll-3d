@@ -1,5 +1,5 @@
 /* =====================================================================
-   Mosaic Roll 3D · «Alhambra de noche»
+   Bescuit: Dau i Forn · «Alhambra de noche»
    Lapis-lazuli night, gold leaf, zellige stars and horseshoe arches.
    ===================================================================== */
 
@@ -162,7 +162,11 @@ kbd {
 .crest-kicker .rule { width: 46px; height: 7px; background: linear-gradient(90deg, transparent, var(--gold-2)) center / 100% 1px no-repeat; position: relative; }
 .crest-kicker .rule:last-child { transform: scaleX(-1); }
 .crest-kicker .rule::after { content: ''; position: absolute; right: -3px; top: 0; width: 7px; height: 7px; clip-path: var(--star); background: var(--gold-2); }
-.wordmark { display: flex; align-items: center; justify-content: center; gap: .18em; font: 600 clamp(42px, 7.4vw, 86px)/1 var(--font-kufi); letter-spacing: .01em; }
+.wordmark { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: .18em; row-gap: .08em; font: 600 clamp(44px, 7.6vw, 88px)/1 var(--font-kufi); letter-spacing: .02em; }
+.wordmark-sub {
+  flex-basis: 100%; color: var(--gold-3); font: 600 clamp(14px, 2vw, 22px)/1.15 var(--font-kufi);
+  letter-spacing: .3em; text-transform: uppercase; text-shadow: 0 2px 12px rgba(0, 0, 0, .65);
+}
 .wordmark-main {
   background: var(--gold-leaf); -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .55)) drop-shadow(0 0 26px rgba(240, 200, 110, .25));
@@ -1192,6 +1196,7 @@ body[data-screen="workshop"] { overflow: hidden; }
   .crest { gap: 4px; margin-top: 0; }
   .crest-kicker { font-size: 11px; }
   .wordmark { font-size: clamp(34px, 9vh, 52px); }
+  .wordmark-sub { font-size: 12px; letter-spacing: .22em; }
   .crest-tagline { display: none; }
   .arcade { padding-block: 10px 0; }
   .door { --door-w: clamp(70px, 17vh, 96px); }
@@ -1495,15 +1500,22 @@ dialog[data-kind="options"] { --w: min(480px, calc(100vw - 20px)); }
 }
 .opt-heading .ico { width: 16px; height: 16px; color: var(--gold-2); }
 .opt-lang-picker {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
 }
 .opt-lang-btn {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  min-height: 52px; padding: 6px 4px; border: 1px solid var(--line); border-radius: 6px;
-  background: rgba(255, 243, 205, .04); color: var(--ivory); font: 600 13px/1.2 var(--font-kufi);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 42px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: rgba(255, 243, 205, .04); color: var(--ivory); font: 600 13.5px/1.2 var(--font-kufi);
   cursor: pointer; touch-action: manipulation; transition: border-color .2s, background .2s, box-shadow .2s, color .2s;
 }
-.opt-lang-btn .flag { font-size: 20px; line-height: 1; }
+.opt-lang-btn .lang-badge {
+  display: inline-grid; place-items: center; padding: 2px 6px; border-radius: 4px;
+  background: rgba(255, 243, 205, .1); border: 1px solid rgba(240, 214, 144, .3);
+  color: var(--gold-3); font: 700 11px/1.1 var(--font-kufi); letter-spacing: .06em;
+}
+.opt-lang-btn.active .lang-badge {
+  background: var(--gold-3); border-color: var(--gold-1); color: #121832;
+}
 .opt-lang-btn:hover { border-color: var(--gold-2); background: rgba(255, 243, 205, .09); }
 .opt-lang-btn.active {
   border-color: var(--gold-3); background: rgba(240, 200, 110, .16); color: var(--gold-4);
