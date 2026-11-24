@@ -447,4 +447,11 @@ export default {
   "+{0}× al multiplicador por monocolor (+{1}× por nivel)": "+{0}× to multiplier for monochrome (+{1}× per level)",
   "+{0}× al multiplicador por colores distintos (+{1}× por nivel)": "+{0}× to multiplier for distinct colors (+{1}× per level)",
   "+{0} puntos base por panel lleno (+{1} por nivel)": "+{0} base points for full panel (+{1} per level)",
+  "Alacena del Alfarero": "Potter's Cupboard",
+  "Colección de Platos de Maestría": "Mastery Plate Collection",
+  "Cada plato perfecciona una técnica de mosaico en el taller.": "Each plate perfects a mosaic technique in the workshop.",
+  "¡{0} ha ascendido a Nivel {1}!": "{0} has risen to Level {1}!",
+  "Plato de maestría": "Mastery plate",
+  "Ver repisa de platos": "View plate shelf",
+  "Repisa de platos": "Plate shelf",
 };

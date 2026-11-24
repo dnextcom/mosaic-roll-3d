@@ -1,6 +1,6 @@
-import english from './ingles.js?v=esmaltes-2';
-import french from './frances.js?v=esmaltes-2';
-import { diceName, glazes } from './catalogo.js?v=esmaltes-2';
+import english from './ingles.js?v=esmaltes-3';
+import french from './frances.js?v=esmaltes-3';
+import { diceName, glazes } from './catalogo.js?v=esmaltes-3';
 
 const preferenceKey = 'mosaic-roll/language';
 export const supported = value => value === 'es' || value === 'en' || value === 'fr';
@@ -54,21 +54,21 @@ export function displayBossRule(boss, bossText) {
 }
 
 export function displayComboGain(comboKey, nextLevel) {
-  if (comboKey === 'pair') return message`+${6 + (nextLevel - 1) * 3} puntos base por pareja (+3 por nivel)`;
-  if (comboKey === 'trio') return message`+${12 + (nextLevel - 1) * 5} puntos base por trío (+5 por nivel)`;
-  if (comboKey === 'quartet') return message`+${23 + (nextLevel - 1) * 8} puntos base por cuarteto (+8 por nivel)`;
-  if (comboKey === 'straight') return message`+${10 + (nextLevel - 1) * 5} puntos base por escalera (+5 por nivel)`;
-  if (comboKey === 'longStraight') return message`+${17 + (nextLevel - 1) * 7} puntos base por escalera larga (+7 por nivel)`;
-  if (comboKey === 'line') return message`+${3 + (nextLevel - 1) * 2} puntos base por línea llena (+2 por nivel)`;
+  if (comboKey === 'pair') return message`+${6 + (nextLevel - 1) * 3} puntos base por pareja (+${3} por nivel)`;
+  if (comboKey === 'trio') return message`+${12 + (nextLevel - 1) * 5} puntos base por trío (+${5} por nivel)`;
+  if (comboKey === 'quartet') return message`+${23 + (nextLevel - 1) * 8} puntos base por cuarteto (+${8} por nivel)`;
+  if (comboKey === 'straight') return message`+${10 + (nextLevel - 1) * 5} puntos base por escalera (+${5} por nivel)`;
+  if (comboKey === 'longStraight') return message`+${17 + (nextLevel - 1) * 7} puntos base por escalera larga (+${7} por nivel)`;
+  if (comboKey === 'line') return message`+${3 + (nextLevel - 1) * 2} puntos base por línea llena (+${2} por nivel)`;
   if (comboKey === 'mono') {
     const val = ((40 + (nextLevel - 1) * 15) / 100).toFixed(2);
-    return message`+${val}× al multiplicador por monocolor (+0,15× por nivel)`;
+    return message`+${val}× al multiplicador por monocolor (+${'0,15'}× por nivel)`;
   }
   if (comboKey === 'chromatic') {
     const val = ((25 + (nextLevel - 1) * 10) / 100).toFixed(2);
-    return message`+${val}× al multiplicador por colores distintos (+0,10× por nivel)`;
+    return message`+${val}× al multiplicador por colores distintos (+${'0,10'}× por nivel)`;
   }
-  if (comboKey === 'panel') return message`+${10 + (nextLevel - 1) * 6} puntos base por panel lleno (+6 por nivel)`;
+  if (comboKey === 'panel') return message`+${10 + (nextLevel - 1) * 6} puntos base por panel lleno (+${6} por nivel)`;
   return '';
 }
 

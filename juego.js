@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-2';
-import { Table, HAND, POWER, UNIQUE, ROLL_TIME } from './mesa.js?v=esmaltes-2';
-import { DiceArt, tileArt, diePortrait } from './arte.js?v=esmaltes-2';
-import { powers, rarities, dieCount, hasFace, getDieSpec } from './catalogo.js?v=esmaltes-2';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-3';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-3';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-3';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-3';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=esmaltes-2';
-import { uniqueDice } from './unicos.js?v=esmaltes-2';
-import { MarketUI } from './mercado.js?v=esmaltes-2';
-import { collectionMarkup } from './coleccion.js?v=esmaltes-2';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-2';
-import { Music } from './musica.js?v=esmaltes-2';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD } from './reglas.js?v=esmaltes-3';
+import { uniqueDice } from './unicos.js?v=esmaltes-3';
+import { MarketUI } from './mercado.js?v=esmaltes-3';
+import { collectionMarkup } from './coleccion.js?v=esmaltes-3';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-3';
+import { Music } from './musica.js?v=esmaltes-3';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -61,7 +61,7 @@ let hapticsEnabled = read(hapticsStorage) !== 'off';
 let fastSpeed = read(speedStorage) === 'fast';
 let music = null, musicMood = 'title';
 let selected = -1, focused = -1, hovered = -1;
-let tooltip = -1, pinned = false;
+let tooltip = -1, tooltipPlate = -1, pinned = false;
 let pointer = null, lockUntil = 0;
 // Stone cell waiting for a confirming second tap on touch screens.
 let armed = -1;
@@ -175,9 +175,10 @@ function note(type) {
     sound ??= new AudioContext();
     if (sound.state === 'suspended') sound.resume().catch(() => {});
     const cues = { pick: [840], place: [560, 1280], chip: [285, 153], roll: [388, 551, 434, 661],
-      count: [574], color: [733, 890], score: [392, 523, 659, 784], forge: [262, 392, 523, 659, 784, 1047] };
+      count: [574], color: [733, 890], score: [392, 523, 659, 784], forge: [262, 392, 523, 659, 784, 1047],
+      levelUp: [523, 659, 784, 1047, 1318] };
     const speedMult = fastSpeed ? 0.75 : 1;
-    const interval = (type === 'forge' ? .115 : type === 'score' ? .075 : .037) * speedMult;
+    const interval = (type === 'levelUp' ? .09 : type === 'forge' ? .115 : type === 'score' ? .075 : .037) * speedMult;
     cues[type].forEach((frequency, index) => {
       const time = sound.currentTime + index * interval;
       const oscillator = sound.createOscillator();
@@ -425,7 +426,7 @@ function render() {
   $('collection-button').disabled = Boolean(resolution);
   $('recall').hidden = !ready() || selected < 0 || selected >= HAND || !isFresh(run.board[selected]);
   $('hint').textContent = hint(score.count);
-  table.mount(run.powers);
+  table.mount(run.powers, run.comboLevels);
   table.marks(score.matches, score.powerMarks);
   updateFocus();
   showUnique();
@@ -513,14 +514,46 @@ function showPower(index, pin = false) {
   pinned = Boolean(key && pin);
   element.hidden = !key;
   if (!key) return;
+  tooltipPlate = -1;
   const power = powers[key], rarity = rarities[power.rarity];
   element.style.setProperty('--rarity', rarity.color);
   element.innerHTML = `<small class="tooltip-kicker">${t(rarity.name)}</small><strong>${t(power.name)}</strong><span>${t(power.text)}</span>`;
   positionPower();
 }
 
+function showPlate(index, pin = false) {
+  const element = $('power-tooltip');
+  const key = comboKeys[index];
+  if (key == null) {
+    tooltipPlate = -1;
+    if (tooltip < 0) element.hidden = true;
+    return;
+  }
+  tooltip = -1;
+  tooltipPlate = index;
+  pinned = Boolean(pin);
+  element.hidden = false;
+  const combo = comboCatalog[key];
+  const level = run?.comboLevels?.[key] || 1;
+  const portraitUrl = plateArt(key, level).url;
+  const val = (key === 'mono' || key === 'chromatic')
+    ? `+${decimal(getComboValue(run, key) / 100)}×`
+    : `+${getComboValue(run, key)}`;
+  element.style.setProperty('--rarity', '#ffd779');
+  element.innerHTML = `<div style="display:flex;align-items:center;gap:12px;">
+    <img src="${portraitUrl}" style="width:46px;height:46px;border-radius:50%;border:1px solid #d4af37;flex-shrink:0;" alt="">
+    <div style="min-width:0;">
+      <small class="tooltip-kicker">${t('Plato de maestría')} · Niv. ${level}</small>
+      <strong style="display:block;margin:1px 0 3px;">${t(combo.name)}</strong>
+      <span>${val} · ${t(combo.text(level))}</span>
+    </div>
+  </div>`;
+  positionPower();
+}
+
 function positionPower() {
   if (tooltip >= 0) positionTooltip($('power-tooltip'), table.powerAnchor(tooltip));
+  else if (tooltipPlate >= 0) positionTooltip($('power-tooltip'), table.plateAnchor(tooltipPlate));
   if (!$('die-tooltip').hidden) positionTooltip($('die-tooltip'), table.dieAnchor(selected));
 }
 
@@ -1024,8 +1057,10 @@ canvas.addEventListener('contextmenu', event => event.preventDefault());
 canvas.addEventListener('pointerdown', event => {
   if (!playing || modal || pointer || event.button !== 0 && event.button !== 2) return;
   const target = table.pick(event.clientX, event.clientY);
-  if (target >= POWER && target < UNIQUE && event.button === 0) { showPower(target - POWER, true); return; }
+  if (target >= POWER && target < UNIQUE && event.button === 0) { showPlate(-1); showPower(target - POWER, true); return; }
+  if (target >= PLATE && target < PLATE + 9 && event.button === 0) { showPower(-1); showPlate(target - PLATE, true); return; }
   showPower(-1);
+  showPlate(-1);
   const touch = event.pointerType !== 'mouse';
   const orbit = event.button === 2 || touch && target < 0;
   if (armed >= 0 && target !== armed) { armed = -1; render(); }
@@ -1069,7 +1104,11 @@ canvas.addEventListener('pointermove', event => {
   focused = -1;
   const previous = hovered;
   hovered = table.pick(event.clientX, event.clientY, Boolean(pointer?.drag && (selected >= HAND || selected >= UNIQUE)));
-  if (!pointer && !pinned && event.pointerType === 'mouse' && previous !== hovered) showPower(hovered >= POWER && hovered < UNIQUE ? hovered - POWER : -1);
+  if (!pointer && !pinned && event.pointerType === 'mouse' && previous !== hovered) {
+    if (hovered >= POWER && hovered < UNIQUE) { showPlate(-1); showPower(hovered - POWER); }
+    else if (hovered >= PLATE && hovered < PLATE + 9) { showPower(-1); showPlate(hovered - PLATE); }
+    else { showPower(-1); showPlate(-1); }
+  }
   canvas.style.cursor = pointer?.drag ? 'grabbing' : hovered >= 0 ? 'pointer' : 'default';
   if (ready() && previous !== hovered) $('hint').textContent = hint(run.board.filter(isFresh).length);
   updateFocus();

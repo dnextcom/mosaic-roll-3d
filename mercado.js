@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-2';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-2';
-import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-2';
-import { diePortrait, tileArt } from './arte.js?v=esmaltes-2';
-import { Workshop } from './taller.js?v=esmaltes-2';
-import { uniqueDice } from './unicos.js?v=esmaltes-2';
-import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-2';
-import { icon } from './iconos.js?v=esmaltes-2';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-3';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-3';
+import { buy, canBuy, sellTile, forge, canForge, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-3';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-3';
+import { Workshop } from './taller.js?v=esmaltes-3';
+import { uniqueDice } from './unicos.js?v=esmaltes-3';
+import { dieFaces, dieTraits } from './coleccion.js?v=esmaltes-3';
+import { icon } from './iconos.js?v=esmaltes-3';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -114,6 +114,7 @@ export class MarketUI {
         <h2 id="workshop-title" tabindex="-1">${this.mode === 'shop' ? t('El zoco') : t('El horno')}</h2></div>
       <nav class="zoco-tabs" aria-label="${t("Secciones del taller")}">${tab('shop', 'store', t('Puestos'))}${tab('oven', 'flame', t('Horno'), oven)}</nav>
       <div class="zoco-tools">
+        <button class="orb orb-small" type="button" data-market="plates" aria-label="${t("Ver repisa de platos")}" title="${t("Repisa de platos")}">${icon('star-fill')}</button>
         <button class="orb orb-small" type="button" data-market="collection" aria-label="${t("Ver bolsa y azulejos")}" title="${t("Bolsa y azulejos")}">${icon('bag')}</button>
         <div class="purse" id="workshop-gold">${this.purseMarkup()}</div>
       </div></header>`;
@@ -223,8 +224,8 @@ export class MarketUI {
       const action = `<button class="btn btn-gold ztip-action" type="button" data-market="combo" data-key="${key}"${!sold && run.gold >= price ? '' : ' disabled'}>${label}</button>`;
       return {
         color: rarities[spec.rarity].color,
-        html: `<div class="ztip-card"><img class="ztip-die" src="${diePortrait(spec)}" alt=""><div class="ztip-text">
-          <small class="ztip-kicker">${t('Mejora de combo')} · ${message`Nivel ${spec.level}`}</small><strong id="ztip-title">${t(spec.name)}</strong>
+        html: `<div class="ztip-card"><img class="ztip-plate" src="${platePortrait(spec)}" alt=""><div class="ztip-text">
+          <small class="ztip-kicker">${t('Plato de maestría')} · ${message`Nivel ${spec.level}`}</small><strong id="ztip-title">${t(spec.name)}</strong>
           <p class="ztip-combo-gain">${displayComboGain(spec.combo, spec.nextLevel) || combo.text(spec.nextLevel)}</p>
           <p class="ztip-plain">${message`Sube el efecto de ${t(spec.name)} a Nivel ${spec.nextLevel}.`}</p>
         </div></div>${action}`
@@ -527,19 +528,90 @@ export class MarketUI {
     else if (market === 'candidate') this.pickForge(Number(key));
     else if (market === 'forge') this.apply();
     else if (market === 'collection') { this.closeTip(); this.callbacks.collection(); }
+    else if (market === 'plates') { this.closeTip(); this.showPlateShelfCelebration(null, 0, 0); }
     else if (market === 'exit') this.callbacks.exit();
     else if (market === 'advance') this.callbacks.advance();
   }
 
   purchaseCombo(key) {
+    const spec = this.run.market.dice[key];
+    const oldLevel = this.run.comboLevels[spec.combo] || 1;
     if (!buy(this.run, 'combo', key)) return;
+    const newLevel = this.run.comboLevels[spec.combo];
     this.closeTip();
-    this.callbacks.note('place');
+    this.callbacks.note('levelUp');
     this.callbacks.changed();
     this.scene?.sold(key);
-    const spec = this.run.market.dice[key];
-    this.toast(message`¡${t(spec.name)} mejorado a Nivel ${this.run.comboLevels[spec.combo]}!`);
     this.refreshShop();
+    this.showPlateShelfCelebration(spec.combo, oldLevel, newLevel);
+  }
+
+  showPlateShelfCelebration(upgradedKey, oldLevel, newLevel) {
+    const comboKeys = ['pair', 'trio', 'quartet', 'straight', 'longStraight', 'line', 'mono', 'chromatic', 'panel'];
+    const spec = upgradedKey ? comboCatalog[upgradedKey] : null;
+    const gainText = upgradedKey ? (displayComboGain(upgradedKey, newLevel) || spec.text(newLevel)) : '';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'plate-shelf-dialog-backdrop';
+    dialog.id = 'plate-shelf-modal';
+    dialog.innerHTML = `
+      <div class="plate-shelf-dialog" role="dialog" aria-modal="true" aria-labelledby="rack-title">
+        <span class="shelf-kicker">${t('Alacena del Alfarero')}</span>
+        <h2 class="shelf-title" id="rack-title">${t('Colección de Platos de Maestría')}</h2>
+        <p class="shelf-subtitle">${t('Cada plato perfecciona una técnica de mosaico en el taller.')}</p>
+
+        <div class="shelf-rack">
+          <div class="shelf-lip"></div>
+          <ul class="shelf-items">
+            ${comboKeys.map(key => {
+              const item = comboCatalog[key];
+              const level = this.run.comboLevels[key] || 1;
+              const isUpgraded = key === upgradedKey;
+              const portrait = platePortrait({ combo: key, level });
+              return `<li class="shelf-item${isUpgraded ? ' upgraded' : ''}">
+                <img class="shelf-plate-img" src="${portrait}" alt="${t(item.name)}">
+                <span class="shelf-name">${t(item.name)}</span>
+                <span class="shelf-level-tag">${message`Niv. ${level}`}</span>
+              </li>`;
+            }).join('')}
+          </ul>
+        </div>
+
+        ${upgradedKey ? `
+        <div class="shelf-celebration-banner">
+          <span class="banner-icon">✨</span>
+          <div class="banner-text">
+            <strong>${message`¡${t(spec.name)} ha ascendido a Nivel ${newLevel}!`}</strong>
+            <span>${gainText}</span>
+          </div>
+        </div>` : ''}
+
+        <button type="button" class="btn btn-gold btn-continue" data-action="close-plate-shelf">${t('Continuar')} ▷</button>
+      </div>
+    `;
+
+    const close = () => {
+      window.removeEventListener('keydown', onKeyDown);
+      dialog.classList.add('closing');
+      setTimeout(() => dialog.remove(), 180);
+    };
+
+    const onKeyDown = event => {
+      if (event.key === 'Escape' || event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault();
+        close();
+      }
+    };
+
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog || event.target.closest('[data-action="close-plate-shelf"]')) {
+        close();
+      }
+    });
+
+    window.addEventListener('keydown', onKeyDown);
+    this.element.append(dialog);
+    setTimeout(() => dialog.querySelector('.btn-continue')?.focus(), 50);
   }
 
   purchase(kind, key, replaceIndex = null) {

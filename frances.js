@@ -531,4 +531,11 @@ export default {
   "+{0}× al multiplicador por monocolor (+{1}× por nivel)": "+{0}× au multiplicateur pour monochrome (+{1}× par niveau)",
   "+{0}× al multiplicador por colores distintos (+{1}× por nivel)": "+{0}× au multiplicateur pour couleurs distinctes (+{1}× par niveau)",
   "+{0} puntos base por panel lleno (+{1} por nivel)": "+{0} points de base pour un panneau plein (+{1} par niveau)",
+  "Alacena del Alfarero": "Buffet du Potier",
+  "Colección de Platos de Maestría": "Collection d'Assiettes de Maîtrise",
+  "Cada plato perfecciona una técnica de mosaico en el taller.": "Chaque assiette perfectionne une technique de mosaïque dans l'atelier.",
+  "¡{0} ha ascendido a Nivel {1}!": "{0} est monté au Niveau {1} !",
+  "Plato de maestría": "Assiette de maîtrise",
+  "Ver repisa de platos": "Voir l'étagère d'assiettes",
+  "Repisa de platos": "Étagère d'assiettes",
 };

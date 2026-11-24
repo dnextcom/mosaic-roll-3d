@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-2';
+import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-3';
 
 const pips = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const stoneGlaze = { color: '#65737c', light: '#a7adb1', darkPips: true };
@@ -238,6 +238,10 @@ export class DiceArt {
     item.materials.forEach(material => { material.map.dispose(); material.dispose(); });
     this.cache.delete(key);
   }
+
+  createPlateMesh(comboKey, level = 1, size = 1) {
+    return createPlateMesh(comboKey, level, size);
+  }
 }
 
 const tiles = new Map();
@@ -328,3 +332,325 @@ export function tileArt(key) {
   tiles.set(key, result);
   return result;
 }
+
+const plates = new Map();
+
+const comboPlatesConfig = {
+  pair: { glaze: { color: '#d97706', light: '#fef3c7', ink: '#78350f' } },
+  trio: { glaze: { color: '#0d9488', light: '#ccfbf1', ink: '#134e4a' } },
+  quartet: { glaze: { color: '#b91c1c', light: '#fee2e2', ink: '#7f1d1d' } },
+  straight: { glaze: { color: '#1d4ed8', light: '#dbeafe', ink: '#1e3a8a' } },
+  longStraight: { glaze: { color: '#047857', light: '#dcfce7', ink: '#064e3b' } },
+  line: { glaze: { color: '#475569', light: '#f8fafc', ink: '#1e293b' } },
+  mono: { glaze: { color: '#b45309', light: '#fef08a', ink: '#713f12' } },
+  chromatic: { rainbow: true, glaze: { color: '#6366f1', light: '#e0e7ff', ink: '#312e81' } },
+  panel: { glaze: { color: '#1e1b4b', light: '#fbbf24', ink: '#0f172a' } },
+};
+
+export function plateArt(key, level = 1) {
+  const cacheKey = `${key}-${level}`;
+  if (plates.has(cacheKey)) return plates.get(cacheKey);
+
+  const spec = comboPlatesConfig[key] || comboPlatesConfig.pair;
+  const canvas = document.createElement('canvas');
+  const size = 256;
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const cx = 128, cy = 128;
+
+  // 1. Plato exterior: borde de latón/oro
+  const rimGrad = ctx.createLinearGradient(0, 0, size, size);
+  rimGrad.addColorStop(0, '#5a3d12');
+  rimGrad.addColorStop(0.25, '#d4af37');
+  rimGrad.addColorStop(0.5, '#fff2a8');
+  rimGrad.addColorStop(0.75, '#c59b27');
+  rimGrad.addColorStop(1, '#5a3d12');
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 122, 0, Math.PI * 2);
+  ctx.fillStyle = rimGrad;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 114, 0, Math.PI * 2);
+  ctx.fillStyle = '#22150a';
+  ctx.fill();
+
+  const marliGrad = ctx.createRadialGradient(cx, cy, 90, cx, cy, 114);
+  marliGrad.addColorStop(0, '#1a1410');
+  marliGrad.addColorStop(1, '#3a2818');
+  ctx.beginPath();
+  ctx.arc(cx, cy, 112, 0, Math.PI * 2);
+  ctx.fillStyle = marliGrad;
+  ctx.fill();
+
+  ctx.fillStyle = '#f1c563';
+  for (let i = 0; i < 32; i++) {
+    const angle = (i * Math.PI * 2) / 32;
+    const px = cx + Math.cos(angle) * 103;
+    const py = cy + Math.sin(angle) * 103;
+    ctx.beginPath();
+    ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 94, 0, Math.PI * 2);
+  ctx.strokeStyle = '#d4af37';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // 2. Fondo del plato (cerámica esmaltada cóncava)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 92, 0, Math.PI * 2);
+  ctx.clip();
+
+  if (spec.rainbow) {
+    const rainbowColors = ['#ef8a76', '#f1c563', '#a0cf9d', '#69a7db', '#9874c1', '#de8aaf'];
+    for (let i = 0; i < 12; i++) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, 95, (i * Math.PI) / 6, ((i + 1) * Math.PI) / 6);
+      ctx.closePath();
+      ctx.fillStyle = rainbowColors[i % rainbowColors.length];
+      ctx.fill();
+    }
+    const rShade = ctx.createRadialGradient(cx, cy, 20, cx, cy, 95);
+    rShade.addColorStop(0, 'rgba(255,255,255,0.25)');
+    rShade.addColorStop(0.7, 'rgba(0,0,0,0.1)');
+    rShade.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = rShade;
+    ctx.fill();
+  } else {
+    const dishGrad = ctx.createRadialGradient(cx - 20, cy - 25, 15, cx, cy, 95);
+    dishGrad.addColorStop(0, spec.glaze.light);
+    dishGrad.addColorStop(0.65, spec.glaze.color);
+    dishGrad.addColorStop(1, spec.glaze.ink);
+    ctx.fillStyle = dishGrad;
+    ctx.fillRect(0, 0, size, size);
+  }
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+  ctx.lineWidth = 1.2;
+  for (let r = 35; r <= 80; r += 22) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // 3. Roseta / Motivo central
+  ctx.beginPath();
+  ctx.arc(cx, cy, 48, 0, Math.PI * 2);
+  const medGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 48);
+  medGrad.addColorStop(0, 'rgba(17, 24, 39, 0.95)');
+  medGrad.addColorStop(1, 'rgba(10, 15, 25, 0.98)');
+  ctx.fillStyle = medGrad;
+  ctx.fill();
+  ctx.strokeStyle = '#f1c563';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.strokeStyle = '#ffd779';
+  ctx.fillStyle = '#fff4ce';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (key === 'pair') {
+    for (const sign of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(sign * 14, 0, 10, 22, sign * 0.35, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(sign * 14, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (key === 'trio') {
+    for (let i = 0; i < 3; i++) {
+      const a = (i * Math.PI * 2) / 3 - Math.PI / 2;
+      const x = Math.cos(a) * 16, y = Math.sin(a) * 16;
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (key === 'quartet') {
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2;
+      const x = Math.cos(a) * 17, y = Math.sin(a) * 17;
+      ctx.beginPath();
+      ctx.arc(x, y, 9, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (key === 'straight') {
+    ctx.beginPath();
+    ctx.moveTo(-20, 18);
+    ctx.lineTo(-12, 18); ctx.lineTo(-12, 9);
+    ctx.lineTo(-4, 9); ctx.lineTo(-4, 0);
+    ctx.lineTo(4, 0); ctx.lineTo(4, -9);
+    ctx.lineTo(12, -9); ctx.lineTo(12, -18);
+    ctx.lineTo(20, -18);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(16, -22, 3, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (key === 'longStraight') {
+    ctx.beginPath();
+    for (let p = 0; p < 16; p++) {
+      const a = (p * Math.PI) / 8;
+      const r = p % 2 === 0 ? 25 : 13;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      if (p === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (key === 'line') {
+    ctx.beginPath();
+    ctx.moveTo(-25, 0); ctx.lineTo(25, 0);
+    ctx.stroke();
+    for (const x of [-16, 0, 16]) {
+      ctx.beginPath();
+      ctx.moveTo(x, -9); ctx.lineTo(x + 7, 0); ctx.lineTo(x, 9); ctx.lineTo(x - 7, 0);
+      ctx.closePath();
+      ctx.fillStyle = '#f1c563';
+      ctx.fill();
+      ctx.stroke();
+    }
+  } else if (key === 'mono') {
+    for (let i = 0; i < 12; i++) {
+      const a = (i * Math.PI) / 6;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * 10, Math.sin(a) * 10);
+      ctx.lineTo(Math.cos(a) * 25, Math.sin(a) * 25);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#f1c563';
+    ctx.fill();
+    ctx.stroke();
+  } else if (key === 'chromatic') {
+    for (let i = 0; i < 6; i++) {
+      const a = (i * Math.PI) / 3;
+      const x = Math.cos(a) * 14, y = Math.sin(a) * 14;
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff4ce';
+    ctx.fill();
+  } else if (key === 'panel') {
+    ctx.beginPath();
+    for (let p = 0; p < 32; p++) {
+      const a = (p * Math.PI) / 16;
+      const r = p % 2 === 0 ? 26 : 16;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      if (p === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#f1c563';
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // 4. Cartela de Nivel
+  const cartW = 74, cartH = 26;
+  const cartX = cx - cartW / 2, cartY = cy + 54;
+  ctx.beginPath();
+  ctx.roundRect(cartX, cartY, cartW, cartH, 8);
+  ctx.fillStyle = '#0f172a';
+  ctx.fill();
+  ctx.strokeStyle = level > 1 ? '#ffd779' : '#a1782e';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.font = 'bold 13px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = level > 1 ? '#ffd779' : '#e2e8f0';
+  ctx.fillText(`NIV. ${level}`, cx, cartY + cartH / 2 + 1);
+
+  // 5. Brillo especular
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 90, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.ellipse(cx - 10, cy - 50, 70, 32, -0.2, 0, Math.PI * 2);
+  const shineGrad = ctx.createLinearGradient(cx, cy - 80, cx, cy - 20);
+  shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0.42)');
+  shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = shineGrad;
+  ctx.fill();
+  ctx.restore();
+
+  const tex = texture(canvas);
+  const result = { map: tex, url: canvas.toDataURL(), canvas };
+  plates.set(cacheKey, result);
+  return result;
+}
+
+export function platePortrait(spec) {
+  const comboKey = spec.combo ?? spec.key;
+  const level = spec.nextLevel ?? spec.level ?? 1;
+  return plateArt(comboKey, level).url;
+}
+
+export function createPlateMesh(comboKey, level = 1, size = 1) {
+  const art = plateArt(comboKey, level);
+  const group = new THREE.Group();
+
+  const radius = 0.44 * size;
+  const height = 0.07 * size;
+  const geometry = new THREE.CylinderGeometry(radius, radius * 0.9, height, 32);
+
+  const sideMat = new THREE.MeshStandardMaterial({ color: 0xc89d3a, roughness: 0.35, metalness: 0.8 });
+  const topMat = new THREE.MeshStandardMaterial({
+    map: art.map,
+    roughness: 0.22,
+    metalness: 0.15,
+  });
+  const backMat = new THREE.MeshStandardMaterial({ color: 0x825433, roughness: 0.65 });
+
+  const plateMesh = new THREE.Mesh(geometry, [sideMat, topMat, backMat]);
+  plateMesh.rotation.x = Math.PI / 2 - 0.32;
+  plateMesh.castShadow = true;
+  plateMesh.receiveShadow = true;
+  group.add(plateMesh);
+
+  // Atril de latón
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xa87332, roughness: 0.35, metalness: 0.7 });
+  const foot = new THREE.Mesh(new THREE.BoxGeometry(0.36 * size, 0.03 * size, 0.22 * size), brassMat);
+  foot.position.set(0, -0.38 * size, 0.02 * size);
+  group.add(foot);
+  for (const sign of [-1, 1]) {
+    const tab = new THREE.Mesh(new THREE.BoxGeometry(0.04 * size, 0.08 * size, 0.04 * size), brassMat);
+    tab.position.set(sign * 0.15 * size, -0.34 * size, 0.11 * size);
+    group.add(tab);
+  }
+  const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.018 * size, 0.018 * size, 0.42 * size, 8), brassMat);
+  strut.position.set(0, -0.22 * size, -0.10 * size);
+  strut.rotation.x = -0.35;
+  group.add(strut);
+
+  group.userData = { combo: comboKey, level, isPlate: true };
+  return group;
+}
+

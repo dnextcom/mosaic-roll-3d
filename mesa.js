@@ -1,14 +1,16 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-2';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-3';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt } from './arte.js?v=esmaltes-2';
-import { projectBoard } from './unicos.js?v=esmaltes-2';
-import { getDieSpec } from './catalogo.js?v=esmaltes-2';
+import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-3';
+import { projectBoard } from './unicos.js?v=esmaltes-3';
+import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-3';
 
 export const HAND = 32;
 export const POWER = 48;
 export const UNIQUE = 64;
+export const PLATE = 80;
 export const ROLL_TIME = 850;
+export const comboKeys = ['pair', 'trio', 'quartet', 'straight', 'longStraight', 'line', 'mono', 'chromatic', 'panel'];
 const spacing = 1.365;
 const xAxis = new THREE.Vector3(1, 0, 0);
 const yAxis = new THREE.Vector3(0, 1, 0);
@@ -62,6 +64,9 @@ export class Table {
     this.effects = new THREE.Group();
     this.powerShelf = new THREE.Group();
     this.powerMeshes = [];
+    this.plateShelf = new THREE.Group();
+    this.plateMeshes = [];
+    this.litPlates = new Set();
     this.highlight = new THREE.Group();
     this.lit = new Set();
     this.models = new Map();
@@ -77,7 +82,7 @@ export class Table {
     this.selected = -1;
     this.focused = -1;
     this.dirty = true;
-    this.scene.add(this.board, this.effects, this.powerShelf, this.highlight, this.uniqueRackGroup);
+    this.scene.add(this.board, this.effects, this.powerShelf, this.plateShelf, this.highlight, this.uniqueRackGroup);
     this.reset();
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(canvas);
@@ -116,10 +121,10 @@ export class Table {
     const floor = mesh(new THREE.PlaneGeometry(40, 40), material(0x142132), 0, -.93, 0, false);
     floor.rotation.x = -Math.PI / 2;
     this.scene.add(floor);
-    this.scene.add(mesh(new RoundedBoxGeometry(10.6, .43, 9.75, 2, .12), this.wood, 0, -.67, -.09));
+    this.scene.add(mesh(new RoundedBoxGeometry(10.8, .43, 11.2, 2, .12), this.wood, 0, -.67, -.40));
     const tablecloth = new THREE.MeshStandardMaterial({ map: mat, roughness: .81 });
-    this.scene.add(mesh(new RoundedBoxGeometry(9.81, .08, 9.04, 1, .03),
-      [this.cobalt, this.cobalt, tablecloth, this.cobalt, this.cobalt, this.cobalt], 0, -.41, -.09, false));
+    this.scene.add(mesh(new RoundedBoxGeometry(10.0, .08, 10.5, 1, .03),
+      [this.cobalt, this.cobalt, tablecloth, this.cobalt, this.cobalt, this.cobalt], 0, -.41, -.40, false));
 
     this.scene.add(mesh(new RoundedBoxGeometry(4.84, .24, 1.27, 2, .105), this.cobalt, 0, -.22, 2.83));
     this.scene.add(mesh(new RoundedBoxGeometry(4.68, .073, 1.13, 1, .035), this.brass, 0, -.083, 2.83));
@@ -222,33 +227,83 @@ export class Table {
     this.reset();
   }
 
-  mount(powers) {
-    const key = `${this.rows}/${powers.join('/')}`;
+  mount(powers, comboLevels = {}) {
+    const levelStr = comboKeys.map(k => comboLevels[k] || 1).join('-');
+    const key = `${this.rows}/${powers.join('/')}/${levelStr}`;
     if (key === this.mountKey) return;
     this.mountKey = key;
+
     for (const piece of this.powerShelf.children) {
       piece.geometry.dispose();
-      if (Array.isArray(piece.material)) piece.material[2].dispose();
+      if (Array.isArray(piece.material)) piece.material[2]?.dispose?.();
     }
     this.powerShelf.clear();
     this.powerMeshes = [];
-    if (!powers.length) { this.dirty = true; return; }
-    const z = this.cell(0).z - 1.32;
-    const gap = 1.02;
-    this.powerShelf.add(mesh(new RoundedBoxGeometry(powers.length * gap + .15, .55, 1.11, 2, .075), this.cobalt, 0, -.052, z));
-    powers.forEach((id, index) => {
-      const surface = new THREE.MeshStandardMaterial({ map: tileArt(id).map, roughness: .38 });
-      const piece = mesh(new RoundedBoxGeometry(.93, .16, .93, 2, .055),
-        [this.brass, this.brass, surface, this.brass, this.brass, this.brass], (index - (powers.length - 1) / 2) * gap, .303, z);
-      piece.userData.id = POWER + index;
-      this.powerMeshes.push(piece);
-      this.powerShelf.add(piece);
+
+    const zPower = this.cell(0).z - 1.25;
+    if (powers.length) {
+      const gap = 1.02;
+      this.powerShelf.add(mesh(new RoundedBoxGeometry(powers.length * gap + .15, .55, 1.11, 2, .075), this.cobalt, 0, -.052, zPower));
+      powers.forEach((id, index) => {
+        const surface = new THREE.MeshStandardMaterial({ map: tileArt(id).map, roughness: .38 });
+        const piece = mesh(new RoundedBoxGeometry(.93, .16, .93, 2, .055),
+          [this.brass, this.brass, surface, this.brass, this.brass, this.brass], (index - (powers.length - 1) / 2) * gap, .303, zPower);
+        piece.userData.id = POWER + index;
+        this.powerMeshes.push(piece);
+        this.powerShelf.add(piece);
+      });
+    }
+
+    // Plate shelf (stands behind the power shelf)
+    for (const piece of this.plateShelf.children) {
+      piece.traverse(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material && !Array.isArray(child.material)) child.material.dispose?.();
+      });
+    }
+    this.plateShelf.clear();
+    this.plateMeshes = [];
+
+    const zPlate = zPower - 0.76;
+    const gap = 0.60;
+    const shelfWidth = comboKeys.length * gap + 0.40;
+    this.plateShelf.add(mesh(new RoundedBoxGeometry(shelfWidth, .36, .64, 2, .06), this.wood, 0, .05, zPlate));
+    this.plateShelf.add(mesh(new RoundedBoxGeometry(shelfWidth - .04, .04, .60, 1, .02), this.brass, 0, .24, zPlate));
+    this.plateShelf.add(mesh(new THREE.BoxGeometry(shelfWidth - .06, .05, .04), this.brass, 0, .26, zPlate + .27));
+
+    comboKeys.forEach((comboKey, index) => {
+      const level = comboLevels[comboKey] || 1;
+      const x = (index - (comboKeys.length - 1) / 2) * gap;
+      const plateArtObj = plateArt(comboKey, level);
+      const radius = 0.26;
+      const height = 0.045;
+      const plateGeom = new THREE.CylinderGeometry(radius, radius * 0.9, height, 28);
+      const sideMat = this.brass;
+      const topMat = new THREE.MeshStandardMaterial({
+        map: plateArtObj.map,
+        roughness: 0.25,
+        metalness: 0.15
+      });
+      const backMat = this.clay;
+      const piece = mesh(plateGeom, [sideMat, topMat, backMat], x, 0.36, zPlate + 0.04);
+      piece.rotation.x = Math.PI / 2 - 0.38;
+      piece.userData.id = PLATE + index;
+      piece.userData.combo = comboKey;
+      piece.userData.level = level;
+      this.plateMeshes.push(piece);
+      this.plateShelf.add(piece);
     });
+
     this.dirty = true;
   }
 
   powerAnchor(index) {
     const piece = this.powerMeshes[index];
+    return piece ? this.anchor(piece.position) : null;
+  }
+
+  plateAnchor(index) {
+    const piece = this.plateMeshes[index];
     return piece ? this.anchor(piece.position) : null;
   }
 
@@ -320,7 +375,7 @@ export class Table {
       if (!extra.source || targets.includes(extra.source.mesh)) targets.push(extra.mesh);
     }
     targets.push(...this.cells);
-    if (!boardOnly) targets.push(...this.tray, ...this.uniqueTray, ...this.powerMeshes);
+    if (!boardOnly) targets.push(...this.tray, ...this.uniqueTray, ...this.powerMeshes, ...this.plateMeshes);
     const hit = this.ray.intersectObjects(targets, false)[0];
     return hit?.object.userData.id ?? -1;
   }
@@ -364,7 +419,7 @@ export class Table {
   sync(state, now, { roll = false, dissolve = false } = {}) {
     const { rows, cols } = state;
     if (rows !== this.rows || cols !== this.cols) this.configure(rows, cols);
-    this.mount(state.powers);
+    this.mount(state.powers, state.comboLevels);
     const { board } = projectBoard(state);
     const live = new Map();
     const extraDice = new Map();
@@ -503,8 +558,17 @@ export class Table {
       const anchor = this.cell(power.cells[0]);
       anchor.y = 1.31;
       this.labels.append(tag);
-      this.tags.push({ tag, anchor, column: true });
+      this.tags.push({ tag, anchor: power.cells[0] != null ? this.cell(power.cells[0]) : anchor, column: true });
     }
+    this.litPlates = new Set();
+    const allSteps = [...matches, ...powers];
+    allSteps.forEach(s => {
+      comboKeys.forEach((key, idx) => {
+        if (s.name && s.name.includes(comboCatalog[key].name)) {
+          this.litPlates.add(idx);
+        }
+      });
+    });
     this.dirty = true;
   }
 
@@ -561,6 +625,15 @@ export class Table {
         piece.mesh.quaternion.copy(base.quaternion);
         piece.mesh.scale.copy(base.scale);
       } else piece.mesh.scale.setScalar(this.lit.has(id) ? .84 : .77);
+    }
+    for (let i = 0; i < this.plateMeshes.length; i++) {
+      const piece = this.plateMeshes[i];
+      const lit = this.litPlates.has(i);
+      const targetScale = lit ? 1.15 : 1.0;
+      if (Math.abs(piece.scale.x - targetScale) > 0.005) {
+        piece.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.2);
+        moving = true;
+      }
     }
     if (moving || this.dirty) {
       this.renderer.render(this.scene, this.camera);
