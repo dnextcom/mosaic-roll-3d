@@ -1,6 +1,6 @@
-import english from './ingles.js?v=esmaltes-9';
-import french from './frances.js?v=esmaltes-9';
-import { diceName, glazes } from './catalogo.js?v=esmaltes-9';
+import english from './ingles.js?v=esmaltes-10';
+import french from './frances.js?v=esmaltes-10';
+import { diceName, glazes } from './catalogo.js?v=esmaltes-10';
 
 const preferenceKey = 'mosaic-roll/language';
 export const supported = value => value === 'es' || value === 'en' || value === 'fr';

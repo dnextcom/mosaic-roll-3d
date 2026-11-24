@@ -1333,10 +1333,19 @@ body[data-screen="workshop"] { overflow: hidden; }
   .bag-cta { padding: 6px 10px; font-size: 13px; margin-top: 4px; }
 
   .diff-body { padding: 10px 10px 16px; gap: 10px; }
-  .chosen-bag-card { padding: 8px 12px; gap: 10px; }
-  .chosen-bag-dice img { width: 30px; height: 30px; }
-  .chosen-bag-name { font-size: 15.5px; }
-  .chosen-bag-desc { font-size: 12px; }
+  .chosen-bag-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 10px 12px;
+    gap: 8px 10px;
+  }
+  .chosen-bag-dice { grid-column: 1; grid-row: 1; }
+  .chosen-bag-dice img { width: 32px; height: 32px; }
+  .chosen-bag-change { grid-column: 2; grid-row: 1; justify-self: end; }
+  .chosen-bag-info { grid-column: 1 / -1; grid-row: 2; }
+  .chosen-bag-name { font-size: 16px; }
+  .chosen-bag-desc { font-size: 12.5px; line-height: 1.3; }
   .diff-stepper-wrap { padding: 6px 8px; gap: 8px; }
   .diff-arrow { width: 34px; height: 34px; }
   .diff-arrow .ico { width: 16px; height: 16px; }
