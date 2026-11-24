@@ -590,4 +590,5 @@ export default {
   "Horno de pago: cocer una mejora cuesta 6 de oro (el horno es saltable).": "Four payant : cuire une amélioration coûte 6 pièces d'or (le four peut être passé).",
   "Metas de puntuación aumentan otro +20% acumulativo (+44% sobre base).": "Objectifs de score augmentent encore de +20% de manière cumulative (+44% par rapport à la base).",
   "El Juicio del Sultán: empiezas con solo 1 cincel por mosaico (-1) y los jefes exigen +15% de puntos adicional.": "Jugement du Sultan : vous commencez avec seulement 1 burin par mosaïque (-1) et les boss exigent +15% de score supplémentaire.",
+  "Nivel {0} de 6": "Niveau {0} sur 6",
 };

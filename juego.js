@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-8';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-8';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-8';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-8';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-9';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-9';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-9';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-9';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-8';
-import { uniqueDice } from './unicos.js?v=esmaltes-8';
-import { MarketUI } from './mercado.js?v=esmaltes-8';
-import { collectionMarkup } from './coleccion.js?v=esmaltes-8';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-8';
-import { Music } from './musica.js?v=esmaltes-8';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-9';
+import { uniqueDice } from './unicos.js?v=esmaltes-9';
+import { MarketUI } from './mercado.js?v=esmaltes-9';
+import { collectionMarkup } from './coleccion.js?v=esmaltes-9';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-9';
+import { Music } from './musica.js?v=esmaltes-9';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -387,23 +387,7 @@ function openDifficultyScreen(deckKey) {
   const descEl = $('chosen-bag-desc');
   if (descEl) descEl.textContent = t(deck.text);
 
-  const tabsBar = $('diff-tabs-bar');
-  if (tabsBar) {
-    tabsBar.innerHTML = [0, 1, 2, 3, 4, 5].map(lvl => {
-      const isUnlocked = lvl <= maxAvailable;
-      const isSelected = lvl === selectedDiffLevel;
-      const isCleared = lvl <= maxCompleted;
-      const diffDef = difficulties[lvl];
-      const checkGlyph = isCleared ? `<span class="diff-cleared-tag">${icon('check')}</span>` : '';
-      const lockGlyph = !isUnlocked ? `<span class="diff-locked-tag">${icon('lock')}</span>` : '';
-      return `<button type="button" class="diff-tab diff-tab-${lvl}${isSelected ? ' active' : ''}${!isUnlocked ? ' locked' : ''}" data-action="pick-diff" data-level="${lvl}" ${!isUnlocked ? 'disabled' : ''}>
-        <span class="diff-tab-num">${lvl}</span>
-        <span class="diff-tab-label">${t(diffDef.name)}</span>
-        ${checkGlyph}${lockGlyph}
-      </button>`;
-    }).join('');
-  }
-
+  renderDiffStepper(selectedDiffLevel, maxAvailable, maxCompleted);
   updateDifficultyDetails(selectedDiffLevel, maxAvailable);
 
   screenBags.hidden = true;
@@ -411,22 +395,65 @@ function openDifficultyScreen(deckKey) {
   $('diff-play-btn')?.focus({ preventScroll: true });
 }
 
+function renderDiffStepper(selectedLevel, maxAvailable, maxCompleted) {
+  const dotsBar = $('diff-dots-bar');
+  if (dotsBar) {
+    dotsBar.innerHTML = [0, 1, 2, 3, 4, 5].map(lvl => {
+      const isUnlocked = lvl <= maxAvailable;
+      const isSelected = lvl === selectedLevel;
+      const isCleared = lvl <= maxCompleted;
+      const diffDef = difficulties[lvl];
+      const displayNum = lvl + 1;
+      let statusClass = 'unlocked';
+      if (!isUnlocked) statusClass = 'locked';
+      else if (isCleared) statusClass = 'cleared';
+
+      const glyph = !isUnlocked
+        ? `<span class="dot-glyph">${icon('lock')}</span>`
+        : isCleared
+          ? `<span class="dot-glyph">${icon('check')}</span>`
+          : '';
+
+      return `<button type="button" class="diff-dot diff-dot-${lvl} ${statusClass}${isSelected ? ' active' : ''}" data-action="pick-diff" data-level="${lvl}" ${!isUnlocked ? 'disabled' : ''} aria-label="${message`Nivel ${displayNum}`} · ${t(diffDef.name)}" title="${message`Nivel ${displayNum}`} · ${t(diffDef.name)}">
+        <span class="dot-num">${displayNum}</span>
+        ${glyph}
+      </button>`;
+    }).join('');
+  }
+
+  const prevBtn = $('diff-prev-btn');
+  if (prevBtn) prevBtn.disabled = selectedLevel <= 0;
+  const nextBtn = $('diff-next-btn');
+  if (nextBtn) nextBtn.disabled = selectedLevel >= maxAvailable;
+}
+
 function updateDifficultyDetails(level, maxAvailable) {
   selectedDiffLevel = level;
   bagDifficulties[selectedDeckKey] = level;
   const diffDef = difficulties[level] || difficulties[0];
+  const displayNum = level + 1;
 
-  const tabsBar = $('diff-tabs-bar');
-  if (tabsBar) {
-    for (const btn of tabsBar.querySelectorAll('[data-action="pick-diff"]')) {
+  const dotsBar = $('diff-dots-bar');
+  if (dotsBar) {
+    for (const btn of dotsBar.querySelectorAll('[data-action="pick-diff"]')) {
       const btnLvl = Number(btn.dataset.level);
       btn.classList.toggle('active', btnLvl === level);
     }
   }
 
+  const prevBtn = $('diff-prev-btn');
+  if (prevBtn) prevBtn.disabled = level <= 0;
+  const nextBtn = $('diff-next-btn');
+  if (nextBtn) nextBtn.disabled = level >= maxAvailable;
+
+  const stepNumEl = $('diff-stepper-num');
+  if (stepNumEl) stepNumEl.textContent = message`Nivel ${displayNum} de 6`;
+  const stepNameEl = $('diff-stepper-name');
+  if (stepNameEl) stepNameEl.textContent = `${t(diffDef.name)} · ${t(diffDef.title)}`;
+
   const badgeEl = $('diff-card-badge');
   if (badgeEl) {
-    badgeEl.textContent = message`Nivel ${level}`;
+    badgeEl.textContent = message`Nivel ${displayNum}`;
     badgeEl.className = `diff-card-badge diff-badge-${level}`;
   }
   const titleEl = $('diff-card-title');
@@ -456,7 +483,7 @@ function updateDifficultyDetails(level, maxAvailable) {
   const playBtn = $('diff-play-btn');
   const playLabel = $('diff-play-label');
   if (playLabel) {
-    playLabel.textContent = level > 0 ? message`Comenzar partida · Niv. ${level}` : t('Comenzar partida');
+    playLabel.textContent = message`Comenzar partida · Niv. ${displayNum}`;
   }
   if (playBtn) {
     playBtn.dataset.bag = selectedDeckKey;
@@ -490,7 +517,7 @@ function chooseBag() {
       </div>`;
     }
     const maxCompleted = prog.completed[key] ?? -1;
-    const completedBadge = maxCompleted >= 0 ? `<span class="bag-cleared-tag">${icon('crown')}${message`Niv. ${maxCompleted} superado`}</span>` : '';
+    const completedBadge = maxCompleted >= 0 ? `<span class="bag-cleared-tag">${icon('crown')}${message`Niv. ${maxCompleted + 1} superado`}</span>` : '';
     return `<button class="bag-card unlocked" type="button" data-action="pick-bag" data-bag="${key}">
       <span class="bag-dice" aria-hidden="true">${deckSample(key).map(spec => `<img src="${diePortrait(spec)}" alt="">`).join('')}</span>
       <strong class="bag-name">${t(deck.name)}</strong>
@@ -521,14 +548,7 @@ function chooseBag() {
           <span class="book-kicker">${message`Paso 2 de 2 · Preparación`}</span>
           <h2>${t('Elige la dificultad')}</h2>
         </div>
-        <div class="diff-head-actions">
-          <button class="btn btn-quiet btn-small" type="button" data-action="back-to-bags">
-            ${icon('undo')}<span>${t('Cambiar bolsa')}</span>
-          </button>
-          <button class="btn btn-quiet btn-small" type="button" data-action="back">
-            ${icon('close')}<span>${t('Cancelar')}</span>
-          </button>
-        </div>
+        <button class="btn btn-quiet btn-small" type="button" data-action="back">${icon('close')}<span>${t('Cancelar')}</span></button>
       </header>
       <div class="diff-body">
         <div class="chosen-bag-card">
@@ -543,11 +563,25 @@ function chooseBag() {
           </button>
         </div>
 
-        <div class="diff-levels-nav" role="tablist" aria-label="${t('Niveles de dificultad')}" id="diff-tabs-bar"></div>
+        <div class="diff-stepper-wrap">
+          <button type="button" class="diff-arrow diff-arrow-prev" id="diff-prev-btn" data-action="diff-prev" aria-label="${t('Dificultad anterior')}">
+            ${icon('arrow-left')}
+          </button>
+          <div class="diff-stepper-center">
+            <div class="diff-stepper-kicker">
+              <span class="diff-stepper-num" id="diff-stepper-num">Nivel 1 de 6</span>
+              <strong class="diff-stepper-name" id="diff-stepper-name"></strong>
+            </div>
+            <div class="diff-dots-bar" id="diff-dots-bar" role="tablist" aria-label="${t('Niveles de dificultad')}"></div>
+          </div>
+          <button type="button" class="diff-arrow diff-arrow-next" id="diff-next-btn" data-action="diff-next" aria-label="${t('Dificultad siguiente')}">
+            ${icon('arrow')}
+          </button>
+        </div>
 
         <div class="diff-card" id="diff-card">
           <div class="diff-card-head">
-            <span class="diff-card-badge" id="diff-card-badge">Nivel 0</span>
+            <span class="diff-card-badge" id="diff-card-badge">Nivel 1</span>
             <h3 class="diff-card-title" id="diff-card-title"></h3>
           </div>
           <p class="diff-card-summary" id="diff-card-summary"></p>
@@ -583,7 +617,8 @@ function render() {
   const progress = run.endless ? message`Modo libre · Mosaico ${run.stage + 1}` : message`Mosaico ${run.stage + 1}/${campaignLength}`;
   const boss = bossAt(run);
   const finalBoss = boss && !run.endless && run.stage === campaignLength - 1;
-  $('stage-label').textContent = `${boss ? (finalBoss ? `${t('Jefe final')} · ` : `${t('Jefe')} · `) : ''}${progress} · ${dimensions}${run.difficulty ? ` · Niv. ${run.difficulty}` : ''}`;
+  const diffBadge = ` · Niv. ${(run.difficulty ?? 0) + 1}`;
+  $('stage-label').textContent = `${boss ? (finalBoss ? `${t('Jefe final')} · ` : `${t('Jefe')} · `) : ''}${progress} · ${dimensions}${diffBadge}`;
   $('stage-name').textContent = t(boss ? bosses[boss.key].name : stage.name);
   $('crown').classList.toggle('boss-stage', Boolean(boss));
   $('boss').hidden = !boss;
@@ -965,7 +1000,7 @@ function help() {
 
 function pause() {
   if (!playing || modal || resolution || pendingOutcome) return;
-  const diffName = run.difficulty ? ` · ${t(difficulties[run.difficulty].name)}` : '';
+  const diffName = ` · ${t(difficulties[run.difficulty ?? 0].name)} (Niv. ${(run.difficulty ?? 0) + 1})`;
   showDialog('pause', windowMarkup({ title: t('Pausa'), eyebrow: `${message`Mosaico ${run.stage + 1}`} · ${t(stageAt(run.stage, run.difficulty ?? 0).name)}${diffName}`, emblem: 'moon',
     actions: action('back', t('Continuar'), 'play', 'gold') +
       action('options', t('Ajustes'), 'settings') +
@@ -1234,7 +1269,7 @@ function showOutcome() {
     if (newlyUnlockedDiff) {
       extraPraise += `<p class="victory-unlock">${icon('crown')}${message`¡Nueva dificultad desbloqueada para ${t(decks[run.deck].name)}!`}</p>`;
     }
-    const diffName = difficulties[run.difficulty ?? 0]?.name ?? 'Normal';
+    const diffName = `${t(difficulties[run.difficulty ?? 0]?.name ?? 'Normal')} (Niv. ${(run.difficulty ?? 0) + 1})`;
     showDialog('outcome', windowMarkup({ title: t('¡Campaña completada!'), eyebrow: `${message`${campaignLength} de ${campaignLength} mosaicos`} · ${t(decks[run.deck].name)} · ${t(diffName)}`,
       body: `<div class="stats">${stat(total, t('Puntos'))}${stat(run.orders.length, t('Encargos'))}</div>${extraPraise}`,
       actions: action('endless', t('Modo libre'), 'play', 'gold') + action('collection', t('Ver bolsa y azulejos'), 'bag') + action('title', t('Volver al patio'), 'door') }), 'victory');
@@ -1295,6 +1330,22 @@ dialog.addEventListener('click', event => {
     }
     case 'back-to-bags': {
       openBagScreen();
+      break;
+    }
+    case 'diff-prev': {
+      const prev = Math.max(0, selectedDiffLevel - 1);
+      const prog = getProgression();
+      const maxCompleted = prog.completed[selectedDeckKey] ?? -1;
+      const maxAvailable = Math.min(5, maxCompleted + 1);
+      updateDifficultyDetails(prev, maxAvailable);
+      break;
+    }
+    case 'diff-next': {
+      const prog = getProgression();
+      const maxCompleted = prog.completed[selectedDeckKey] ?? -1;
+      const maxAvailable = Math.min(5, maxCompleted + 1);
+      const next = Math.min(maxAvailable, selectedDiffLevel + 1);
+      updateDifficultyDetails(next, maxAvailable);
       break;
     }
     case 'pick-diff': {
