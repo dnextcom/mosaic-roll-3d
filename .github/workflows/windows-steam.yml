@@ -47,7 +47,9 @@ jobs:
           } else {
             $ver = "1.0.${{ github.run_number }}"
           }
+          $semver = if ($ver -match '^\d+\.\d+$') { "$ver.0" } elseif ($ver -match '^\d+$') { "$ver.0.0" } else { $ver }
           "VERSION_NAME=$ver" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SEMVER_VERSION=$semver" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
           New-Item -ItemType Directory -Force -Path build-win/app | Out-Null
           $files = @(
@@ -79,7 +81,7 @@ jobs:
         run: |
           $pkg = @{
             name = "bescuit-dau-i-forn"
-            version = $env:VERSION_NAME
+            version = $env:SEMVER_VERSION
             description = "Bescuit: Dau i Forn - Roguelite de dados y ceramica en 3D"
             author = "dnextcom"
             main = "main.cjs"
@@ -114,7 +116,8 @@ jobs:
             '.png': 'image/png',
             '.webp': 'image/webp',
             '.svg': 'image/svg+xml',
-            '.ico': 'image/x-icon'
+            '.ico': 'image/x-icon',
+            '.mp3': 'audio/mpeg'
           };
 
           protocol.registerSchemesAsPrivileged([
