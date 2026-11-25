@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Versión semántica (ej. 1.0.0)'
+        description: 'Versión semántica (ej. 0.1.2; vacío lee VERSION)'
         required: false
-        default: '1.0.0'
+        default: ''
         type: string
   push:
     tags:
@@ -44,8 +44,10 @@ jobs:
             $ver = "${{ github.ref_name }}".TrimStart('v')
           } elseif ("${{ inputs.version_name }}") {
             $ver = "${{ inputs.version_name }}".TrimStart('v')
+          } elseif (Test-Path VERSION) {
+            $ver = (Get-Content VERSION -Raw).Trim().TrimStart('v')
           } else {
-            $ver = "1.0.${{ github.run_number }}"
+            $ver = "0.1.${{ github.run_number }}"
           }
           $semver = if ($ver -match '^\d+\.\d+$') { "$ver.0" } elseif ($ver -match '^\d+$') { "$ver.0.0" } else { $ver }
           "VERSION_NAME=$ver" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Versión visible (ej. 1.0.0)'
+        description: 'Versión visible (ej. 0.1.2; vacío lee VERSION)'
         required: false
-        default: '1.0.0'
+        default: ''
         type: string
       version_code:
         description: 'Código entero para Google Play (auto usa run_number)'
@@ -63,8 +63,10 @@ jobs:
             VERSION_NAME="${GITHUB_REF_NAME#v}"
           elif [ -n "${{ inputs.version_name }}" ]; then
             VERSION_NAME="${{ inputs.version_name }}"
+          elif [ -f VERSION ]; then
+            VERSION_NAME="$(tr -d '[:space:]' < VERSION)"
           else
-            VERSION_NAME="1.0.${{ github.run_number }}"
+            VERSION_NAME="0.1.${{ github.run_number }}"
           fi
 
           APP_ID="${{ inputs.app_id || 'com.dnextcom.bescuit' }}"

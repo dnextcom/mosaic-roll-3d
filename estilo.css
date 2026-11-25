@@ -233,6 +233,7 @@ kbd {
 .music-credit { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; color: var(--ivory-3); text-decoration: none; transition: color .2s; }
 .music-credit:hover { color: var(--gold-3); }
 .music-credit .ico { width: 14px; height: 14px; color: var(--gold-2); }
+.patio-version { display: inline-flex; align-items: center; min-height: 30px; color: var(--ivory-3); opacity: .75; letter-spacing: .08em; }
 
 /* =====================================================================
    Game: full-bleed 3D stage with floating overlays
