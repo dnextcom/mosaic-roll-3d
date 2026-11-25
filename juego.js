@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-28';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-28';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-28';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-28';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-29';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-29';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-29';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-29';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-28';
-import { uniqueDice } from './unicos.js?v=esmaltes-28';
-import { MarketUI } from './mercado.js?v=esmaltes-28';
-import { collectionMarkup, syncCollectionTips, hideCollectionTip, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-28';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-28';
-import { Music } from './musica.js?v=esmaltes-28';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-29';
+import { uniqueDice } from './unicos.js?v=esmaltes-29';
+import { MarketUI } from './mercado.js?v=esmaltes-29';
+import { collectionMarkup, syncCollectionTips, hideCollectionTip, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-29';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-29';
+import { Music } from './musica.js?v=esmaltes-29';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -667,12 +667,17 @@ function render() {
   if (boss) $('boss-rule').textContent = displayBossRule(boss, bossText);
   countTo($('score'), points);
   $('goal').textContent = `/ ${run.goal}`;
+  const projected = points + (resolution ? 0 : score.total);
   const ring = $('progress');
   ring.setAttribute('aria-valuemax', run.goal);
   ring.setAttribute('aria-valuenow', Math.min(run.goal, points));
-  ring.setAttribute('aria-valuetext', message`${points} de ${run.goal} puntos`);
+  ring.setAttribute('aria-valuetext', score.count && !resolution
+    ? message`${points} de ${run.goal} puntos (+${score.total} en esta jugada)`
+    : message`${points} de ${run.goal} puntos`);
   $('medallion').style.setProperty('--p', Math.min(1, points / run.goal).toFixed(4));
+  $('medallion').style.setProperty('--p-next', Math.min(1, projected / run.goal).toFixed(4));
   $('medallion').classList.toggle('reached', points >= run.goal);
+  $('medallion').classList.toggle('will-reach', points < run.goal && projected >= run.goal);
   $('turns').setAttribute('aria-label', message`${run.turns} de ${run.maxTurns} turnos`);
   $('turns').innerHTML = Array.from({ length: run.maxTurns }, (_, index) => `<i class="pip${index >= run.turns ? ' spent' : ''}"></i>`).join('');
   $('chisel-count').textContent = `×${run.chisels}`;
@@ -721,7 +726,7 @@ function render() {
     if (!resolution && score.count) bump($('preview'));
   }
   $('breakdown').innerHTML = score.count ? `${chips(score.base, score.multiplier)}${score.gold ? `<span class="gold-note">+${coins(score.gold)}</span>` : ''}`
-    : run.lastScore ? message`Última jugada: +${run.lastScore}` : t('Coloca un dado para ver sus puntos.');
+    : t('Coloca un dado para ver sus puntos.');
   $('placed').innerHTML = Array.from({ length: 4 }, (_, index) => `<i class="slot${index < score.count ? ' filled' : ''}"></i>`).join('') +
     `<span class="sr-only">${message`${score.count}/4 dados colocados`}</span>`;
   $('tally').classList.toggle('has-play', score.count > 0);

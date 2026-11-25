@@ -4,6 +4,7 @@
    ===================================================================== */
 
 @property --p { syntax: '<number>'; inherits: true; initial-value: 0; }
+@property --p-next { syntax: '<number>'; inherits: true; initial-value: 0; }
 
 :root {
   /* Backdrops read by the shared 3D modules (mesa.js / taller.js). */
@@ -312,11 +313,36 @@ kbd {
 .pip { width: 11px; height: 11px; clip-path: var(--star); background: var(--gold-flat); }
 .pip.spent { background: rgba(210, 174, 94, .22); }
 
-.medallion { --med: 112px; --p: 0; position: relative; display: grid; place-items: center; width: var(--med); height: var(--med); transition: --p .65s var(--ease-out); }
+.medallion { --med: 112px; --p: 0; --p-next: 0; position: relative; display: grid; place-items: center; width: var(--med); height: var(--med); transition: --p .65s var(--ease-out), --p-next .25s var(--ease-out); }
+.medallion-preview {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    transparent calc(var(--p) * 360deg),
+    rgba(240, 214, 144, .52) calc(var(--p) * 360deg),
+    rgba(240, 214, 144, .22) calc(var(--p-next) * 360deg),
+    transparent calc(var(--p-next) * 360deg));
+  -webkit-mask:
+    repeating-linear-gradient(135deg, #000 0 3px, rgba(0, 0, 0, .35) 3px 6px),
+    radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7.5px));
+  -webkit-mask-composite: source-in;
+  mask:
+    repeating-linear-gradient(135deg, #000 0 3px, rgba(0, 0, 0, .35) 3px 6px),
+    radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7.5px));
+  mask-composite: intersect;
+  pointer-events: none;
+}
+.medallion.will-reach .medallion-preview {
+  background: conic-gradient(from 0deg,
+    transparent calc(var(--p) * 360deg),
+    rgba(138, 230, 214, .7) calc(var(--p) * 360deg),
+    rgba(52, 181, 165, .38) calc(var(--p-next) * 360deg),
+    transparent calc(var(--p-next) * 360deg));
+  filter: drop-shadow(0 0 7px rgba(138, 230, 214, .55));
+}
 .medallion-ring {
   position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(from 0deg, var(--gold-3) 0, var(--gold-2) calc(var(--p) * 360deg), rgba(210, 174, 94, .14) calc(var(--p) * 360deg));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5.5px));
+  background: conic-gradient(from 0deg, var(--gold-3) 0, var(--gold-2) calc(var(--p) * 360deg), rgba(210, 174, 94, .12) calc(var(--p) * 360deg));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7.5px), #000 calc(100% - 7px)); mask: radial-gradient(farthest-side, transparent calc(100% - 7.5px), #000 calc(100% - 7px));
   filter: drop-shadow(0 0 6px rgba(240, 214, 144, .35));
 }
 .medallion::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid var(--line-soft); }
@@ -347,7 +373,7 @@ kbd {
 /* Plaques under the stage name: the commission (order) and the boss rule */
 .plaques {
   position: absolute; z-index: 3; top: calc(max(12px, env(safe-area-inset-top)) + 62px); left: max(14px, env(safe-area-inset-left));
-  display: grid; justify-items: start; gap: 8px; max-width: min(380px, calc(100% - 28px)); transition: opacity .25s;
+  display: grid; justify-items: start; gap: 8px; max-width: min(320px, calc(100vw - 28px)); transition: opacity .25s;
 }
 .scoring .plaques { opacity: 0; pointer-events: none; }
 .order {
@@ -1459,12 +1485,12 @@ body[data-screen="workshop"] { overflow: hidden; }
   .orb-small { width: 38px; height: 38px; }
   .codex-toggle { height: 40px; padding: 0 12px; }
   .codex-toggle-label { display: none; }
-  .plaques { top: calc(max(10px, env(safe-area-inset-top)) + 132px); left: 50%; width: calc(100% - 20px); max-width: 420px; justify-items: center; gap: 6px; transform: translateX(-50%); }
-  .order { padding: 5px 10px 5px 8px; white-space: nowrap; }
-  .boss { padding: 5px 10px 5px 8px; }
-  .boss-ico { width: 18px; height: 18px; }
+  .plaques { top: calc(max(10px, env(safe-area-inset-top)) + 138px); left: 50%; width: calc(100% - 20px); max-width: 420px; justify-items: center; gap: 4px; transform: translateX(-50%); }
+  .order { padding: 4px 10px 4px 8px; white-space: nowrap; }
+  .boss { padding: 4px 10px 4px 8px; }
+  .boss-ico { width: 16px; height: 16px; }
   .boss-kicker { display: none; }
-  .boss strong { font-size: 13.5px; line-height: 1.25; }
+  .boss strong { font-size: 12.5px; line-height: 1.2; }
   dialog[data-kind="bags"] { width: calc(100vw - 12px); max-height: calc(100svh - 12px); }
   .bags { max-height: calc(100svh - 12px); }
   .bag-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px 10px 4px; }

@@ -11,9 +11,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Reem+Kufi:wght@400..700&display=swap">
-  <link rel="stylesheet" href="estilo.css?v=esmaltes-28">
+  <link rel="stylesheet" href="estilo.css?v=esmaltes-29">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
-  <script type="module" src="juego.js?v=esmaltes-28"></script>
+  <script type="module" src="juego.js?v=esmaltes-29"></script>
 </head>
 <body data-screen="title">
   <main class="patio" id="start">
@@ -56,7 +56,7 @@
       </select>
       <button class="options-toggle" type="button" id="title-options" aria-label="Ajustes" title="Ajustes"><i data-icon="settings"></i>Ajustes</button>
       <a class="music-credit" href="https://umbriamusic.bandcamp.com/" target="_blank" rel="noopener noreferrer"><i data-icon="music"></i><span>Música: Umbría</span></a>
-      <span class="patio-version" id="app-version">v0.1.1</span>
+      <span class="patio-version" id="app-version">v0.1.2</span>
     </footer>
   </main>
 
@@ -86,6 +86,7 @@
             <div class="glyph" id="chisel-glyph" title="Cargas de cincel"><i data-icon="chisel" class="glyph-ico"></i><span class="sr-only">Cincel</span><strong id="chisel-count"></strong></div>
           </div>
           <div class="medallion" id="medallion">
+            <div class="medallion-preview" id="progress-preview" aria-hidden="true"></div>
             <div class="medallion-ring" id="progress" role="progressbar" aria-label="Objetivo del mosaico" aria-valuemin="0"></div>
             <div class="medallion-star">
               <span class="medallion-kicker" aria-hidden="true">Puntos</span>

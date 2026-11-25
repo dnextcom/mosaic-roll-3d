@@ -1,9 +1,9 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-28';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-29';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-28';
-import { projectBoard } from './unicos.js?v=esmaltes-28';
-import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-28';
+import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-29';
+import { projectBoard } from './unicos.js?v=esmaltes-29';
+import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-29';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -444,10 +444,11 @@ export class Table {
   zoomBy(factor) { this.zoom = clamp(this.zoom * factor, .83, 1.42); this.updateCamera(); }
 
   updateCamera() {
+    const portrait = this.isPortrait();
     const pitch = angle(this.elevation);
     const yaw = angle(this.azimuth);
-    const distance = (10.35 + (this.rows - 2) * 1.47 + (this.cols - 3) * .71) * this.zoom;
-    const target = new THREE.Vector3(0, -.03, .42 - (this.rows - 2) * .60);
+    const distance = (10.55 + (this.rows - 2) * 1.47 + (this.cols - 3) * .71) * this.zoom;
+    const target = new THREE.Vector3(0, -.03, (portrait ? -.06 : .06) - (this.rows - 2) * .60);
     this.camera.position.set(Math.sin(yaw) * Math.cos(pitch) * distance, Math.sin(pitch) * distance,
       Math.cos(yaw) * Math.cos(pitch) * distance).add(target);
     this.camera.lookAt(target);
@@ -684,6 +685,20 @@ export class Table {
 
   positionTags() {
     const reserved = [];
+    const hudObstacles = [];
+    const canvasRect = this.canvas.getBoundingClientRect();
+    for (const sel of ['.medallion-cluster', '#order:not([hidden])', '#boss:not([hidden])', '.cartouche']) {
+      const el = document.querySelector(sel);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      hudObstacles.push({
+        x: r.left - canvasRect.left - 4,
+        y: r.top - canvasRect.top - 4,
+        width: r.width + 8,
+        height: r.height + 8,
+      });
+    }
     const shelfLimit = this.plateMeshes[0]
       ? (1 - this.plateMeshes[0].position.clone().add(new THREE.Vector3(0, -0.34, 0.25)).project(this.camera).y) / 2 * this.height
       : this.height;
@@ -694,14 +709,26 @@ export class Table {
       const rawX = (screen.x + 1) / 2 * this.width - (plate || column ? width * .5 : width);
       const rawY = (1 - screen.y) / 2 * this.height - (plate ? height * .5 : column ? height + 3 : height / 2);
       const x = clamp(rawX, 4, this.width - width - 4);
-      const maxY = plate ? Math.min(this.height - height - 4, Math.max(4, shelfLimit - height)) : this.height - height - 4;
+      const maxY = plate ? Math.min(this.height - height - 4, Math.max(4, shelfLimit + 12)) : this.height - height - 4;
+      const obstacles = plate ? [...reserved, ...hudObstacles] : reserved;
       let y = clamp(rawY, 4, maxY);
-      const overlaps = (cy) => reserved.some(other => x < other.x + other.width && x + width > other.x && cy < other.y + other.height && cy + height > other.y);
+      const overlaps = (cy) => obstacles.some(other => x < other.x + other.width && x + width > other.x && cy < other.y + other.height && cy + height > other.y);
       if (overlaps(y)) {
-        let up = y - height - 3;
-        while (up >= 4 && overlaps(up)) up -= height + 3;
-        if (up >= 4 && !overlaps(up)) y = up;
-        else while (overlaps(y) && y + height + 4 <= maxY) y += height + 4;
+        if (plate) {
+          let down = y + 4;
+          while (down <= maxY && overlaps(down)) down += height + 3;
+          if (down <= maxY && !overlaps(down)) y = down;
+          else {
+            let up = y - height - 3;
+            while (up >= 4 && overlaps(up)) up -= height + 3;
+            if (up >= 4 && !overlaps(up)) y = up;
+          }
+        } else {
+          let up = y - height - 3;
+          while (up >= 4 && overlaps(up)) up -= height + 3;
+          if (up >= 4 && !overlaps(up)) y = up;
+          else while (overlaps(y) && y + height + 4 <= maxY) y += height + 4;
+        }
       }
       reserved.push({ x, y, width, height });
       tag.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
