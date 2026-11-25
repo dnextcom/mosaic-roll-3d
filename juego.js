@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-18';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-18';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-18';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-18';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-20';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-20';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-20';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-20';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-18';
-import { uniqueDice } from './unicos.js?v=esmaltes-18';
-import { MarketUI } from './mercado.js?v=esmaltes-18';
-import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-18';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-18';
-import { Music } from './musica.js?v=esmaltes-18';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-20';
+import { uniqueDice } from './unicos.js?v=esmaltes-20';
+import { MarketUI } from './mercado.js?v=esmaltes-20';
+import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-20';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-20';
+import { Music } from './musica.js?v=esmaltes-20';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -873,14 +873,24 @@ function showPlate(index, pin = false) {
   positionPower();
 }
 
-function openPlatesList(focusKey = null) {
+function openPlatesList() {
   if (!run || modal) return;
   showPower(-1);
   showPlate(-1);
   modal = 'plates';
+  const score = preview(run);
+  const activeCombos = new Map();
+  for (const step of [...score.numberSteps, ...score.colorSteps]) {
+    if (!step?.combo) continue;
+    const cur = activeCombos.get(step.combo) || { count: 0, points: 0, add: 0 };
+    cur.count++;
+    cur.points += step.points || 0;
+    cur.add += step.add || 0;
+    activeCombos.set(step.combo, cur);
+  }
   openPlateShelf(run, {
     host: $('play-layout') || document.body,
-    focusKey,
+    activeCombos,
     onClose: () => {
       if (modal === 'plates') modal = null;
     },
@@ -1516,7 +1526,7 @@ canvas.addEventListener('pointerup', event => {
   pointer = null;
   if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
   if (!gesture.orbit && !gesture.moved && gesture.plate != null) {
-    openPlatesList(comboKeys[gesture.plate]);
+    openPlatesList();
   } else if (!gesture.orbit && !gesture.moved && ready()) {
     const stone = gesture.target >= 0 && gesture.target < HAND && Boolean(run.board[gesture.target]?.stone);
     const wasArmed = armed;

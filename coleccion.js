@@ -1,9 +1,9 @@
-import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-18';
-import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-18';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-18';
-import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-18';
-import { uniqueDice } from './unicos.js?v=esmaltes-18';
-import { icon } from './iconos.js?v=esmaltes-18';
+import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-20';
+import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-20';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-20';
+import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-20';
+import { uniqueDice } from './unicos.js?v=esmaltes-20';
+import { icon } from './iconos.js?v=esmaltes-20';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);
@@ -109,16 +109,21 @@ export function collectionMarkup(run) {
 export const comboUsesLabel = count => count === 1 ? t('1 uso') : message`${count} usos`;
 export const comboUsesSentence = count => count === 1 ? t('Usado 1 vez en esta partida.') : message`Usado ${count} veces en esta partida.`;
 
-export function openPlateShelf(run, { host = document.body, upgradedKey = null, oldLevel = 0, newLevel = 0, focusKey = null, onClose = null } = {}) {
+export function openPlateShelf(run, { host = document.body, upgradedKey = null, oldLevel = 0, newLevel = 0, activeCombos = null, onClose = null } = {}) {
   document.getElementById('plate-shelf-modal')?.remove();
 
   const patternKeys = ['line', 'mono', 'chromatic', 'panel'];
   const valueKeys = ['pair', 'trio', 'quartet', 'straight', 'longStraight'];
   const spec = upgradedKey ? comboCatalog[upgradedKey] : null;
   const gainText = upgradedKey ? (displayComboGain(upgradedKey, newLevel) || spec.text(newLevel)) : '';
-  const fmtValue = key => (key === 'mono' || key === 'chromatic')
-    ? `+${(getComboValue(run, key) / 100).toFixed(2).replace('.', language === 'en' ? '.' : ',')}×`
-    : `+${getComboValue(run, key)}`;
+  const fmtAmount = (key, amount) => (key === 'mono' || key === 'chromatic')
+    ? `+${(amount / 100).toFixed(2).replace('.', language === 'en' ? '.' : ',')}×`
+    : `+${amount}`;
+  const fmtValue = key => fmtAmount(key, getComboValue(run, key));
+  const fmtActive = (key, info) => {
+    const val = fmtAmount(key, info.add || info.points);
+    return info.count > 1 ? `${val} (×${info.count})` : val;
+  };
 
   const renderTier = (keys, label) => `
     <section class="plate-tier" aria-label="${label}">
@@ -129,14 +134,18 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
           const level = run?.comboLevels?.[key] || 1;
           const uses = run?.comboCounts?.[key] || 0;
           const isUpgraded = key === upgradedKey;
-          const isFocused = !isUpgraded && key === focusKey;
+          const active = activeCombos?.get?.(key);
           const portrait = platePortrait({ combo: key, level });
           const levelText = isUpgraded ? message`Niv. ${oldLevel} → ${newLevel}` : message`Niv. ${level}`;
-          return `<li class="plate-row${isUpgraded ? ' upgraded' : ''}${isFocused ? ' focused' : ''}" data-combo="${key}">
+          const activePill = active
+            ? `<span class="plate-active-tag">${active.count > 1 ? `${t('Activa')} ×${active.count}` : t('Activa')}</span>`
+            : '';
+          const shownVal = active ? fmtAmount(key, active.add || active.points) : fmtValue(key);
+          return `<li class="plate-row${isUpgraded ? ' upgraded' : ''}${active ? ' active-play' : ''}" data-combo="${key}">
             <button type="button" class="plate-row-btn" data-combo-tip="${key}" aria-expanded="false">
               <img class="plate-row-img" src="${portrait}" alt="">
-              <strong class="plate-row-name">${t(item.name)}</strong>
-              <span class="plate-row-val">${fmtValue(key)}</span>
+              <span class="plate-row-main"><strong class="plate-row-name">${t(item.name)}</strong>${activePill}</span>
+              <span class="plate-row-val">${shownVal}</span>
               <span class="plate-level-tag">${levelText}</span>
               <span class="plate-uses-tag${uses > 0 ? ' used' : ''}" aria-label="${comboUsesSentence(uses)}">${comboUsesLabel(uses)}</span>
               <span class="plate-row-more" aria-hidden="true">${icon('help')}</span>
@@ -202,6 +211,7 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
     const uses = run?.comboCounts?.[key] || 0;
     const portrait = platePortrait({ combo: key, level });
     const desc = displayComboGain(key, level) || item.text(level);
+    const active = activeCombos?.get?.(key);
     activeTipKey = key;
     anchorBtn.setAttribute('aria-expanded', 'true');
     tip.innerHTML = `
@@ -211,6 +221,7 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
           <small class="ztip-kicker">${t('Plato de maestría')} · ${message`Nivel ${level}`}</small>
           <strong>${t(item.name)} · ${fmtValue(key)}</strong>
           <p>${desc}</p>
+          ${active ? `<p class="plate-tip-active">${message`En esta jugada: ${fmtActive(key, active)}`}</p>` : ''}
           <p class="plate-tip-uses">${comboUsesSentence(uses)}</p>
         </div>
         <button type="button" class="plate-tip-close" data-action="close-plate-tip" aria-label="${t('Cerrar')}">${icon('close')}</button>

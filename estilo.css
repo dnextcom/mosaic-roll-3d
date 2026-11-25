@@ -261,7 +261,8 @@ kbd {
 .match.column { border-color: var(--turq-2); color: var(--turq-3); box-shadow: inset 0 0 0 2px rgba(7, 12, 34, .9), inset 0 0 0 3px rgba(52, 181, 165, .25), 0 6px 14px -4px rgba(0, 0, 0, .7); }
 .match.unique-mark { border-color: var(--violet); color: #ece2ff; }
 .match.plate-badge {
-  padding: 2px 7px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; border-radius: 999px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 3px 8px 4px; border-radius: 8px; line-height: 1.08;
   border-color: var(--gold-2); color: #fff4ce;
   background: linear-gradient(180deg, rgba(35, 25, 9, .95), rgba(14, 10, 4, .95));
   box-shadow: 0 0 12px rgba(240, 200, 110, .5), 0 4px 10px rgba(0, 0, 0, .75);
@@ -271,6 +272,8 @@ kbd {
   background: linear-gradient(180deg, rgba(10, 34, 34, .95), rgba(5, 16, 18, .95));
   box-shadow: 0 0 12px rgba(52, 181, 165, .5), 0 4px 10px rgba(0, 0, 0, .75);
 }
+.plate-badge-name { font: 600 9.5px/1.1 var(--font-kufi); letter-spacing: .02em; opacity: .92; }
+.plate-badge-val { font: 700 12px/1.1 var(--font-kufi); letter-spacing: .03em; }
 
 /* Crown: score medallion and resources */
 .crown {
@@ -1805,9 +1808,10 @@ dialog[data-kind="options"] { --w: min(480px, calc(100vw - 20px)); }
   background: rgba(8, 13, 28, 0.78); border: 1px solid rgba(255, 243, 205, 0.12);
   transition: border-color .2s, background .2s, box-shadow .2s;
 }
-.plate-row.focused {
-  border-color: var(--turq-2);
-  background: linear-gradient(90deg, rgba(52, 181, 165, 0.16), rgba(8, 13, 28, 0.85));
+.plate-row.active-play {
+  border-color: var(--gold-2);
+  background: linear-gradient(90deg, rgba(241, 197, 99, 0.16), rgba(12, 20, 40, 0.88));
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
 }
 .plate-row.upgraded {
   border-color: #d4af37;
@@ -1828,10 +1832,20 @@ dialog[data-kind="options"] { --w: min(480px, calc(100vw - 20px)); }
 .plate-row.upgraded .plate-row-img {
   animation: plate-pulse 1.8s infinite alternate ease-in-out;
 }
+.plate-row-main {
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+}
 .plate-row-name {
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--ivory); font: italic 700 15px/1.15 var(--font-serif);
 }
+.plate-active-tag {
+  flex-shrink: 0; padding: 2px 6px; border-radius: 999px;
+  font: 700 9.5px/1 var(--font-kufi); letter-spacing: .04em; text-transform: uppercase;
+  color: #fff4ce; background: rgba(212, 175, 55, 0.25); border: 1px solid rgba(241, 197, 99, 0.6);
+}
+.plate-row.active-play .plate-row-name { color: #fff4ce; }
+.plate-row.active-play .plate-row-val { color: #ffd779; }
 .plate-row.upgraded .plate-row-name { color: #ffd779; }
 .plate-row-val {
   color: var(--gold-3); font: 700 13px/1 var(--font-kufi); white-space: nowrap;
@@ -1875,6 +1889,7 @@ dialog[data-kind="options"] { --w: min(480px, calc(100vw - 20px)); }
   display: block; margin: 2px 0 4px; color: #fff4ce; font: italic 700 17px/1.15 var(--font-serif);
 }
 .plate-tip-text p { margin: 0; font-size: 13px; line-height: 1.35; color: var(--ivory-2); }
+.plate-tip-active { margin-top: 4px !important; color: #ffd779 !important; font-weight: 700; }
 .plate-tip-uses { margin-top: 4px !important; color: var(--turq-3) !important; font-weight: 600; }
 .plate-tip-close {
   display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
@@ -1911,11 +1926,13 @@ dialog[data-kind="options"] { --w: min(480px, calc(100vw - 20px)); }
   .plate-tier { gap: 4px; }
   .shelf-tier-label { font-size: 9px; letter-spacing: .14em; }
   .plate-list { gap: 3px; }
-  .plate-row-btn { grid-template-columns: 26px minmax(0, 1fr) auto auto auto auto; gap: 5px; padding: 4px 7px; }
-  .plate-row-img { width: 26px; height: 26px; }
-  .plate-row-name { font-size: 13.5px; }
-  .plate-row-val { font-size: 11.5px; }
-  .plate-level-tag, .plate-uses-tag { font-size: 10px; padding: 2.5px 6px; }
+  .plate-row-btn { grid-template-columns: 24px minmax(0, 1fr) auto auto auto auto; gap: 4px; padding: 4px 6px; }
+  .plate-row-img { width: 24px; height: 24px; }
+  .plate-row-main { gap: 4px; }
+  .plate-row-name { font-size: 12.5px; }
+  .plate-active-tag { font-size: 8px; padding: 2px 4px; }
+  .plate-row-val { font-size: 11px; }
+  .plate-level-tag, .plate-uses-tag { font-size: 9.5px; padding: 2px 5px; }
   .plate-row-more .ico { width: 12px; height: 12px; }
   .plate-shelf-foot { padding: 7px 10px 9px; }
   .btn-continue { width: 100%; min-height: 38px; padding: 7px 18px; font-size: 13.5px; }

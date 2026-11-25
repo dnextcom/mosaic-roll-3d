@@ -1,9 +1,9 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-18';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-20';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-18';
-import { projectBoard } from './unicos.js?v=esmaltes-18';
-import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-18';
+import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-20';
+import { projectBoard } from './unicos.js?v=esmaltes-20';
+import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-20';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -668,7 +668,13 @@ export class Table {
       if (!parts.length) continue;
       const tag = document.createElement('span');
       tag.className = `match plate-badge${total.add && !total.points ? ' mult' : ''}`;
-      tag.textContent = parts.join(' · ');
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'plate-badge-name';
+      nameSpan.textContent = t(comboCatalog[comboKey].name);
+      const valSpan = document.createElement('span');
+      valSpan.className = 'plate-badge-val';
+      valSpan.textContent = parts.join(' · ');
+      tag.append(nameSpan, valSpan);
       this.labels.append(tag);
       const anchor = piece.position.clone().add(new THREE.Vector3(0, -0.26, 0.14));
       this.tags.push({ tag, anchor, plate: true });
@@ -678,6 +684,9 @@ export class Table {
 
   positionTags() {
     const reserved = [];
+    const shelfLimit = this.plateMeshes[0]
+      ? (1 - this.plateMeshes[0].position.clone().add(new THREE.Vector3(0, -0.34, 0.25)).project(this.camera).y) / 2 * this.height
+      : this.height;
     for (const { tag, anchor, column, plate } of this.tags) {
       const screen = anchor.clone().project(this.camera);
       const width = tag.offsetWidth;
@@ -685,9 +694,15 @@ export class Table {
       const rawX = (screen.x + 1) / 2 * this.width - (plate || column ? width * .5 : width);
       const rawY = (1 - screen.y) / 2 * this.height - (plate ? height * .5 : column ? height + 3 : height / 2);
       const x = clamp(rawX, 4, this.width - width - 4);
-      let y = clamp(rawY, 4, this.height - height - 4);
-      while (reserved.some(other => x < other.x + other.width && x + width > other.x && y < other.y + other.height && y + height > other.y)
-          && y + height * 2 + 8 < this.height) y += height + 4;
+      const maxY = plate ? Math.min(this.height - height - 4, Math.max(4, shelfLimit - height)) : this.height - height - 4;
+      let y = clamp(rawY, 4, maxY);
+      const overlaps = (cy) => reserved.some(other => x < other.x + other.width && x + width > other.x && cy < other.y + other.height && cy + height > other.y);
+      if (overlaps(y)) {
+        let up = y - height - 3;
+        while (up >= 4 && overlaps(up)) up -= height + 3;
+        if (up >= 4 && !overlaps(up)) y = up;
+        else while (overlaps(y) && y + height + 4 <= maxY) y += height + 4;
+      }
       reserved.push({ x, y, width, height });
       tag.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)`;
     }

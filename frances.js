@@ -540,6 +540,8 @@ export default {
   "Repisa de platos": "Étagère d'assiettes",
   "Ver platos": "Voir assiettes",
   "Toca un plato para ver más detalles.": "Touchez une assiette pour plus de détails.",
+  "Activa": "Actif",
+  "En esta jugada: {0}": "Dans ce coup : {0}",
   "1 uso": "1 fois",
   "{0} usos": "{0} fois",
   "Usado 1 vez en esta partida.": "Utilisé 1 fois dans cette partie.",
