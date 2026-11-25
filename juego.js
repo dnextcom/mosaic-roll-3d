@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-31';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-31';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-31';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-31';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-32';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-32';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-32';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog, colorDie, uniqueDie } from './catalogo.js?v=esmaltes-32';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-31';
-import { uniqueDice } from './unicos.js?v=esmaltes-31';
-import { MarketUI } from './mercado.js?v=esmaltes-31';
-import { collectionMarkup, syncCollectionTips, hideCollectionTip, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-31';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-31';
-import { Music } from './musica.js?v=esmaltes-31';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-32';
+import { uniqueDice } from './unicos.js?v=esmaltes-32';
+import { MarketUI } from './mercado.js?v=esmaltes-32';
+import { collectionMarkup, syncCollectionTips, hideCollectionTip, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-32';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-32';
+import { Music } from './musica.js?v=esmaltes-32';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -1697,12 +1697,65 @@ function frame(now) {
 
 setCodex(false);
 paintMusic();
+function populatePatio() {
+  const drift = $('patio-drift');
+  if (!drift || drift.childElementCount) return;
+  const items = [
+    { kind: 'tile', key: 'nasridStar', x: '7%', y: '18%', xm: '6%', ym: '28%', s: '72px', o: .58, dx: '12px', dy: '-18px', r0: '-8deg', r1: '6deg', dur: '11s', delay: '-2s', glow: 'rgba(240, 200, 110, .48)' },
+    { kind: 'die', spec: uniqueDie('glass'), x: '16%', y: '44%', s: '66px', o: .62, dx: '-10px', dy: '-22px', r0: '-12deg', r1: '10deg', dur: '13s', delay: '-5s', cls: 'floater-mid', glow: 'rgba(138, 230, 214, .42)' },
+    { kind: 'tile', key: 'lattice', x: '6%', y: '68%', xm: '7%', ym: '72%', s: '58px', o: .46, dx: '14px', dy: '-14px', r0: '6deg', r1: '-9deg', dur: '10s', delay: '-1s', glow: 'rgba(72, 134, 232, .45)' },
+    { kind: 'die', spec: { ...colorDie(1), gild: 63 }, x: '22%', y: '24%', s: '46px', o: .34, blur: '.8px', dx: '8px', dy: '-14px', r0: '10deg', r1: '-14deg', dur: '15s', delay: '-7s', cls: 'floater-mid', glow: 'rgba(240, 200, 110, .35)' },
+    { kind: 'tile', key: 'stainedGlass', x: '86%', y: '22%', xm: '79%', ym: '27%', s: '74px', o: .56, dx: '-14px', dy: '-16px', r0: '8deg', r1: '-7deg', dur: '12s', delay: '-4s', glow: 'rgba(220, 130, 240, .42)' },
+    { kind: 'die', spec: uniqueDie('bud'), x: '79%', y: '46%', s: '64px', o: .60, dx: '10px', dy: '-20px', r0: '12deg', r1: '-10deg', dur: '14s', delay: '-6s', cls: 'floater-mid', glow: 'rgba(116, 212, 146, .42)' },
+    { kind: 'tile', key: 'alhambra', x: '87%', y: '67%', xm: '80%', ym: '71%', s: '60px', o: .48, dx: '-12px', dy: '-14px', r0: '-7deg', r1: '9deg', dur: '11.5s', delay: '-3s', glow: 'rgba(240, 180, 110, .44)' },
+    { kind: 'die', spec: colorDie(0), x: '74%', y: '16%', s: '48px', o: .36, blur: '.8px', dx: '-9px', dy: '-12px', r0: '-14deg', r1: '12deg', dur: '16s', delay: '-8s', cls: 'floater-mid', glow: 'rgba(92, 156, 255, .36)' },
+    { kind: 'tile', key: 'saffron', x: '11%', y: '8%', xm: '5%', ym: '6%', s: '44px', o: .32, blur: '.6px', dx: '8px', dy: '12px', r0: '-5deg', r1: '7deg', dur: '14.5s', delay: '-9s', glow: 'rgba(240, 190, 80, .38)' },
+    { kind: 'die', spec: colorDie(3), x: '84%', y: '83%', xm: '82%', ym: '81%', s: '46px', o: .36, blur: '.5px', dx: '-8px', dy: '-16px', r0: '15deg', r1: '-8deg', dur: '13.5s', delay: '-4.5s', glow: 'rgba(232, 112, 92, .38)' },
+    { kind: 'tile', key: 'livingGlaze', x: '13%', y: '84%', xm: '10%', ym: '81%', s: '48px', o: .38, blur: '.5px', dx: '10px', dy: '-12px', r0: '7deg', r1: '-10deg', dur: '12.5s', delay: '-2.5s', glow: 'rgba(52, 181, 165, .42)' },
+    { kind: 'die', spec: uniqueDie('twin'), x: '72%', y: '74%', s: '50px', o: .42, dx: '8px', dy: '-15px', r0: '-10deg', r1: '11deg', dur: '15s', delay: '-1.5s', cls: 'floater-mid', glow: 'rgba(182, 148, 255, .42)' },
+  ];
+  const nodes = items.map(item => {
+    const el = document.createElement('span');
+    el.className = `floater floater-${item.kind}${item.cls ? ` ${item.cls}` : ''}`;
+    el.style.cssText = `--x:${item.x};--y:${item.y};${item.xm ? `--xm:${item.xm};` : ''}${item.ym ? `--ym:${item.ym};` : ''}--s:${item.s};--o:${item.o};--dx:${item.dx};--dy:${item.dy};--r0:${item.r0};--r1:${item.r1};--dur:${item.dur};--delay:${item.delay};--glow:${item.glow};${item.blur ? `--blur:${item.blur};` : ''}`;
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = item.kind === 'tile' ? tileArt(item.key).url : diePortrait(item.spec);
+    el.append(img);
+    return el;
+  });
+  const motes = [
+    ['18%', '76%', '4px', '8s', '-1s', '12px'],
+    ['32%', '82%', '5px', '10s', '-4s', '-10px'],
+    ['44%', '88%', '4px', '9s', '-7s', '14px'],
+    ['58%', '86%', '5px', '11s', '-2s', '-12px'],
+    ['68%', '78%', '4px', '8.5s', '-5s', '10px'],
+    ['82%', '74%', '5px', '10.5s', '-3s', '-14px'],
+    ['24%', '58%', '3.5px', '9.5s', '-6s', '8px'],
+    ['76%', '56%', '3.5px', '9.5s', '-8s', '-8px'],
+  ].map(([x, y, s, dur, delay, dx]) => {
+    const m = document.createElement('span');
+    m.className = 'mote';
+    m.style.cssText = `--x:${x};--y:${y};--s:${s};--dur:${dur};--delay:${delay};--dx:${dx};`;
+    return m;
+  });
+  drift.append(...nodes, ...motes);
+}
+
 try {
   const art = new DiceArt();
   table = new Table(canvas, $('world-labels'), art);
   await table.load();
   market = new MarketUI(art, workshop, { open: showWorkshop, changed: () => { save(); render(); }, note, bump, advance: nextMosaic, exit: title, collection: () => showCollection() }, table.porcelain.map);
+  populatePatio();
   title();
+  $('start').addEventListener('pointermove', event => {
+    if (event.pointerType !== 'mouse') return;
+    const nx = (event.clientX / Math.max(1, innerWidth) - 0.5) * 2;
+    const ny = (event.clientY / Math.max(1, innerHeight) - 0.5) * 2;
+    $('patio-drift')?.style.setProperty('--mx', nx.toFixed(3));
+    $('patio-drift')?.style.setProperty('--my', ny.toFixed(3));
+  }, { passive: true });
   requestAnimationFrame(frame);
 } catch (error) {
   console.error('No se pudo iniciar la mesa 3D', error);
