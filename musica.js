@@ -1,13 +1,13 @@
 // Background soundtrack player («The vale path» by Umbría) with Web Audio API
 // underwater/muffled lowpass filtering when entering the workshop (bazaar & kiln).
 
-const TRACK_URL = './musica-umbria.mp3?v=esmaltes-22';
+const TRACK_URL = './musica-umbria.mp3?v=esmaltes-23';
 
 const MOODS = {
   title: { cutoff: 18000, q: 0.7, gain: 0.75 },
   play: { cutoff: 18000, q: 0.7, gain: 0.68 },
   boss: { cutoff: 18000, q: 0.7, gain: 0.78 },
-  shop: { cutoff: 340, q: 1.6, gain: 0.55 },
+  shop: { cutoff: 520, q: 1.35, gain: 1.05 },
 };
 
 export class Music {

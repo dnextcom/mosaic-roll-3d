@@ -1,9 +1,9 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-22';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-23';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-22';
-import { projectBoard } from './unicos.js?v=esmaltes-22';
-import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-22';
+import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-23';
+import { projectBoard } from './unicos.js?v=esmaltes-23';
+import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-23';
 
 export const HAND = 32;
 export const POWER = 48;
