@@ -1,4 +1,4 @@
-import { uniqueDice } from './unicos.js?v=esmaltes-30';
+import { uniqueDice } from './unicos.js?v=esmaltes-31';
 
 export const glazes = [
   { name: 'Cobalto', color: '#1e40af', light: '#72a9db' },

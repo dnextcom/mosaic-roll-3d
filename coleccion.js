@@ -1,9 +1,9 @@
-import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-30';
-import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-30';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-30';
-import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-30';
-import { uniqueDice } from './unicos.js?v=esmaltes-30';
-import { icon } from './iconos.js?v=esmaltes-30';
+import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-31';
+import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-31';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-31';
+import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-31';
+import { uniqueDice } from './unicos.js?v=esmaltes-31';
+import { icon } from './iconos.js?v=esmaltes-31';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);

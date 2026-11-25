@@ -1146,12 +1146,12 @@ body[data-screen="workshop"] { overflow: hidden; }
 }
 .wall-label { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--gold-2); font: 500 11px/1.2 var(--font-kufi); letter-spacing: .2em; text-transform: uppercase; }
 .wall-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
-.wall-tiles { display: flex; flex-wrap: wrap; gap: 12px; }
+.wall-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
 .wall-tile {
-  display: grid; justify-items: center; gap: 7px; width: 76px; padding: 0; border: 0; background: none; color: var(--gold-3);
-  font: 600 13px/1 var(--font-kufi); touch-action: manipulation;
+  display: grid; justify-items: center; gap: 8px; width: 84px; padding: 0; border: 0; background: none; color: var(--gold-3);
+  font: 600 13.5px/1 var(--font-kufi); touch-action: manipulation;
 }
-.wall-tile img { width: 66px; height: 66px; border-radius: 1px; box-shadow: 0 0 0 1px var(--rarity), 0 0 0 4px var(--night-1), 0 0 0 5px var(--line-soft); transition: box-shadow .2s, transform .2s; }
+.wall-tile img { width: 74px; height: 74px; border-radius: 1px; box-shadow: 0 0 0 1px var(--rarity), 0 0 0 4px var(--night-1), 0 0 0 5px var(--line-soft); transition: box-shadow .2s, transform .2s; }
 .wall-tile:hover img, .wall-tile[aria-expanded="true"] img { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--rarity), 0 0 0 4px var(--night-1), 0 0 0 5px var(--gold-2), 0 0 24px -2px color-mix(in srgb, var(--rarity) 70%, transparent); }
 .wall-tile:focus-visible { outline-offset: 5px; }
 .wall-price { display: inline-flex; align-items: center; gap: 4px; height: 16px; }
@@ -1589,26 +1589,28 @@ body[data-screen="workshop"] { overflow: hidden; }
   .purse strong { font-size: 20px; }
   .zoco-tabs { grid-area: tabs; }
   .zoco-tab { flex: 1; min-width: 0; min-height: 42px; padding: 12px 8px 8px; font-size: 12px; letter-spacing: .1em; border-radius: 50% 50% 0 0 / 18px 18px 0 0; }
-  .zoco-shop, .zoco-oven { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(150px, 1fr) auto; gap: 8px; }
+  .zoco-shop { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
+  .zoco-oven { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(150px, 1fr) auto; gap: 8px; }
   .workshop-stage { border-radius: 50% 50% 6px 6px / 46px 46px 6px 6px; }
+  .zoco-shop .workshop-stage { aspect-ratio: 1.12 / 1; max-height: 46dvh; }
   .exhibit-plate { width: 100%; padding: 5px 4px 6px; gap: 2px; }
   .exhibit-plate strong { font-size: 13.5px; }
   .exhibit-combo-meta { font-size: 10px; }
   .exhibit-plate small { font-size: 13px; }
   .rarity-name { display: none; }
 
-  .wall { grid-template-rows: auto auto; gap: 8px; padding: 10px 12px; }
-  .wall-row { display: grid; grid-template-columns: 70px minmax(0, 1fr); align-items: center; gap: 10px; }
-  .wall-label { display: block; margin: 0; font-size: 9.5px; letter-spacing: .14em; line-height: 1.35; }
+  .wall { grid-template-rows: auto auto; align-content: center; gap: 16px; padding: 14px 14px; }
+  .wall-row { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 10px; text-align: center; }
+  .wall-label { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin: 0; font-size: 11px; letter-spacing: .16em; line-height: 1.25; }
   .wall-label::after { display: none; }
-  .wall-label .count { display: block; font-size: 12px; }
-  .wall-tiles { flex-wrap: nowrap; gap: 10px; }
-  .wall-tile { width: 54px; gap: 4px; font-size: 12px; }
-  .wall-tile img { width: 48px; height: 48px; }
-  .wall-owned { gap: 7px; }
-  .wall-tile.owned { width: 38px; }
-  .wall-tile.owned img { width: 36px; height: 36px; box-shadow: 0 0 0 1px var(--rarity), 0 0 0 3px var(--night-1); }
-  .niche-empty { width: 36px; height: 40px; border-radius: 50% 50% 2px 2px / 16px 16px 2px 2px; }
+  .wall-label .count { display: inline; font-size: 11.5px; color: var(--gold-3); }
+  .wall-tiles { flex-wrap: nowrap; justify-content: center; gap: 18px; width: 100%; }
+  .wall-tile { width: 88px; gap: 7px; font-size: 14px; }
+  .wall-tile img { width: 78px; height: 78px; }
+  .wall-owned { gap: 12px; }
+  .wall-tile.owned { width: 50px; }
+  .wall-tile.owned img { width: 48px; height: 48px; box-shadow: 0 0 0 1px var(--rarity), 0 0 0 3px var(--night-1); }
+  .niche-empty { width: 48px; height: 54px; border-radius: 50% 50% 2px 2px / 20px 20px 2px 2px; }
   .wall-note { display: none; }
 
   .kiln-state { top: 10px; padding: 4px 10px 3px; font-size: 9.5px; }

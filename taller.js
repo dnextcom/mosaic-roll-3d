@@ -1,7 +1,7 @@
-import { t } from './idioma.js?v=esmaltes-30';
+import { t } from './idioma.js?v=esmaltes-31';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { rarities } from './catalogo.js?v=esmaltes-30';
+import { rarities } from './catalogo.js?v=esmaltes-31';
 
 // Dice in the workshop are a little smaller than on the table so the whole scene fits on phones.
 const DIE_SCALE = .8;
@@ -9,7 +9,7 @@ const DIE_HALF = .43 * DIE_SCALE;
 const FLOOR = -.26;
 // Half the visible world, per scene, before the aspect ratio widens one of the axes.
 const VIEWS = {
-  gallery: { width: 3.1, height: 2.02, eye: new THREE.Vector3(0, 5, 8), target: new THREE.Vector3(0, 1.0, -.1) },
+  gallery: { width: 3.1, height: 1.92, eye: new THREE.Vector3(0, 5, 8), target: new THREE.Vector3(0, .96, -.1) },
   kiln: { width: 2.55, height: 2.16, eye: new THREE.Vector3(0, 6, 7), target: new THREE.Vector3(0, 1.0, -.35) },
 };
 const HEARTH = -.45;
