@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-25';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-25';
-import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-25';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-25';
-import { Workshop } from './taller.js?v=esmaltes-25';
-import { uniqueDice } from './unicos.js?v=esmaltes-25';
-import { dieFaces, dieTraits, openPlateShelf, comboUsesLabel, comboUsesSentence } from './coleccion.js?v=esmaltes-25';
-import { icon } from './iconos.js?v=esmaltes-25';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-28';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-28';
+import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-28';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-28';
+import { Workshop } from './taller.js?v=esmaltes-28';
+import { uniqueDice } from './unicos.js?v=esmaltes-28';
+import { dieFaces, dieTraits, openPlateShelf, comboUsesLabel, comboUsesSentence } from './coleccion.js?v=esmaltes-28';
+import { icon } from './iconos.js?v=esmaltes-28';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -550,7 +550,10 @@ export class MarketUI {
       if (event.detail === 0) this.tipElement.querySelector('.ztip-action:not(:disabled)')?.focus({ preventScroll: true });
       return;
     }
-    if (!actionButton || actionButton.disabled) return;
+    if (!actionButton || actionButton.disabled) {
+      if (this.tipElement.contains(event.target)) this.closeTip();
+      return;
+    }
     const { market, key } = actionButton.dataset;
     if (market === 'to-oven') this.show('oven');
     else if (market === 'combo') this.purchaseCombo(Number(key));
@@ -746,7 +749,7 @@ export class MarketUI {
         showOwnedTip(Number(pickBtn.dataset.replacePick), pickBtn);
         return;
       }
-      if (selectedIdx != null && !event.target.closest('#replace-tip')) hideTip();
+      if (selectedIdx != null) hideTip();
     });
 
     window.addEventListener('keydown', onKeyDown, true);

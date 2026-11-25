@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-25';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-25';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-25';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-25';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-28';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-28';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-28';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-28';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-25';
-import { uniqueDice } from './unicos.js?v=esmaltes-25';
-import { MarketUI } from './mercado.js?v=esmaltes-25';
-import { collectionMarkup, syncCollectionTips, hideCollectionTip, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-25';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-25';
-import { Music } from './musica.js?v=esmaltes-25';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-28';
+import { uniqueDice } from './unicos.js?v=esmaltes-28';
+import { MarketUI } from './mercado.js?v=esmaltes-28';
+import { collectionMarkup, syncCollectionTips, hideCollectionTip, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-28';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-28';
+import { Music } from './musica.js?v=esmaltes-28';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -60,7 +60,7 @@ let musicVolume = Number(read(musicVolumeStorage) ?? '0.6') || 0.6;
 let sfxVolume = Number(read(soundVolumeStorage) ?? '0.8') || 0.8;
 let hapticsEnabled = read(hapticsStorage) !== 'off';
 let fastSpeed = read(speedStorage) === 'fast';
-let music = null, musicMood = 'title';
+let music = null, musicMood = 'title', musicHalted = false;
 let selected = -1, focused = -1, hovered = -1;
 let tooltip = -1, tooltipPlate = -1, pinned = false;
 let pointer = null, lockUntil = 0;
@@ -173,14 +173,14 @@ const chips = (base, multiplier, popBase = false, popMulti = false) =>
 // Music plays while sound is on, the music switch is on and the page is visible.
 function syncMusic() {
   try {
-    if (musicOn && !muted && !document.hidden && window.AudioContext) {
+    if (musicOn && !muted && !musicHalted && !document.hidden && window.AudioContext) {
       sound ??= new AudioContext();
       if (sound.state === 'suspended') sound.resume().catch(() => {});
       music ??= new Music(sound);
       music.setMood(musicMood);
       music.setVolume(musicVolume);
       music.start();
-    } else music?.stop();
+    } else if (!musicHalted || !musicOn || muted || document.hidden) music?.stop();
   } catch { /* The game stays playable without music. */ }
   paintMusic();
 }
@@ -263,7 +263,9 @@ function closeDialog() {
 }
 
 function title() {
+  musicHalted = false;
   setMusicMood('title');
+  if (sound) syncMusic();
   closeDialog();
   cancelPointer();
   setCodex(false);
@@ -342,7 +344,9 @@ function enter(roll = []) {
   render();
   table.frame(now);
   if (roll.length) note('roll');
+  musicHalted = false;
   setMusicMood(bossAt(run) ? 'boss' : 'play');
+  syncMusic();
   if (run.phase !== 'play') showOutcome();
   else if (bossAt(run)) popup(message`Jefe: ${t(bosses[bossAt(run).key].name)}`, [], 'banner boss');
 }
@@ -1352,6 +1356,10 @@ function showOutcome() {
       actions: action('endless', t('Modo libre'), 'play', 'gold') + action('collection', t('Ver bolsa y azulejos'), 'bag') + action('title', t('Volver al patio'), 'door') }), 'victory');
     return;
   }
+  if (!musicHalted) {
+    musicHalted = true;
+    music?.windDown();
+  }
   const heading = run.turns && run.board.every(Boolean) ? t('Tablero bloqueado') : t('Sin turnos');
   const boss = bossAt(run);
   showDialog('outcome', windowMarkup({ title: heading, eyebrow: `${run.endless ? message`Mosaico ${run.stage + 1}` : `${t('Mosaico')} ${run.stage + 1}/${campaignLength}`} · ${boss ? message`Jefe: ${t(bosses[boss.key].name)}` : t(stageAt(run.stage, run.difficulty ?? 0).name)}`,
@@ -1635,6 +1643,8 @@ $('top').addEventListener('click', topCamera);
 $('reset-camera').addEventListener('click', centerCamera);
 $('catalog').addEventListener('click', () => showCollection(true));
 $('collection-button').addEventListener('click', () => showCollection());
+$('power-tooltip').addEventListener('click', () => { pinned = false; showPower(-1); showPlate(-1); });
+$('die-tooltip').addEventListener('click', () => { $('die-tooltip').hidden = true; });
 $('recall').addEventListener('click', returnDie);
 $('skip-score').addEventListener('click', () => finishScore());
 $('confirm').addEventListener('click', scoreTurn);

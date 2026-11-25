@@ -1,9 +1,9 @@
-import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-25';
-import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-25';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-25';
-import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-25';
-import { uniqueDice } from './unicos.js?v=esmaltes-25';
-import { icon } from './iconos.js?v=esmaltes-25';
+import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-28';
+import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-28';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-28';
+import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-28';
+import { uniqueDice } from './unicos.js?v=esmaltes-28';
+import { icon } from './iconos.js?v=esmaltes-28';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);
@@ -253,7 +253,7 @@ export function initCollectionTips(dialog) {
       else ctrl.show(btn, true);
       return;
     }
-    if (ctrl.active && !event.target.closest('#book-tip')) hideCollectionTip();
+    if (ctrl.active && !event.target.closest('[data-action="break-unique"]')) hideCollectionTip();
   });
   dialog.addEventListener('toggle', hideCollectionTip, true);
   addEventListener('resize', hideCollectionTip);
@@ -430,7 +430,7 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
       showTip(rowBtn.dataset.comboTip, rowBtn);
       return;
     }
-    if (activeTipKey && !event.target.closest('#plate-tip')) hideTip();
+    if (activeTipKey) hideTip();
   });
 
   window.addEventListener('keydown', onKeyDown, true);

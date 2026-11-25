@@ -379,7 +379,7 @@ kbd {
 /* Tooltips anchored to 3D objects */
 .tooltip {
   position: absolute; z-index: 7; left: 0; top: 0; display: grid; gap: 3px; width: max-content; max-width: min(270px, calc(100% - 12px)); padding: 10px 14px 11px;
-  border: 1px solid var(--rarity, var(--gold-2)); background: rgba(7, 12, 34, .95); pointer-events: none;
+  border: 1px solid var(--rarity, var(--gold-2)); background: rgba(7, 12, 34, .95); pointer-events: auto; cursor: pointer;
   box-shadow: inset 0 0 0 3px rgba(7, 12, 34, .95), inset 0 0 0 4px var(--line-soft), 0 14px 28px -10px rgba(0, 0, 0, .85);
 }
 .tooltip-kicker { color: var(--rarity, var(--gold-2)); font: 500 10px/1.2 var(--font-kufi); letter-spacing: .18em; text-transform: uppercase; }
