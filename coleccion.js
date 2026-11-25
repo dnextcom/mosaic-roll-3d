@@ -1,9 +1,9 @@
-import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-16';
-import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-16';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-16';
-import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-16';
-import { uniqueDice } from './unicos.js?v=esmaltes-16';
-import { icon } from './iconos.js?v=esmaltes-16';
+import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-18';
+import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-18';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-18';
+import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-18';
+import { uniqueDice } from './unicos.js?v=esmaltes-18';
+import { icon } from './iconos.js?v=esmaltes-18';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);
@@ -133,18 +133,14 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
           const portrait = platePortrait({ combo: key, level });
           const levelText = isUpgraded ? message`Niv. ${oldLevel} → ${newLevel}` : message`Niv. ${level}`;
           return `<li class="plate-row${isUpgraded ? ' upgraded' : ''}${isFocused ? ' focused' : ''}" data-combo="${key}">
-            <img class="plate-row-img" src="${portrait}" alt="">
-            <div class="plate-row-info">
-              <div class="plate-row-top">
-                <strong class="plate-row-name">${t(item.name)}</strong>
-                <span class="plate-row-val">${fmtValue(key)}</span>
-              </div>
-              <p class="plate-row-desc">${displayComboGain(key, level) || item.text(level)}</p>
-            </div>
-            <div class="plate-row-badges">
+            <button type="button" class="plate-row-btn" data-combo-tip="${key}" aria-expanded="false">
+              <img class="plate-row-img" src="${portrait}" alt="">
+              <strong class="plate-row-name">${t(item.name)}</strong>
+              <span class="plate-row-val">${fmtValue(key)}</span>
               <span class="plate-level-tag">${levelText}</span>
               <span class="plate-uses-tag${uses > 0 ? ' used' : ''}" aria-label="${comboUsesSentence(uses)}">${comboUsesLabel(uses)}</span>
-            </div>
+              <span class="plate-row-more" aria-hidden="true">${icon('help')}</span>
+            </button>
           </li>`;
         }).join('')}
       </ul>
@@ -159,7 +155,7 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
       <div class="plate-shelf-head">
         <span class="shelf-kicker">${t('Alacena del Alfarero')}</span>
         <h2 class="shelf-title" id="rack-title">${t('Colección de Platos de Maestría')}</h2>
-        <p class="shelf-subtitle">${t('Cada plato perfecciona una técnica de mosaico en el taller.')}</p>
+        <p class="shelf-subtitle">${t('Toca un plato para ver más detalles.')}</p>
       </div>
 
       ${upgradedKey ? `
@@ -176,11 +172,60 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
         ${renderTier(valueKeys, t('Combinaciones de Dados'))}
       </div>
 
+      <div class="plate-tip" id="plate-tip" role="dialog" aria-label="${t('Plato de maestría')}" hidden></div>
+
       <div class="plate-shelf-foot">
         <button type="button" class="btn btn-gold btn-continue" data-action="close-plate-shelf">${t('Continuar')} ▷</button>
       </div>
     </div>
   `;
+
+  const card = dialog.querySelector('.plate-shelf-dialog');
+  const tip = dialog.querySelector('#plate-tip');
+  let activeTipKey = null;
+
+  const hideTip = () => {
+    if (!activeTipKey) return;
+    activeTipKey = null;
+    tip.hidden = true;
+    for (const btn of dialog.querySelectorAll('.plate-row-btn[aria-expanded="true"]')) {
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  const showTip = (key, anchorBtn) => {
+    if (activeTipKey === key) { hideTip(); return; }
+    hideTip();
+    const item = comboCatalog[key];
+    if (!item || !anchorBtn) return;
+    const level = run?.comboLevels?.[key] || 1;
+    const uses = run?.comboCounts?.[key] || 0;
+    const portrait = platePortrait({ combo: key, level });
+    const desc = displayComboGain(key, level) || item.text(level);
+    activeTipKey = key;
+    anchorBtn.setAttribute('aria-expanded', 'true');
+    tip.innerHTML = `
+      <div class="plate-tip-card">
+        <img class="plate-tip-img" src="${portrait}" alt="">
+        <div class="plate-tip-text">
+          <small class="ztip-kicker">${t('Plato de maestría')} · ${message`Nivel ${level}`}</small>
+          <strong>${t(item.name)} · ${fmtValue(key)}</strong>
+          <p>${desc}</p>
+          <p class="plate-tip-uses">${comboUsesSentence(uses)}</p>
+        </div>
+        <button type="button" class="plate-tip-close" data-action="close-plate-tip" aria-label="${t('Cerrar')}">${icon('close')}</button>
+      </div>
+    `;
+    tip.hidden = false;
+    const cardRect = card.getBoundingClientRect();
+    const btnRect = anchorBtn.getBoundingClientRect();
+    const tipHeight = tip.offsetHeight;
+    const spaceBelow = cardRect.bottom - btnRect.bottom;
+    const top = spaceBelow >= tipHeight + 12
+      ? btnRect.bottom - cardRect.top + 6
+      : Math.max(8, btnRect.top - cardRect.top - tipHeight - 6);
+    tip.style.top = `${Math.round(top)}px`;
+  };
 
   let closed = false;
   const close = () => {
@@ -193,7 +238,14 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
   };
 
   const onKeyDown = event => {
-    if (event.key === 'Escape' || event.key === ' ' || event.key === 'Enter') {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      if (activeTipKey) hideTip();
+      else close();
+      return;
+    }
+    if ((event.key === ' ' || event.key === 'Enter') && !event.target.closest('.plate-row-btn')) {
       event.preventDefault();
       event.stopPropagation();
       close();
@@ -201,13 +253,24 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
   };
 
   dialog.addEventListener('click', event => {
-    if (event.target === dialog || event.target.closest('[data-action="close-plate-shelf"]')) close();
+    if (event.target === dialog || event.target.closest('[data-action="close-plate-shelf"]')) {
+      close();
+      return;
+    }
+    if (event.target.closest('[data-action="close-plate-tip"]')) {
+      hideTip();
+      return;
+    }
+    const rowBtn = event.target.closest('.plate-row-btn');
+    if (rowBtn) {
+      showTip(rowBtn.dataset.comboTip, rowBtn);
+      return;
+    }
+    if (activeTipKey && !event.target.closest('#plate-tip')) hideTip();
   });
 
   window.addEventListener('keydown', onKeyDown, true);
   host.append(dialog);
-  const targetKey = upgradedKey || focusKey;
-  if (targetKey) dialog.querySelector(`[data-combo="${targetKey}"]`)?.scrollIntoView({ block: 'nearest' });
-  setTimeout(() => dialog.querySelector('.btn-continue')?.focus(), 50);
+  setTimeout(() => dialog.querySelector('.btn-continue')?.focus({ preventScroll: true }), 50);
   return close;
 }

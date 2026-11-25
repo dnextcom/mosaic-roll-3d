@@ -1,9 +1,9 @@
-import { t, language, scoreText } from './idioma.js?v=esmaltes-16';
+import { t, language, scoreText } from './idioma.js?v=esmaltes-18';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-16';
-import { projectBoard } from './unicos.js?v=esmaltes-16';
-import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-16';
+import { DiceArt, tileArt, plateArt } from './arte.js?v=esmaltes-18';
+import { projectBoard } from './unicos.js?v=esmaltes-18';
+import { getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-18';
 
 export const HAND = 32;
 export const POWER = 48;
@@ -66,7 +66,9 @@ export class Table {
     this.powerMeshes = [];
     this.plateShelf = new THREE.Group();
     this.plateMeshes = [];
+    this.plateEntries = [];
     this.litPlates = new Set();
+    this.scoringPlate = -1;
     this.highlight = new THREE.Group();
     this.lit = new Set();
     this.models = new Map();
@@ -292,11 +294,13 @@ export class Table {
     for (const piece of this.plateShelf.children) {
       piece.traverse(child => {
         if (child.geometry) child.geometry.dispose();
-        if (child.material && !Array.isArray(child.material)) child.material.dispose?.();
+        if (Array.isArray(child.material)) child.material.forEach(mat => { if (mat !== this.brass && mat !== this.clay) mat?.dispose?.(); });
+        else if (child.material && child.material !== this.cobalt && child.material !== this.brass && child.material !== this.clay) child.material.dispose?.();
       });
     }
     this.plateShelf.clear();
     this.plateMeshes = [];
+    this.plateEntries = [];
 
     const zLower = zPower - 0.74;
     const zUpper = zLower - 0.52;
@@ -339,6 +343,7 @@ export class Table {
     // Leaves a clear central corridor for the HUD badge
     const upperX = [-1.62, -0.66, 0.66, 1.62];
 
+    const haloGeom = new THREE.TorusGeometry(radius + 0.045, 0.026, 10, 36);
     comboKeys.forEach((comboKey, index) => {
       const level = comboLevels[comboKey] || 1;
       const isLower = index < 5;
@@ -349,6 +354,9 @@ export class Table {
       const plateArtObj = plateArt(comboKey, level);
       const topMat = new THREE.MeshStandardMaterial({
         map: plateArtObj.map,
+        emissive: new THREE.Color(0xffd779),
+        emissiveMap: plateArtObj.map,
+        emissiveIntensity: 0,
         roughness: 0.25,
         metalness: 0.15
       });
@@ -358,13 +366,18 @@ export class Table {
       piece.userData.combo = comboKey;
       piece.userData.level = level;
 
+      const haloMat = new THREE.MeshBasicMaterial({ color: 0xffe28a, transparent: true, opacity: 0, depthWrite: false });
+      const halo = mesh(haloGeom, haloMat, x, y, z - 0.015, false);
+      halo.rotation.x = -0.32;
+
       // Small brass easel support behind plate
       const easel = mesh(new THREE.BoxGeometry(0.035, 0.24, 0.14), this.brass, x, y - 0.05, z - 0.07);
       easel.rotation.x = -0.32;
       this.plateShelf.add(easel);
 
       this.plateMeshes.push(piece);
-      this.plateShelf.add(piece);
+      this.plateEntries.push({ mesh: piece, halo, topMat, haloMat, baseY: y });
+      this.plateShelf.add(halo, piece);
     });
 
     this.dirty = true;
@@ -608,10 +621,16 @@ export class Table {
     for (const [id, piece] of this.extras) this.removeExtra(id, piece);
     this.marks([]);
     this.lightCells([]);
+    this.pulsePlate(null);
     this.dirty = true;
   }
 
-  marks(matches, powers = []) {
+  pulsePlate(comboKey = null) {
+    this.scoringPlate = comboKey ? comboKeys.indexOf(comboKey) : -1;
+    this.dirty = true;
+  }
+
+  marks(matches, powers = [], activeSteps = []) {
     for (const object of this.effects.children) object.geometry.dispose();
     this.effects.clear();
     this.labels.replaceChildren();
@@ -626,46 +645,47 @@ export class Table {
           match.column ? this.aqua : this.gold, center.x + (match.column ? side * .629 : 0),
           match.column ? .365 : .374, center.z + (match.column ? 0 : side * .629), false));
       }
-      const tag = document.createElement('span');
-      tag.className = `match${match.column ? ' column' : ''}`;
-      const points = match.points ? `+${match.points}` : '';
-      const bonus = match.add ? `+${(match.add / 100).toLocaleString(language)}×` : '';
-      tag.textContent = `${scoreText(match.name)} ${[points, bonus].filter(Boolean).join(' · ')}`;
-      this.labels.append(tag);
-      first.y = .63;
-      if (match.column) first.z -= .79;
-      else first.x -= .77;
-      this.tags.push({ tag, anchor: first, column: match.column });
     }
-    for (const power of powers) {
-      const tag = document.createElement('span');
-      tag.className = 'match unique-mark';
-      tag.textContent = `${t(power.name)} · +${(power.points ?? power.add / 100).toLocaleString(language)}${power.add ? '×' : ''}`;
-      const anchor = this.cell(power.cells[0]);
-      anchor.y = 1.31;
-      this.labels.append(tag);
-      this.tags.push({ tag, anchor: power.cells[0] != null ? this.cell(power.cells[0]) : anchor, column: true });
+    const plateTotals = new Map();
+    for (const step of activeSteps) {
+      if (!step?.combo) continue;
+      const cur = plateTotals.get(step.combo) || { points: 0, add: 0 };
+      cur.points += step.points || 0;
+      cur.add += step.add || 0;
+      plateTotals.set(step.combo, cur);
     }
     this.litPlates = new Set();
-    const allSteps = [...matches, ...powers];
-    allSteps.forEach(s => {
-      comboKeys.forEach((key, idx) => {
-        if (s.name && s.name.includes(comboCatalog[key].name)) {
-          this.litPlates.add(idx);
-        }
-      });
-    });
+    const locale = language === 'en' ? 'en-US' : 'es-ES';
+    for (const [comboKey, total] of plateTotals) {
+      const idx = comboKeys.indexOf(comboKey);
+      if (idx < 0) continue;
+      this.litPlates.add(idx);
+      const piece = this.plateMeshes[idx];
+      if (!piece) continue;
+      const parts = [];
+      if (total.points) parts.push(`+${total.points}`);
+      if (total.add) parts.push(`+${(total.add / 100).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`);
+      if (!parts.length) continue;
+      const tag = document.createElement('span');
+      tag.className = `match plate-badge${total.add && !total.points ? ' mult' : ''}`;
+      tag.textContent = parts.join(' · ');
+      this.labels.append(tag);
+      const anchor = piece.position.clone().add(new THREE.Vector3(0, -0.26, 0.14));
+      this.tags.push({ tag, anchor, plate: true });
+    }
     this.dirty = true;
   }
 
   positionTags() {
     const reserved = [];
-    for (const { tag, anchor, column } of this.tags) {
+    for (const { tag, anchor, column, plate } of this.tags) {
       const screen = anchor.clone().project(this.camera);
       const width = tag.offsetWidth;
       const height = tag.offsetHeight;
-      const x = clamp((screen.x + 1) / 2 * this.width - width * (column ? .5 : 1), 4, this.width - width - 4);
-      let y = clamp((1 - screen.y) / 2 * this.height - (column ? height + 3 : height / 2), 4, this.height - height - 4);
+      const rawX = (screen.x + 1) / 2 * this.width - (plate || column ? width * .5 : width);
+      const rawY = (1 - screen.y) / 2 * this.height - (plate ? height * .5 : column ? height + 3 : height / 2);
+      const x = clamp(rawX, 4, this.width - width - 4);
+      let y = clamp(rawY, 4, this.height - height - 4);
       while (reserved.some(other => x < other.x + other.width && x + width > other.x && y < other.y + other.height && y + height > other.y)
           && y + height * 2 + 8 < this.height) y += height + 4;
       reserved.push({ x, y, width, height });
@@ -712,14 +732,31 @@ export class Table {
         piece.mesh.scale.copy(base.scale);
       } else piece.mesh.scale.setScalar(this.lit.has(id) ? .84 : .77);
     }
-    for (let i = 0; i < this.plateMeshes.length; i++) {
-      const piece = this.plateMeshes[i];
-      const lit = this.litPlates.has(i);
-      const targetScale = lit ? 1.15 : 1.0;
-      if (Math.abs(piece.scale.x - targetScale) > 0.005) {
-        piece.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.2);
+    for (let i = 0; i < this.plateEntries.length; i++) {
+      const entry = this.plateEntries[i];
+      const { mesh: piece, halo, topMat, haloMat, baseY } = entry;
+      const active = this.litPlates.has(i);
+      const scoring = this.scoringPlate === i;
+      const shimmer = active || scoring ? 0.5 + 0.5 * Math.sin(now * 0.008 + i * 0.7) : 0;
+      const targetScale = scoring ? 1.30 : active ? 1.18 : 1.0;
+      const targetY = baseY + (scoring ? 0.14 : active ? 0.07 : 0);
+      const targetEmissive = scoring ? 1.15 : active ? (0.45 + shimmer * 0.25) : 0;
+      const targetHalo = scoring ? 0.92 : active ? (0.48 + shimmer * 0.24) : 0;
+
+      if (Math.abs(piece.scale.x - targetScale) > 0.004 || Math.abs(piece.position.y - targetY) > 0.002) {
+        piece.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.22);
+        piece.position.y += (targetY - piece.position.y) * 0.22;
+        halo.position.y = piece.position.y;
+        halo.scale.copy(piece.scale);
         moving = true;
       }
+      if (Math.abs(topMat.emissiveIntensity - targetEmissive) > 0.01 || Math.abs(haloMat.opacity - targetHalo) > 0.01) {
+        topMat.emissiveIntensity += (targetEmissive - topMat.emissiveIntensity) * 0.24;
+        haloMat.opacity += (targetHalo - haloMat.opacity) * 0.24;
+        halo.visible = haloMat.opacity > 0.01;
+        moving = true;
+      }
+      if (active || scoring) moving = true;
     }
     if (moving || this.dirty) {
       this.renderer.render(this.scene, this.camera);

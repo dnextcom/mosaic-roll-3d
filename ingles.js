@@ -455,6 +455,7 @@ export default {
   "Ver repisa de platos": "View plate shelf",
   "Repisa de platos": "Plate shelf",
   "Ver platos": "View plates",
+  "Toca un plato para ver más detalles.": "Tap a plate for more details.",
   "1 uso": "1 use",
   "{0} usos": "{0} uses",
   "Usado 1 vez en esta partida.": "Used 1 time in this run.",

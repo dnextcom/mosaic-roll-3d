@@ -454,6 +454,7 @@ export default {
   "Ver repisa de platos": "Vore prestatge de plats",
   "Repisa de platos": "Prestatge de plats",
   "Ver platos": "Vore plats",
+  "Toca un plato para ver más detalles.": "Toca un plat per a vore més detalls.",
   "1 uso": "1 ús",
   "{0} usos": "{0} usos",
   "Usado 1 vez en esta partida.": "Usat 1 vegada en esta partida.",

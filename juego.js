@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-16';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-16';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-16';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-16';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-18';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-18';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-18';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-18';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-16';
-import { uniqueDice } from './unicos.js?v=esmaltes-16';
-import { MarketUI } from './mercado.js?v=esmaltes-16';
-import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-16';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-16';
-import { Music } from './musica.js?v=esmaltes-16';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-18';
+import { uniqueDice } from './unicos.js?v=esmaltes-18';
+import { MarketUI } from './mercado.js?v=esmaltes-18';
+import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-18';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-18';
+import { Music } from './musica.js?v=esmaltes-18';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -108,9 +108,9 @@ function resetCounters() {
 
 function popup(text, cells = [], kind = '', extra = null) {
   if (reducedMotion.matches || !table?.width) return;
-  const anchors = cells.map(cell => table.dieAnchor(cell)).filter(Boolean);
+  const anchors = extra?.anchor ? [extra.anchor] : cells.map(cell => table.dieAnchor(cell)).filter(Boolean);
   const x = anchors.length ? anchors.reduce((sum, point) => sum + point.x, 0) / anchors.length : table.width / 2;
-  const y = anchors.length ? anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length : table.height * .42;
+  const y = anchors.length ? anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length - (extra?.anchor ? 12 : 0) : table.height * .42;
   const element = document.createElement('span');
   element.className = `popup ${kind}`.trim();
   element.style.left = `${Math.round(x)}px`;
@@ -748,7 +748,7 @@ function render() {
   $('recall').hidden = !ready() || selected < 0 || selected >= HAND || !isFresh(run.board[selected]);
   $('hint').textContent = hint(score.count);
   table.mount(run.powers, run.comboLevels);
-  table.marks(score.matches, score.powerMarks);
+  table.marks(score.matches, score.powerMarks, [...score.numberSteps, ...score.colorSteps]);
   updateFocus();
   showUnique();
 }
@@ -958,9 +958,10 @@ function scoringFrame(now) {
   $('sequence-detail').textContent = step.phase === 'Total' ? `${resolution.score.base} × ${decimal(resolution.score.multiplier)}`
     : step.reward ? t(step.name) : `${scoreText(step.name)}${bonus}`;
   table.lightCells(step.cells);
-  if (step.points) popup(`+${step.points}`, step.cells);
-  else if (step.add) popup(`+${decimal(step.add / 100)}×`, step.cells, 'mult');
-  else if (step.factor) popup(`×${decimal(step.factor)}`, step.cells, 'mult');
+  table.pulsePlate(step.combo ?? null);
+  const platePoint = step.combo ? table.plateAnchor(comboKeys.indexOf(step.combo)) : null;
+  if (platePoint && step.points) popup(`+${step.points}`, [], '', { anchor: platePoint });
+  else if (platePoint && step.add) popup(`+${decimal(step.add / 100)}×`, [], 'mult', { anchor: platePoint });
   else if (step.reward) popup(message`+${step.reward} oro`, [], 'gold');
   else if (step.phase === 'Total') { popup(`+${resolution.score.total}`, [], 'total', { heat, fire }); shake(heat >= 3); }
   if (!reducedMotion.matches || step.phase === 'Total') note(step.phase === 'Total' ? 'score' : step.phase === 'Multiplicador' ? 'color' : 'count');
@@ -973,6 +974,7 @@ function finishScore(now = performance.now()) {
   resolution = null;
   hideSequence();
   table.lightCells([]);
+  table.pulsePlate(null);
   const animate = rolled.length > 0 && !reducedMotion.matches;
   lockUntil = animate ? now + ROLL_TIME : 0;
   table.sync(run, now, { roll: new Set(animate ? rolled : []) });

@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-16';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-16';
-import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-16';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-16';
-import { Workshop } from './taller.js?v=esmaltes-16';
-import { uniqueDice } from './unicos.js?v=esmaltes-16';
-import { dieFaces, dieTraits, openPlateShelf, comboUsesLabel, comboUsesSentence } from './coleccion.js?v=esmaltes-16';
-import { icon } from './iconos.js?v=esmaltes-16';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-18';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-18';
+import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-18';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-18';
+import { Workshop } from './taller.js?v=esmaltes-18';
+import { uniqueDice } from './unicos.js?v=esmaltes-18';
+import { dieFaces, dieTraits, openPlateShelf, comboUsesLabel, comboUsesSentence } from './coleccion.js?v=esmaltes-18';
+import { icon } from './iconos.js?v=esmaltes-18';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.

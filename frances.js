@@ -539,6 +539,7 @@ export default {
   "Ver repisa de platos": "Voir l'étagère d'assiettes",
   "Repisa de platos": "Étagère d'assiettes",
   "Ver platos": "Voir assiettes",
+  "Toca un plato para ver más detalles.": "Touchez une assiette pour plus de détails.",
   "1 uso": "1 fois",
   "{0} usos": "{0} fois",
   "Usado 1 vez en esta partida.": "Utilisé 1 fois dans cette partie.",

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-16';
+import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-18';
 
 const pips = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const stoneGlaze = { color: '#65737c', light: '#a7adb1', darkPips: true };
@@ -337,7 +337,7 @@ const plates = new Map();
 
 const comboPlatesConfig = {
   pair: { glaze: { color: '#d97706', light: '#fef3c7', ink: '#78350f' } },
-  trio: { glaze: { color: '#0d9488', light: '#ccfbf1', ink: '#134e4a' } },
+  trio: { glaze: { color: '#7e22ce', light: '#f3e8ff', ink: '#4c1d95' } },
   quartet: { glaze: { color: '#b91c1c', light: '#fee2e2', ink: '#7f1d1d' } },
   straight: { glaze: { color: '#1d4ed8', light: '#dbeafe', ink: '#1e3a8a' } },
   longStraight: { glaze: { color: '#047857', light: '#dcfce7', ink: '#064e3b' } },
