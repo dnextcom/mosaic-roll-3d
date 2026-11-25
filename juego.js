@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-23';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-23';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-23';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-23';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-25';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-25';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-25';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-25';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-23';
-import { uniqueDice } from './unicos.js?v=esmaltes-23';
-import { MarketUI } from './mercado.js?v=esmaltes-23';
-import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-23';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-23';
-import { Music } from './musica.js?v=esmaltes-23';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-25';
+import { uniqueDice } from './unicos.js?v=esmaltes-25';
+import { MarketUI } from './mercado.js?v=esmaltes-25';
+import { collectionMarkup, syncCollectionTips, hideCollectionTip, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-25';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-25';
+import { Music } from './musica.js?v=esmaltes-25';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.
@@ -1020,12 +1020,14 @@ function showCollection(catalogOnly = false) {
   if (resolution) return;
   collectionReturn = modal;
   showDialog('collection', collectionMarkup(catalogOnly ? null : run));
+  syncCollectionTips(dialog);
   dialog.scrollTop = 0;
   const body = dialog.querySelector('.book-body');
   if (body) body.scrollTop = 0;
 }
 
 function closeCollection() {
+  hideCollectionTip();
   modal = collectionReturn;
   collectionReturn = '';
   if (modal === 'outcome') {

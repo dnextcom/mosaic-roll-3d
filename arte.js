@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-23';
+import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-25';
 
 const pips = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const stoneGlaze = { color: '#65737c', light: '#a7adb1', darkPips: true };
@@ -286,15 +286,36 @@ const tileMotifs = {
   mortar: 'M42 35 70 29 94 47 99 71 85 93 54 99 33 82 28 58Z M66 30 54 51 69 64 52 77 54 97 M69 64 95 50 M52 77 33 80',
   basalt: 'M37 84Q44 77 44 60A20 20 0 0 1 84 60Q84 77 91 84Z M55 91Q64 107 73 91 M64 33V26 M34 48 27 41 M94 48 101 41',
   alhambra: 'M33 97V62Q33 45 64 29Q95 45 95 62V97Z M48 97V67Q48 57 64 47Q80 57 80 67V97 M23 97H105 M64 68V97',
+  sixes: 'M64 28L94 45V83L64 100L34 83V45Z M74 44Q50 42 50 66Q50 84 65 84Q79 84 79 70Q79 58 64 58Q54 58 50 66',
+  fourfold: 'M36 36H58V58H36Z M70 36H92V58H70Z M36 70H58V92H36Z M70 70H92V92H70Z',
+  doublePair: 'M32 64A18 18 0 1 1 68 64A18 18 0 1 1 32 64 M60 64A18 18 0 1 1 96 64A18 18 0 1 1 60 64',
+  corners: 'M34 50V34H50 M78 34H94V50 M34 78V94H50 M78 94H94V78 M64 56L72 64L64 72L56 64Z',
+  glazedSteps: 'M32 88H54V68H74V48H96V36 M32 98H96',
+  saffron: 'M64 28V40 M64 88V100 M28 64H40 M88 64H100 M39 39L47 47 M81 81L89 89 M89 39L81 47 M47 81L39 89 M50 64A14 14 0 1 1 78 64A14 14 0 1 1 50 64',
+  emerald: 'M64 30Q76 50 74 72H54Q52 50 64 30Z M42 84H86 M48 94H80 M64 72V84',
+  terracotta: 'M54 32H74 M57 32L55 44Q42 56 44 74Q46 92 64 96Q82 92 84 74Q86 56 73 44L71 32 M53 48Q40 48 40 60Q40 68 46 70 M75 48Q88 48 88 60Q88 68 82 70',
+  lattice: 'M32 86V60Q32 46 43 44Q54 46 54 60V86 M53 86V56Q53 40 64 38Q75 40 75 56V86 M74 86V60Q74 46 85 44Q96 46 96 60V86 M28 86H100',
+  livingGlaze: 'M34 78L44 48L58 40 M94 78L84 48L70 40 M36 86H92 M64 28L76 52L64 76L52 52Z',
+  symmetry: 'M36 90V48Q36 34 52 34V90Z M92 90V48Q92 34 76 34V90Z M64 52L70 62L64 72L58 62Z',
+  chiselDust: 'M36 86L68 54L76 62L44 94L32 96Z M42 36L46 46 M64 28V40 M84 36L78 46 M70 86H96',
+  stainedGlass: 'M34 64H94 M64 34V94 M40 64A24 24 0 1 1 88 64A24 24 0 1 1 40 64 M54 64L64 54L74 64L64 74Z',
+  nasridStar: 'M39 39H89V89H39Z M64 29L99 64L64 99L29 64Z M56 64L64 56L72 64L64 72Z',
 };
 
 const tilePalettes = {
   chisel: ['#27527e', '#9ab8c5', '#efe2bf'], midas: ['#86441c', '#d49b42', '#fff0c5'],
-  aces: ['#8e3744', '#c5665e', '#f9dfca'], colonnade: ['#34566a', '#7ca897', '#e7efe0'],
-  acanthus: ['#205b3d', '#79a454', '#edf1ce'], cobalt: ['#1c408c', '#507bbf', '#dbeafa'],
+  aces: ['#8e3744', '#c5665e', '#f9dfca'], sixes: ['#3c2b14', '#e0a938', '#fff5d8'],
+  fourfold: ['#364d24', '#9ab858', '#f2f5df'], colonnade: ['#34566a', '#7ca897', '#e7efe0'],
+  acanthus: ['#205b3d', '#79a454', '#edf1ce'], doublePair: ['#1e3a6e', '#e59a3c', '#f8ebd2'],
+  corners: ['#2c3645', '#d9b25f', '#e9edf2'], glazedSteps: ['#133a54', '#2bb5a8', '#e2f4f0'],
+  cobalt: ['#1c408c', '#507bbf', '#dbeafa'], saffron: ['#994400', '#f59e0b', '#fef3c7'],
+  emerald: ['#064e3b', '#34d399', '#dcfce7'], terracotta: ['#7c2d12', '#ea580c', '#ffedd5'],
   frieze: ['#6a3d73', '#b87ca2', '#f0ddeb'], prism: ['#1f5b69', '#579ba3', '#dcefe5'],
-  patience: ['#715436', '#bc9666', '#f1e5be'], mortar: ['#584556', '#c08653', '#f3e0cf'],
-  basalt: ['#383f52', '#8b9ca2', '#e2e7e4'], alhambra: ['#6e3030', '#c99553', '#f6e0b2'],
+  patience: ['#715436', '#bc9666', '#f1e5be'], lattice: ['#1e1b4b', '#38bdf8', '#e0f2fe'],
+  mortar: ['#584556', '#c08653', '#f3e0cf'], basalt: ['#383f52', '#8b9ca2', '#e2e7e4'],
+  livingGlaze: ['#262b36', '#22d3ee', '#e2e8f0'], symmetry: ['#4c1d95', '#c084fc', '#f3e8ff'],
+  chiselDust: ['#291d2e', '#fbbf24', '#ede4f5'], alhambra: ['#6e3030', '#c99553', '#f6e0b2'],
+  stainedGlass: ['#581c87', '#f472b6', '#fef08a'], nasridStar: ['#0f2454', '#facc15', '#e0f7fa'],
 };
 
 export function tileArt(key) {
@@ -334,6 +355,17 @@ export function tileArt(key) {
   ctx.fillStyle = glaze;
   ctx.fill();
   ctx.stroke();
+  if (key === 'stainedGlass') {
+    const quadColors = ['rgba(30,64,175,0.22)', 'rgba(217,119,6,0.24)', 'rgba(4,120,87,0.22)', 'rgba(185,28,28,0.22)'];
+    for (let q = 0; q < 4; q++) {
+      ctx.beginPath();
+      ctx.moveTo(64, 64);
+      ctx.arc(64, 64, 43, q * Math.PI / 2, (q + 1) * Math.PI / 2);
+      ctx.closePath();
+      ctx.fillStyle = quadColors[q];
+      ctx.fill();
+    }
+  }
   const corner = new Path2D('M16 17Q24 16 32 17Q26 20 24 25Q20 26 17 32Q16 24 16 17Z M20 20Q26 27 30 30');
   ctx.fillStyle = ink;
   ctx.strokeStyle = accent;

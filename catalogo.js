@@ -1,4 +1,4 @@
-import { uniqueDice } from './unicos.js?v=esmaltes-23';
+import { uniqueDice } from './unicos.js?v=esmaltes-25';
 
 export const glazes = [
   { name: 'Cobalto', color: '#1e40af', light: '#72a9db' },
@@ -31,15 +31,29 @@ export const powers = {
   chisel: { name: 'Cincel de Hefesto', price: 4, rarity: 0, text: '+1 carga de cincel por mosaico.' },
   midas: { name: 'Cincel de Midas', price: 4, rarity: 0, text: '+2 de oro cada vez que cincelas.' },
   aces: { name: 'Ases de artesano', price: 4, rarity: 0, text: '+5 puntos base por cada dado activo de valor 1.' },
+  sixes: { name: 'Seises de taller', price: 4, rarity: 0, text: '+4 puntos base por cada dado activo de valor 6.' },
+  fourfold: { name: 'Compás de cuatro', price: 4, rarity: 0, text: '+7 puntos base y +1 de oro si colocas 4 dados en el mismo turno.' },
   colonnade: { name: 'Columnata', price: 5, rarity: 1, text: '+3 puntos por cada combo numérico en columna.' },
   acanthus: { name: 'Acanto', price: 5, rarity: 1, text: '+5 puntos base por cada escalera.' },
+  doublePair: { name: 'Doble compás', price: 5, rarity: 1, text: '+12 puntos base si activas 2 o más parejas en la misma jugada.' },
+  corners: { name: 'Bisel de esquina', price: 5, rarity: 1, text: '+5 puntos base por cada dado activo en las 4 esquinas del tablero.' },
+  glazedSteps: { name: 'Peldaños vidriados', price: 5, rarity: 1, text: 'Cada escalera añade +0,15× al multiplicador además de sus puntos.' },
   cobalt: { name: 'Resonancia cobalto', price: 6, rarity: 2, text: '+0,15× por cada dado activo que cuente como cobalto.' },
+  saffron: { name: 'Sol de azafrán', price: 6, rarity: 2, text: '+4 puntos base por cada dado activo que cuente como azafrán (si hay 3 o más, +2 de oro).' },
+  emerald: { name: 'Jardín esmeralda', price: 6, rarity: 2, text: '+0,12× y +2 puntos base por cada dado activo que cuente como esmeralda.' },
+  terracotta: { name: 'Arcilla viva', price: 6, rarity: 2, text: '+6 puntos base por cada dado activo que cuente como terracota (+2 extra si toca una piedra).' },
   frieze: { name: 'Friso real', price: 6, rarity: 2, text: '+0,25× adicional por cada línea monocolor.' },
   prism: { name: 'Lente prismática', price: 6, rarity: 2, text: '+0,15× adicional por cada línea de colores distintos.' },
   patience: { name: 'Paciencia del artesano', price: 6, rarity: 2, text: '+1 de oro por cada turno sin usar al superar un mosaico.' },
+  lattice: { name: 'Celosía de tres', price: 7, rarity: 2, text: 'Monocolor y Colores distintos también se activan con 3 dados seguidos.' },
   mortar: { name: 'Mortero Kintsugi', price: 8, rarity: 3, text: 'Las piedras de combos numéricos suman su valor una vez por turno.' },
   basalt: { name: 'Campanas de basalto', price: 8, rarity: 3, text: '+0,08× por cada piedra que haya en el tablero.' },
+  livingGlaze: { name: 'Esmalte vivo', price: 9, rarity: 3, text: 'Las piedras conservan su color para formar Monocolor y Colores distintos.' },
+  symmetry: { name: 'Simetría gemela', price: 9, rarity: 3, text: '+0,45× al multiplicador si activas 2 o más parejas (+0,15× por cada pareja adicional).' },
+  chiselDust: { name: 'Polvo de cincel', price: 8, rarity: 3, text: '+0,12× durante este mosaico por cada piedra que cinceles.' },
   alhambra: { name: 'Gran Alhambra', price: 11, rarity: 4, text: 'Multiplica por 1,35 la jugada si el tablero está lleno.' },
+  stainedGlass: { name: 'Vidriera del Sultán', price: 12, rarity: 4, text: 'Tu dado nuevo de mayor valor cuenta como todos los colores y suma +0,20× por cada combo de color en el que participe.' },
+  nasridStar: { name: 'Estrella nazarí', price: 12, rarity: 4, text: 'Multiplica por 1,30 la jugada si activas a la vez al menos un combo numérico y uno de color.' },
 };
 
 export const comboCatalog = {

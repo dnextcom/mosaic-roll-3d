@@ -1,5 +1,5 @@
-import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-23';
-import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-23';
+import { glazes, rarities, powers, upgrades, basicColors, plainDie, colorDie, uniqueDie, market, ovenOffers, hasFace, choose, dieCount, diceName, canEnchant, enchant, comboCatalog, getDieSpec } from './catalogo.js?v=esmaltes-25';
+import { projectBoard, uniqueDice } from './unicos.js?v=esmaltes-25';
 
 const names = ['Patio de cal', 'Claustro azul', 'El mirador', 'Galería del azahar', 'Sala de la fuente', 'Taller del maestro'];
 const campaignGoals = [55, 88, 110, 150, 170, 185, 198, 217, 242, 275, 312, 350];
@@ -139,6 +139,7 @@ function startStage(state, random) {
   state.turns = state.maxTurns = stage.turns - (bossKey(state) === 'hourglass' ? 1 : 0);
   const baseChisels = (state.difficulty ?? 0) >= 5 ? 1 : 2;
   state.chisels = baseChisels + (has(state, 'chisel') ? 1 : 0);
+  state.chiselCount = 0;
   // The short-handed boss sends the fourth die of the tray back to the bag.
   if (handLimit(state) < handSize) state.hand = state.hand.map((die, slot) => slot < handLimit(state) ? die : null);
   state.board = Array(state.rows * state.cols).fill(null);
@@ -253,6 +254,7 @@ export function chip(state, cell, random = Math.random) {
   if (state.phase !== 'play' || !state.chisels || !state.board[cell]?.stone) return null;
   state.board[cell] = null;
   state.chisels--;
+  state.chiselCount = (state.chiselCount || 0) + 1;
   if (has(state, 'midas')) state.gold += 2;
   return !state.hand.some(Boolean) && !state.board.some(isFresh) ? replenish(state, random) : [];
 }
@@ -263,8 +265,10 @@ function eclipsed(state, spec) {
   return boss?.key === 'eclipse' && !spec.rainbow && (spec.glaze === boss.color || spec.second === boss.color);
 }
 
-function colors(state, spec, die) {
+function colors(state, spec, die, cell = -1, stainedCell = -1) {
+  if (!spec) return [];
   if (eclipsed(state, spec)) return [];
+  if (cell >= 0 && cell === stainedCell) return glazes.map((_, color) => color);
   if (die.tint != null) return [die.tint];
   return spec.rainbow ? glazes.map((_, color) => color) : spec.second == null ? [spec.glaze] : [spec.glaze, spec.second];
 }
@@ -323,7 +327,7 @@ function numericPatterns(state, board, cells, column) {
   });
 }
 
-function evaluateLine(state, board, cells, column, axis, score, stones) {
+function evaluateLine(state, board, cells, column, axis, score, stones, stainedCell = -1) {
   const dice = cells.map(cell => board[cell]);
   if (!dice.some(isFresh)) return;
   const numeric = numericPatterns(state, board, cells, column);
@@ -332,18 +336,42 @@ function evaluateLine(state, board, cells, column, axis, score, stones) {
   const highlighted = new Set(numbers.flatMap(item => item.cells));
   numeric.flatMap(item => item.cells).filter(cell => board[cell].stone).forEach(cell => stones.add(cell));
   score.numberSteps.push(...numbers);
-  let color;
-  if (full && dice.every(die => !die.stone) && bossKey(state) !== 'whitewash') {
-    const options = dice.flatMap(die => {
-      const choices = colors(state, getDieSpec(state, die), die);
+  const eligibleColor = die => Boolean(die && (!die.stone || has(state, 'livingGlaze')));
+  const checkColorSegment = seg => {
+    const segDice = seg.map(c => board[c]);
+    if (!segDice.some(isFresh) || !segDice.every(eligibleColor)) return null;
+    const options = segDice.flatMap((die, i) => {
+      const choices = colors(state, getDieSpec(state, die), die, seg[i], stainedCell);
       return die.extra == null ? [choices] : [choices, choices];
     });
+    if (!options.length || options.some(list => !list.length)) return null;
     if (options[0].some(shade => options.every(list => list.includes(shade)))) {
-      color = { combo: 'mono', name: 'Monocolor', add: getComboValue(state, 'mono') + (has(state, 'frieze') ? 25 : 0), cells };
-    } else if (distinct(options)) {
-      color = { combo: 'chromatic', name: 'Colores distintos', add: getComboValue(state, 'chromatic') + (has(state, 'prism') ? 15 : 0), cells };
+      return { combo: 'mono', name: 'Monocolor', add: getComboValue(state, 'mono') + (has(state, 'frieze') ? 25 : 0), cells: seg };
     }
-    if (color) { score.colorSteps.push(color); cells.forEach(cell => highlighted.add(cell)); }
+    if (distinct(options)) {
+      return { combo: 'chromatic', name: 'Colores distintos', add: getComboValue(state, 'chromatic') + (has(state, 'prism') ? 15 : 0), cells: seg };
+    }
+    return null;
+  };
+  let color = null;
+  if (bossKey(state) !== 'whitewash') {
+    if (full) color = checkColorSegment(cells);
+    if (!color && has(state, 'lattice') && cells.length >= 3) {
+      for (let start = 0; start + 3 <= cells.length; start++) {
+        const candidate = checkColorSegment(cells.slice(start, start + 3));
+        if (candidate && (!color || candidate.combo === 'mono' && color.combo !== 'mono')) {
+          color = candidate;
+          if (color.combo === 'mono') break;
+        }
+      }
+    }
+    if (color) {
+      score.colorSteps.push(color);
+      color.cells.forEach(cell => highlighted.add(cell));
+      if (stainedCell >= 0 && color.cells.includes(stainedCell)) {
+        score.colorSteps.push({ name: 'Vidriera del Sultán', add: 20, cells: [stainedCell] });
+      }
+    }
   }
   if (highlighted.size) score.matches.push({ column, axis, cells: cells.filter(cell => highlighted.has(cell)),
     name: numeric.map(item => item.name).join(' + ') || color?.name || 'Línea',
@@ -357,18 +385,30 @@ export function preview(state) {
   if (!score.count) return score;
   const { cols, rows } = state;
   const { board, numberSteps, colorSteps } = projectBoard(state);
+  let stainedCell = -1;
+  if (has(state, 'stainedGlass')) {
+    let bestVal = -1;
+    board.forEach((die, cell) => {
+      if (!die || die.stone || !isFresh(die)) return;
+      const v = Math.max(die.value, die.extra ?? -1);
+      if (v > bestVal) { bestVal = v; stainedCell = cell; }
+    });
+  }
   const stones = new Set();
-  for (let row = 0; row < rows; row++) evaluateLine(state, board, Array.from({ length: cols }, (_, col) => row * cols + col), false, row, score, stones);
-  for (let col = 0; col < cols; col++) evaluateLine(state, board, Array.from({ length: rows }, (_, row) => row * cols + col), true, col, score, stones);
+  for (let row = 0; row < rows; row++) evaluateLine(state, board, Array.from({ length: cols }, (_, col) => row * cols + col), false, row, score, stones, stainedCell);
+  for (let col = 0; col < cols; col++) evaluateLine(state, board, Array.from({ length: rows }, (_, row) => row * cols + col), true, col, score, stones, stainedCell);
   score.numberSteps.push(...numberSteps);
   score.colorSteps.push(...colorSteps);
   score.powerMarks = [...numberSteps, ...colorSteps];
   if (has(state, 'mortar')) for (const cell of stones) score.numberSteps.push({ name: 'Mortero Kintsugi', points: board[cell].value, cells: [cell] });
 
-  const basalt = [], cobalt = [];
+  const cornerSet = new Set([0, cols - 1, (rows - 1) * cols, rows * cols - 1]);
+  const basalt = [], cobalt = [], saffron = [], emerald = [], terracottaCells = [], cornerCells = [], freshCells = [];
+  let terracottaPts = 0;
   board.forEach((die, cell) => {
     if (!die) return;
     if (die.stone) { basalt.push(cell); return; }
+    if (isFresh(die)) freshCells.push(cell);
     const spec = getDieSpec(state, die);
     if (!spec) return;
     const factor = (hasFace(spec.boost, die.face) ? (spec.boostMult || 2) : 1) * (die.sealed ? 2 : 1);
@@ -380,12 +420,23 @@ export function preview(state) {
       if (cancelled) score.dieSteps.push({ name: `${label} ${value} · ${cancelled}`, points: 0, cells: [cell] });
       else score.dieSteps.push({ name: factor > 1 ? `${label} ${value} × ${factor}` : `${label} ${value}`, points: value * factor, cells: [cell] });
       if (value === 1 && has(state, 'aces')) score.numberSteps.push({ name: 'Ases de artesano', points: 5, cells: [cell] });
+      if (value === 6 && has(state, 'sixes')) score.numberSteps.push({ name: 'Seises de taller', points: 4, cells: [cell] });
     }
+    if (cornerSet.has(cell) && has(state, 'corners')) cornerCells.push(cell);
     if (isFresh(die) && hasFace(spec.gild, die.face)) score.gold += (spec.goldYield || 3);
-    if (colors(state, spec, die).includes(0)) cobalt.push(...values.map(() => cell));
+    const dieColors = colors(state, spec, die, cell, stainedCell);
+    if (dieColors.includes(0)) cobalt.push(...values.map(() => cell));
+    if (dieColors.includes(1)) saffron.push(...values.map(() => cell));
+    if (dieColors.includes(2)) emerald.push(...values.map(() => cell));
     const row = Math.floor(cell / cols), col = cell % cols;
-    const adjacent = [col > 0 ? cell - 1 : -1, col < cols - 1 ? cell + 1 : -1,
-      row > 0 ? cell - cols : -1, row < rows - 1 ? cell + cols : -1].filter(index => {
+    const orthogonal = [col > 0 ? cell - 1 : -1, col < cols - 1 ? cell + 1 : -1,
+      row > 0 ? cell - cols : -1, row < rows - 1 ? cell + cols : -1];
+    const hasStoneNeighbor = orthogonal.some(index => board[index]?.stone);
+    if (dieColors.includes(3)) {
+      terracottaCells.push(cell);
+      terracottaPts += values.length * (hasStoneNeighbor ? 8 : 6);
+    }
+    const adjacent = orthogonal.filter(index => {
       const neighbor = board[index];
       return neighbor?.stone && getDieSpec(state, neighbor)?.obsidian;
     });
@@ -394,12 +445,51 @@ export function preview(state) {
       score.numberSteps.push({ name: 'Obsidiana', points: adjacent.length * bonus * values.length, cells: [cell, ...adjacent] });
     }
   });
+  if (score.count >= 4 && has(state, 'fourfold')) {
+    score.numberSteps.push({ name: 'Compás de cuatro', points: 7, cells: freshCells });
+    score.gold += 1;
+  }
+  if (cornerCells.length && has(state, 'corners')) {
+    score.numberSteps.push({ name: 'Bisel de esquina', points: cornerCells.length * 5, cells: cornerCells });
+  }
+  const pairSteps = score.numberSteps.filter(step => step.combo === 'pair');
+  if (pairSteps.length >= 2) {
+    const pairCells = [...new Set(pairSteps.flatMap(step => step.cells))];
+    if (has(state, 'doublePair')) score.numberSteps.push({ name: 'Doble compás', points: 12, cells: pairCells });
+    if (has(state, 'symmetry')) score.colorSteps.push({ name: 'Simetría gemela', add: 45 + (pairSteps.length - 2) * 15, cells: pairCells });
+  }
+  const stairSteps = score.numberSteps.filter(step => step.combo === 'straight' || step.combo === 'longStraight');
+  if (stairSteps.length && has(state, 'glazedSteps')) {
+    score.colorSteps.push({ name: 'Peldaños vidriados', add: stairSteps.length * 15, cells: [...new Set(stairSteps.flatMap(step => step.cells))] });
+  }
   if (basalt.length && has(state, 'basalt')) score.colorSteps.push({ name: 'Campanas de basalto', add: basalt.length * 8, cells: basalt });
-  if (cobalt.length && has(state, 'cobalt') && bossKey(state) !== 'whitewash') score.colorSteps.push({ name: 'Resonancia cobalto', add: cobalt.length * 15, cells: [...new Set(cobalt)] });
+  if (bossKey(state) !== 'whitewash') {
+    if (cobalt.length && has(state, 'cobalt')) score.colorSteps.push({ name: 'Resonancia cobalto', add: cobalt.length * 15, cells: [...new Set(cobalt)] });
+    if (saffron.length && has(state, 'saffron')) {
+      const sCells = [...new Set(saffron)];
+      score.numberSteps.push({ name: 'Sol de azafrán', points: saffron.length * 4, cells: sCells });
+      if (sCells.length >= 3) score.gold += 2;
+    }
+    if (emerald.length && has(state, 'emerald')) {
+      const eCells = [...new Set(emerald)];
+      score.numberSteps.push({ name: 'Jardín esmeralda', points: emerald.length * 2, cells: eCells });
+      score.colorSteps.push({ name: 'Jardín esmeralda', add: emerald.length * 12, cells: eCells });
+    }
+    if (terracottaCells.length && has(state, 'terracotta')) {
+      score.numberSteps.push({ name: 'Arcilla viva', points: terracottaPts, cells: terracottaCells });
+    }
+  }
+  if ((state.chiselCount || 0) > 0 && has(state, 'chiselDust')) {
+    score.colorSteps.push({ name: 'Polvo de cincel', add: state.chiselCount * 12, cells: [] });
+  }
   if (board.every(Boolean)) {
     const cells = board.map((_, index) => index);
     score.numberSteps.push({ combo: 'panel', name: 'Panel completo', points: getComboValue(state, 'panel'), cells });
     if (has(state, 'alhambra')) score.colorSteps.push({ name: 'Gran Alhambra', factor: 1.35, cells });
+  }
+  if (has(state, 'nasridStar') && score.numberSteps.some(step => Boolean(step.combo)) &&
+      score.colorSteps.some(step => step.combo === 'mono' || step.combo === 'chromatic')) {
+    score.colorSteps.push({ name: 'Estrella nazarí', factor: 1.30, cells: [...new Set(score.matches.flatMap(m => m.cells))] });
   }
   const order = orderAt(state.stage);
   if (order && !state.orders.includes(order.key) && [...score.numberSteps, ...score.colorSteps].some(step => order.combos.includes(step.name))) {
@@ -629,6 +719,7 @@ export function validSave(state) {
         (entry.faces == null || Array.isArray(entry.faces) && entry.faces.length === 6 && entry.faces.every(value => Number.isInteger(value) && value >= 1 && value <= 6))) ||
       !state.comboLevels || typeof state.comboLevels !== 'object' ||
       !state.comboCounts || typeof state.comboCounts !== 'object' ||
+      !Number.isInteger(state.chiselCount) || state.chiselCount < 0 ||
       !Array.isArray(state.uniques) || state.uniques.length > 3) return false;
   const active = [...state.board, ...state.hand].filter(Boolean);
   return state.bag.every(spec => spec === null || validSpec(spec)) &&
@@ -644,6 +735,7 @@ export function restoreRun(old, random = Math.random) {
     const difficulty = Number.isInteger(old.difficulty) && old.difficulty >= 0 && old.difficulty <= 5 ? old.difficulty : 0;
     const comboLevels = { ...defaultComboLevels(), ...(old.comboLevels || {}) };
     const comboCounts = { ...defaultComboCounts(), ...(old.comboCounts || {}) };
+    const chiselCount = Number.isInteger(old.chiselCount) && old.chiselCount >= 0 ? old.chiselCount : 0;
     const uniques = Array.isArray(old.uniques) ? old.uniques : [];
     const uniqueRack = Array.isArray(old.uniqueRack) ? old.uniqueRack : Array(3).fill(null);
     let market = old.market;
@@ -652,7 +744,7 @@ export function restoreRun(old, random = Math.random) {
         ? market.oven : ovenOffers(random);
       market = { ...market, forged: Boolean(market.forged), oven };
     }
-    const state = { ...old, version: 7, difficulty, comboLevels, comboCounts, uniques, uniqueRack, market };
+    const state = { ...old, version: 7, difficulty, comboLevels, comboCounts, chiselCount, uniques, uniqueRack, market };
     return validSave(state) ? state : null;
   }
   // Runs from before bags and bosses keep the classic bag and get their bosses now.

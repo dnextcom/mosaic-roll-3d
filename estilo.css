@@ -982,6 +982,27 @@ dialog[data-kind="collection"][open] { display: flex; }
 .chapter-nest { padding-left: clamp(8px, 2vw, 24px); }
 .chapter-nest .chapter:last-child { border-bottom: 0; }
 .folios { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; padding: 4px 0 18px; list-style: none; }
+.folios-icons { display: flex; flex-wrap: wrap; gap: 10px; padding: 6px 0 18px; }
+.folio-item { list-style: none; }
+.folio-icon-btn {
+  position: relative; display: grid; place-items: center; padding: 0; border: 0; background: none;
+  cursor: pointer; touch-action: manipulation; border-radius: 50% 50% 4px 4px / 30px 30px 4px 4px;
+}
+.folio-icon-btn .folio-niche { transition: transform .18s var(--ease-out), box-shadow .18s, background .18s; }
+.folio-icon-btn:is(:hover, :focus-visible, [aria-expanded="true"]) .folio-niche {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px var(--rarity), 0 0 18px -2px color-mix(in srgb, var(--rarity) 75%, transparent);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rarity) 34%, transparent), rgba(14, 24, 58, .55) 75%);
+}
+.folio-icon-btn.is-tile .folio-niche img { border-radius: 1px; }
+.folio-badge {
+  position: absolute; right: -4px; bottom: -4px; min-width: 22px; height: 18px; padding: 0 5px;
+  display: inline-grid; place-items: center; border-radius: 999px;
+  border: 1px solid var(--gold-2); background: var(--night-0); color: var(--gold-3);
+  font: 700 11px/1 var(--font-kufi); box-shadow: 0 2px 6px rgba(0, 0, 0, .75); pointer-events: none;
+}
+.book-tip .folio-note { color: var(--ivory-3); font-size: 13px; }
+.book-tip .face-list { margin-block: 4px 2px; }
 .folio { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 14px; padding: 12px 14px; border: 1px solid var(--line-soft); background: linear-gradient(180deg, rgba(27, 50, 116, .22), rgba(7, 12, 34, .3)); }
 .folio-niche { display: grid; place-items: center; width: 62px; height: 78px; padding-top: 10px; border: 1px solid var(--rarity); border-radius: 50% 50% 3px 3px / 30px 30px 3px 3px; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rarity) 22%, transparent), transparent 70%); }
 .folio-niche img { width: 46px; height: 46px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0, 0, 0, .5); }
