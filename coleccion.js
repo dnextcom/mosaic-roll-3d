@@ -1,9 +1,9 @@
-import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-29';
-import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-29';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-29';
-import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-29';
-import { uniqueDice } from './unicos.js?v=esmaltes-29';
-import { icon } from './iconos.js?v=esmaltes-29';
+import { t, message, language, displayDie, displayItem, displayComboGain } from './idioma.js?v=esmaltes-30';
+import { basicColors, colorDie, dieCount, hasFace, powers, rarities, uniqueDie, glazes, comboCatalog } from './catalogo.js?v=esmaltes-30';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-30';
+import { tileLimit, decks, deckSample, bosses, BOSS_EVERY, getComboValue } from './reglas.js?v=esmaltes-30';
+import { uniqueDice } from './unicos.js?v=esmaltes-30';
+import { icon } from './iconos.js?v=esmaltes-30';
 
 const basicDice = basicColors.map(colorDie);
 const specialDice = Object.keys(uniqueDice).map(uniqueDie);
@@ -416,7 +416,15 @@ export function openPlateShelf(run, { host = document.body, upgradedKey = null, 
     }
   };
 
+  let sawPointerDown = false;
+  dialog.addEventListener('pointerdown', () => { sawPointerDown = true; }, true);
+
   dialog.addEventListener('click', event => {
+    if (event.detail > 0 && !sawPointerDown) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (event.target === dialog || event.target.closest('[data-action="close-plate-shelf"]')) {
       close();
       return;
