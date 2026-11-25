@@ -1,14 +1,14 @@
-import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-20';
-import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-20';
-import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-20';
-import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-20';
+import { t, message, language, setupLanguage, setLanguage, isLanguageAutoDetected, displayDie, displayBossRule, scoreText } from './idioma.js?v=esmaltes-22';
+import { Table, HAND, POWER, UNIQUE, PLATE, ROLL_TIME, comboKeys } from './mesa.js?v=esmaltes-22';
+import { DiceArt, tileArt, diePortrait, platePortrait, plateArt } from './arte.js?v=esmaltes-22';
+import { powers, rarities, dieCount, hasFace, getDieSpec, comboCatalog } from './catalogo.js?v=esmaltes-22';
 import { stageAt, campaignLength, orderAt, comboPoints, getComboValue, tileLimit, newRun, restoreRun, isFresh, canPlace, canMove, place, move, recall, chip, preview, commit, continueEndless, advance, breakUnique,
-  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-20';
-import { uniqueDice } from './unicos.js?v=esmaltes-20';
-import { MarketUI } from './mercado.js?v=esmaltes-20';
-import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-20';
-import { icon, hydrateIcons } from './iconos.js?v=esmaltes-20';
-import { Music } from './musica.js?v=esmaltes-20';
+  decks, deckSample, bosses, bossAt, bossText, BOSS_EVERY, BOSS_GOLD, difficulties } from './reglas.js?v=esmaltes-22';
+import { uniqueDice } from './unicos.js?v=esmaltes-22';
+import { MarketUI } from './mercado.js?v=esmaltes-22';
+import { collectionMarkup, openPlateShelf, comboUsesLabel } from './coleccion.js?v=esmaltes-22';
+import { icon, hydrateIcons } from './iconos.js?v=esmaltes-22';
+import { Music } from './musica.js?v=esmaltes-22';
 
 const $ = id => document.getElementById(id);
 // Runs are shared with every other edition of the web game.

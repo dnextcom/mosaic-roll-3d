@@ -1,11 +1,11 @@
-import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-20';
-import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-20';
-import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-20';
-import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-20';
-import { Workshop } from './taller.js?v=esmaltes-20';
-import { uniqueDice } from './unicos.js?v=esmaltes-20';
-import { dieFaces, dieTraits, openPlateShelf, comboUsesLabel, comboUsesSentence } from './coleccion.js?v=esmaltes-20';
-import { icon } from './iconos.js?v=esmaltes-20';
+import { t, message, displayDie, displayBossRule, displayComboGain } from './idioma.js?v=esmaltes-22';
+import { glazes, basicColors, rarities, powers, upgrades, comboCatalog } from './catalogo.js?v=esmaltes-22';
+import { buy, canBuy, sellTile, forge, canForge, ovenCost, tileLimit, stageAt, handSize, bossAt, bossText, bosses, BOSS_GOLD } from './reglas.js?v=esmaltes-22';
+import { diePortrait, tileArt, platePortrait } from './arte.js?v=esmaltes-22';
+import { Workshop } from './taller.js?v=esmaltes-22';
+import { uniqueDice } from './unicos.js?v=esmaltes-22';
+import { dieFaces, dieTraits, openPlateShelf, comboUsesLabel, comboUsesSentence } from './coleccion.js?v=esmaltes-22';
+import { icon } from './iconos.js?v=esmaltes-22';
 
 const coins = value => `<span class="coins">${value}<i class="coin" aria-hidden="true"></i></span>`;
 // Time the kiln animation needs before the finished die is presented.
@@ -43,6 +43,7 @@ export class MarketUI {
     document.body.append(this.tipElement, this.toastElement);
 
     for (const target of [element, this.tipElement]) target.addEventListener('click', event => this.click(event));
+    this.tipElement.addEventListener('pointerdown', event => event.stopPropagation());
     element.addEventListener('pointerover', event => {
       const item = event.target.closest('[data-tip]');
       if (item && event.pointerType === 'mouse' && !item.disabled) this.showTip(item, false);
@@ -608,15 +609,149 @@ export class MarketUI {
   }
 
   promptBreakUnique(dieKey) {
+    this.closeTip();
+    document.getElementById('unique-replace-modal')?.remove();
     const spec = this.run.market.dice[dieKey];
-    const html = `<div class="ztip-card"><div class="ztip-text">
-      <small class="ztip-kicker">${t('Repisa de dados únicos llena (3/3)')}</small>
-      <strong id="ztip-title">${t('Elige qué dado romper')}</strong>
-      <p>${message`Rompe un dado único (0 oro) para sustituirlo por ${displayDie(spec)}:`}</p>
-      <div class="break-unique-list" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">${this.run.uniques.map((u, i) => `<button type="button" class="btn btn-quiet btn-break" data-market="replace-unique" data-key="${dieKey}" data-replace="${i}" style="text-align:left;padding:6px 10px;">${icon('close')} ${displayDie(u)}</button>`).join('')}</div>
-    </div></div>`;
-    this.tipElement.innerHTML = html;
-    this.tipElement.hidden = false;
+    if (!spec) return;
+    const price = rarities[spec.rarity].price;
+    const incomingUnique = uniqueDice[spec.unique];
+
+    const dialog = document.createElement('div');
+    dialog.className = 'plate-shelf-dialog-backdrop';
+    dialog.id = 'unique-replace-modal';
+    dialog.innerHTML = `
+      <div class="plate-shelf-dialog unique-replace-dialog" role="dialog" aria-modal="true" aria-labelledby="replace-title">
+        <div class="plate-shelf-head">
+          <span class="shelf-kicker">${t('Repisa de dados únicos llena (3/3)')}</span>
+          <h2 class="shelf-title" id="replace-title">${t('Elige qué dado sustituir')}</h2>
+          <p class="shelf-subtitle">${t('Toca uno para ver su efecto y reemplazarlo.')}</p>
+        </div>
+
+        <div class="replace-body">
+          <div class="replace-incoming" style="--rarity:${rarities[spec.rarity].color}">
+            <img class="replace-incoming-img" src="${diePortrait(spec)}" alt="">
+            <div class="replace-incoming-info">
+              <small class="ztip-kicker">${t('Nuevo dado')}${incomingUnique ? ` · ${incomingUnique.mark}` : ''}</small>
+              <strong>${displayDie(spec)}</strong>
+              <p>${incomingUnique ? t(incomingUnique.text) : ''}</p>
+            </div>
+            <span class="replace-incoming-price">${coins(price)}</span>
+          </div>
+
+          <section class="plate-tier" aria-label="${t('Tus 3 dados únicos')}">
+            <h3 class="shelf-tier-label">${t('Tus 3 dados únicos')}</h3>
+            <div class="replace-owned-grid">
+              ${this.run.uniques.map((u, i) => {
+                const uDef = uniqueDice[u.unique];
+                return `<button type="button" class="replace-owned-card" data-replace-pick="${i}" aria-pressed="false" style="--rarity:${rarities[u.rarity].color}">
+                  <img src="${diePortrait(u)}" alt="">
+                  ${uDef ? `<span class="replace-owned-mark">${uDef.mark}</span>` : ''}
+                  <strong>${displayDie(u)}</strong>
+                </button>`;
+              }).join('')}
+            </div>
+          </section>
+        </div>
+
+        <div class="plate-tip replace-tip" id="replace-tip" role="dialog" aria-label="${t('Dado único')}" hidden></div>
+
+        <div class="plate-shelf-foot">
+          <button type="button" class="btn btn-quiet btn-continue" data-action="close-unique-replace">${t('Cancelar')}</button>
+        </div>
+      </div>
+    `;
+
+    const card = dialog.querySelector('.unique-replace-dialog');
+    const tip = dialog.querySelector('#replace-tip');
+    let selectedIdx = null;
+
+    const hideTip = () => {
+      if (selectedIdx == null) return;
+      selectedIdx = null;
+      tip.hidden = true;
+      for (const btn of dialog.querySelectorAll('.replace-owned-card')) {
+        btn.classList.remove('selected');
+        btn.setAttribute('aria-pressed', 'false');
+      }
+    };
+
+    const showOwnedTip = (idx, anchorBtn) => {
+      if (selectedIdx === idx) { hideTip(); return; }
+      hideTip();
+      const u = this.run.uniques[idx];
+      if (!u || !anchorBtn) return;
+      const uDef = uniqueDice[u.unique];
+      selectedIdx = idx;
+      anchorBtn.classList.add('selected');
+      anchorBtn.setAttribute('aria-pressed', 'true');
+      tip.innerHTML = `
+        <div class="plate-tip-card">
+          <img class="plate-tip-img" src="${diePortrait(u)}" alt="">
+          <div class="plate-tip-text">
+            <small class="ztip-kicker">${t('Dado único')}${uDef ? ` · ${uDef.mark}` : ''}</small>
+            <strong>${displayDie(u)}</strong>
+            ${dieFaces(u)}
+            <p>${uDef ? t(uDef.text) : ''}</p>
+          </div>
+          <button type="button" class="plate-tip-close" data-action="close-replace-tip" aria-label="${t('Cerrar')}">${icon('close')}</button>
+        </div>
+        <button type="button" class="btn btn-gold replace-confirm-btn" data-action="confirm-replace-unique">${message`Reemplazar · ${coins(price)}`}</button>
+      `;
+      tip.hidden = false;
+      const cardRect = card.getBoundingClientRect();
+      const btnRect = anchorBtn.getBoundingClientRect();
+      const tipHeight = tip.offsetHeight;
+      const aboveTop = btnRect.top - cardRect.top - tipHeight - 8;
+      const belowTop = btnRect.bottom - cardRect.top + 8;
+      const top = aboveTop >= 8 ? aboveTop : Math.min(cardRect.height - tipHeight - 8, belowTop);
+      tip.style.top = `${Math.max(8, Math.round(top))}px`;
+    };
+
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      window.removeEventListener('keydown', onKeyDown, true);
+      dialog.classList.add('closing');
+      setTimeout(() => dialog.remove(), 180);
+    };
+
+    const onKeyDown = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        if (selectedIdx != null) hideTip();
+        else close();
+      }
+    };
+
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog || event.target.closest('[data-action="close-unique-replace"]')) {
+        close();
+        return;
+      }
+      if (event.target.closest('[data-action="close-replace-tip"]')) {
+        hideTip();
+        return;
+      }
+      if (event.target.closest('[data-action="confirm-replace-unique"]')) {
+        if (selectedIdx == null) return;
+        const idx = selectedIdx;
+        close();
+        this.purchase('die', dieKey, idx);
+        return;
+      }
+      const pickBtn = event.target.closest('[data-replace-pick]');
+      if (pickBtn) {
+        showOwnedTip(Number(pickBtn.dataset.replacePick), pickBtn);
+        return;
+      }
+      if (selectedIdx != null && !event.target.closest('#replace-tip')) hideTip();
+    });
+
+    window.addEventListener('keydown', onKeyDown, true);
+    this.element.append(dialog);
+    setTimeout(() => dialog.querySelector('.replace-owned-card')?.focus({ preventScroll: true }), 50);
   }
 
   sell(key) {
@@ -629,6 +764,8 @@ export class MarketUI {
   }
 
   back() {
+    const replaceModal = document.getElementById('unique-replace-modal');
+    if (replaceModal) { replaceModal.remove(); return true; }
     if (this.tip) { this.closeTip(); return true; }
     if (this.result) return true;
     if (this.mode === 'oven') { this.show('shop'); return true; }
@@ -636,6 +773,7 @@ export class MarketUI {
   }
 
   close() {
+    document.getElementById('unique-replace-modal')?.remove();
     this.closeTip();
     this.mode = null;
     this.result = null;

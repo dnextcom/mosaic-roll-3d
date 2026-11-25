@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
-import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-20';
+import { glazes, hasFace, powers, rarities } from './catalogo.js?v=esmaltes-22';
 
 const pips = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 const stoneGlaze = { color: '#65737c', light: '#a7adb1', darkPips: true };
@@ -119,13 +119,13 @@ function dieFace(spec, face, stone) {
     return canvas;
   }
   const tinted = !stone && spec.tint != null;
-  const gilded = !stone && !tinted && hasFace(spec.gild, face);
-  const glaze = stone ? stoneGlaze : tinted ? glazes[spec.tint] : gilded ? glazes[6] : glazes[spec.glaze];
+  const gilded = !stone && hasFace(spec.gild, face);
+  const glaze = stone ? stoneGlaze : tinted ? glazes[spec.tint] : glazes[spec.glaze];
   const wash = ctx.createLinearGradient(5, 7, 124, 115);
-  if (spec.rainbow && !tinted && !stone && !gilded) rainbow.forEach((color, i) => wash.addColorStop(i / (rainbow.length - 1), color));
+  if (spec.rainbow && !tinted && !stone) rainbow.forEach((color, i) => wash.addColorStop(i / (rainbow.length - 1), color));
   else {
     wash.addColorStop(0, glaze.light);
-    if (spec.second != null && !stone && !gilded && !tinted) {
+    if (spec.second != null && !stone && !tinted) {
       wash.addColorStop(.49, glaze.color);
       wash.addColorStop(.51, glazes[spec.second].light);
       wash.addColorStop(1, glazes[spec.second].color);
@@ -133,8 +133,22 @@ function dieFace(spec, face, stone) {
   }
   ctx.fillStyle = wash;
   ctx.fillRect(0, 0, 128, 128);
-  ctx.strokeStyle = spec.numberChanged || spec.sealed ? '#efc9ff' : stone ? '#d0d0cba0' : spec.eternal ? '#15171e' : gilded ? '#ffe392' : '#f6e7c7b9';
-  ctx.lineWidth = spec.eternal && !stone ? 3 : 1.8;
+  if (spec.obsidian) {
+    const obs = ctx.createLinearGradient(0, 0, 128, 128);
+    obs.addColorStop(0, '#1f182e');
+    obs.addColorStop(0.5, '#0b0912');
+    obs.addColorStop(1, '#2a1d42');
+    ctx.strokeStyle = obs;
+    ctx.lineWidth = 18;
+    ctx.strokeRect(5, 5, 118, 118);
+    ctx.strokeStyle = '#9b7be8';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.roundRect(14, 14, 100, 100, 10);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = spec.numberChanged || spec.sealed ? '#efc9ff' : spec.obsidian ? '#b79cff' : stone ? '#d0d0cba0' : spec.eternal ? '#15171e' : gilded ? '#ffe392' : '#f6e7c7b9';
+  ctx.lineWidth = (spec.eternal && !stone) || spec.obsidian ? 2.6 : 1.8;
   ctx.beginPath();
   ctx.roundRect(11, 11, 106, 106, 11);
   ctx.stroke();
@@ -147,8 +161,21 @@ function dieFace(spec, face, stone) {
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
   }
-  const dark = glaze.darkPips || spec.rainbow && !tinted;
-  const ink = stone || dark ? '#212f3e' : '#fff1d4';
+  if (gilded) {
+    const disc = ctx.createRadialGradient(54, 50, 6, 64, 64, 45);
+    disc.addColorStop(0, '#fff7c2');
+    disc.addColorStop(0.55, '#f2c75c');
+    disc.addColorStop(1, '#b87b16');
+    ctx.beginPath();
+    ctx.arc(64, 64, 44, 0, Math.PI * 2);
+    ctx.fillStyle = disc;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffe999';
+    ctx.stroke();
+  }
+  const dark = gilded || glaze.darkPips || spec.rainbow && !tinted;
+  const ink = gilded ? '#2c1e05' : stone || dark ? '#212f3e' : '#fff1d4';
   if (!stone && hasFace(spec.wild, face) && !spec.numberChanged) {
     ctx.font = '54px Georgia';
     ctx.textAlign = 'center';
@@ -216,7 +243,7 @@ export class DiceArt {
   }
 
   create(spec, stone = false) {
-    const key = JSON.stringify([stone, spec.faces, spec.unique, spec.numberChanged, stone ? 0 : [spec.glaze, spec.second, spec.boost, spec.gild, spec.wild, spec.eternal, spec.rainbow, spec.tint, spec.echo, spec.sealed]]);
+    const key = JSON.stringify([stone, spec.faces, spec.unique, spec.numberChanged, Boolean(spec.obsidian), stone ? 0 : [spec.glaze, spec.second, spec.boost, spec.gild, spec.wild, spec.eternal, spec.rainbow, spec.tint, spec.echo, spec.sealed]]);
     let item = this.cache.get(key);
     if (!item) {
       const materials = [2, 3, 0, 5, 1, 4].map(face => new THREE.MeshPhysicalMaterial({ map: texture(dieFace(spec, face, stone)),
