@@ -205,8 +205,27 @@ jobs:
           import os, re
 
           gradle_path = 'build-app/android/app/build.gradle'
+          variables_path = 'build-app/android/variables.gradle'
+          min_sdk = 24
+          bump_min_sdk = lambda match: f"{match.group(1)}{max(min_sdk, int(match.group(2)))}"
+          sdk_verified = False
+
+          if os.path.exists(variables_path):
+              with open(variables_path, 'r') as f:
+                  v_content = f.read()
+              updated_v, count_v = re.subn(r'(minSdkVersion\s*=\s*)(\d+)', bump_min_sdk, v_content)
+              if count_v:
+                  with open(variables_path, 'w') as f:
+                      f.write(updated_v)
+                  sdk_verified = True
+
           with open(gradle_path, 'r') as f:
               content = f.read()
+
+          content, count_app = re.subn(r'(minSdk(?:Version)?\s*=?\s*)(\d+)', bump_min_sdk, content)
+          if count_app:
+              sdk_verified = True
+          assert sdk_verified, 'No se pudo verificar ni actualizar minSdkVersion >= 24'
 
           v_code = os.environ['VERSION_CODE']
           v_name = os.environ['VERSION_NAME']
