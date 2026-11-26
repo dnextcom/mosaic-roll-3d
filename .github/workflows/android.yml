@@ -82,7 +82,7 @@ jobs:
         working-directory: build-app
         run: |
           npm init -y
-          npm install --silent @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7
+          npm install --silent @capacitor/core@^8 @capacitor/cli@^8 @capacitor/android@^8
           cat > capacitor.config.json <<EOF
           {
             "appId": "${APP_ID}",
@@ -206,26 +206,31 @@ jobs:
 
           gradle_path = 'build-app/android/app/build.gradle'
           variables_path = 'build-app/android/variables.gradle'
-          min_sdk = 24
-          bump_min_sdk = lambda match: f"{match.group(1)}{max(min_sdk, int(match.group(2)))}"
-          sdk_verified = False
+          sdk_floors = {'minSdkVersion': 24, 'compileSdkVersion': 36, 'targetSdkVersion': 36}
 
+          def enforce_sdk(text, key, minimum):
+              pattern = rf'({key}\s*=?\s*)(\d+)'
+              return re.subn(pattern, lambda m: f"{m.group(1)}{max(minimum, int(m.group(2)))}", text)
+
+          verified = set()
           if os.path.exists(variables_path):
               with open(variables_path, 'r') as f:
                   v_content = f.read()
-              updated_v, count_v = re.subn(r'(minSdkVersion\s*=\s*)(\d+)', bump_min_sdk, v_content)
-              if count_v:
-                  with open(variables_path, 'w') as f:
-                      f.write(updated_v)
-                  sdk_verified = True
+              for key, minimum in sdk_floors.items():
+                  v_content, count = enforce_sdk(v_content, key, minimum)
+                  if count:
+                      verified.add(key)
+              with open(variables_path, 'w') as f:
+                  f.write(v_content)
 
           with open(gradle_path, 'r') as f:
               content = f.read()
 
-          content, count_app = re.subn(r'(minSdk(?:Version)?\s*=?\s*)(\d+)', bump_min_sdk, content)
-          if count_app:
-              sdk_verified = True
-          assert sdk_verified, 'No se pudo verificar ni actualizar minSdkVersion >= 24'
+          for key, minimum in sdk_floors.items():
+              content, count = enforce_sdk(content, key, minimum)
+              if count:
+                  verified.add(key)
+          assert sdk_floors.keys() <= verified, f'No se pudieron verificar SDKs requeridos: {sdk_floors.keys() - verified}'
 
           v_code = os.environ['VERSION_CODE']
           v_name = os.environ['VERSION_NAME']
