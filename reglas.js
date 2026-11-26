@@ -187,7 +187,8 @@ export function newRun(deck = 'classic', difficulty = 0, random = Math.random) {
     bag = decks[deck].start(random);
   }
   const die = (id, face, slot) => ({ id, slot, face, value: bag[id].faces[face], stone: false, fixed: false });
-  const hand = deck === 'classic' ? [[0, 2], [1, 3], [4, 4], [2, 5]].map(([id, value], slot) => die(id, bag[id].faces.indexOf(value), slot))
+  const hand = deck === 'classic' && difficulty === 0
+    ? [[0, 2], [1, 3], [4, 4], [2, 5]].map(([id, value], slot) => die(id, bag[id].faces.indexOf(value), slot))
     : Array(handSize).fill(null);
   const comboLevels = defaultComboLevels();
   const comboCounts = defaultComboCounts();

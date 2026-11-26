@@ -16,7 +16,7 @@ on:
       app_id:
         description: 'Application ID (paquete Android único)'
         required: false
-        default: 'com.dnextcom.bescuit'
+        default: 'com.diablonext.bescuit'
         type: string
   push:
     tags:
@@ -69,7 +69,7 @@ jobs:
             VERSION_NAME="0.1.${{ github.run_number }}"
           fi
 
-          APP_ID="${{ inputs.app_id || 'com.dnextcom.bescuit' }}"
+          APP_ID="${{ inputs.app_id || 'com.diablonext.bescuit' }}"
 
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
