@@ -18,6 +18,24 @@ on:
         required: false
         default: 'com.diablonext.bescuit'
         type: string
+      play_track:
+        description: 'Pista de Google Play (beta = pruebas abiertas)'
+        required: false
+        default: 'beta'
+        type: choice
+        options:
+          - beta
+          - internal
+          - alpha
+          - production
+      play_status:
+        description: 'Estado en Google Play (completed o draft)'
+        required: false
+        default: 'completed'
+        type: choice
+        options:
+          - completed
+          - draft
   push:
     tags:
       - 'v*'
@@ -323,6 +341,28 @@ jobs:
           path: build-app/dist/*
           retention-days: 7
 
+      - name: Comprobar secreto de Google Play
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "HAS_PLAY_JSON=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_PLAY_JSON=false" >> "$GITHUB_ENV"
+          fi
+          echo "PLAY_TRACK=${{ inputs.play_track || 'beta' }}" >> "$GITHUB_ENV"
+          echo "PLAY_STATUS=${{ inputs.play_status || 'completed' }}" >> "$GITHUB_ENV"
+
+      - name: Desplegar AAB en Google Play
+        if: env.SIGNING_MODE == 'release' && env.HAS_PLAY_JSON == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.APP_ID }}
+          releaseFiles: build-app/dist/*.aab
+          track: ${{ env.PLAY_TRACK }}
+          status: ${{ env.PLAY_STATUS }}
+
       - name: Resumen de compilación
         run: |
           {
@@ -331,6 +371,11 @@ jobs:
             echo "- **Versión:** \`${VERSION_NAME}\` (\`versionCode: ${VERSION_CODE}\`)"
             if [ "$SIGNING_MODE" = "release" ]; then
               echo "- **Firma:** Keystore de producción (apto para Google Play Console)"
+              if [ "$HAS_PLAY_JSON" = "true" ]; then
+                echo "- **Google Play:** Desplegado en pista \`${PLAY_TRACK}\` (estado: \`${PLAY_STATUS}\`)"
+              else
+                echo "- **Google Play:** ℹ️ Añade el secreto \`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON\` para activar la subida automática"
+              fi
             else
               echo "- **Firma:** ⚠️ Keystore temporal de pruebas (instala el \`.apk\` para probar, pero **no** lo subas a Google Play aún)"
               echo ""
