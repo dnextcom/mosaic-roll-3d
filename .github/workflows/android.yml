@@ -96,7 +96,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Generar iconos adaptativos y splash desde azulejo.jpg
+      - name: Generar iconos adaptativos y splash desde icono.png
         run: |
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
@@ -104,8 +104,23 @@ jobs:
           from PIL import Image, ImageDraw
 
           res_dir = 'build-app/android/app/src/main/res'
-          tile = Image.open('azulejo.jpg').convert('RGBA')
-          bg_color = (7, 12, 34, 255)
+          icon = Image.open('icono.png').convert('RGBA')
+          bg_color = (3, 11, 39, 255)
+
+          def build_adaptive_foreground(fg_size):
+              fg = Image.new('RGBA', (fg_size, fg_size), (0, 0, 0, 0))
+              inner = int(fg_size * 0.68)
+              resized = icon.resize((inner, inner), Image.Resampling.LANCZOS)
+              feather = Image.new('L', (inner, inner), 0)
+              fd = ImageDraw.Draw(feather)
+              cx = inner // 2
+              for i in range(16):
+                  t = i / 15
+                  r = int((0.468 - 0.048 * t) * inner)
+                  fd.ellipse((cx - r, cx - r, cx + r, cx + r), fill=int(255 * t))
+              offset = (fg_size - inner) // 2
+              fg.paste(resized, (offset, offset), feather)
+              return fg
 
           sizes = {
               'mipmap-mdpi': 48,
@@ -120,7 +135,7 @@ jobs:
               os.makedirs(out_dir, exist_ok=True)
 
               # Standard square icon
-              sq = tile.resize((size, size), Image.Resampling.LANCZOS)
+              sq = icon.resize((size, size), Image.Resampling.LANCZOS)
               sq.save(os.path.join(out_dir, 'ic_launcher.png'))
 
               # Round icon with circular mask
@@ -130,16 +145,11 @@ jobs:
               rnd.paste(sq, (0, 0), mask)
               rnd.save(os.path.join(out_dir, 'ic_launcher_round.png'))
 
-              # Adaptive foreground (108dp canvas with ~62% centered safe zone)
+              # Adaptive foreground (108dp canvas with centered safe zone blending into #030B27)
               fg_size = int(size * 108 / 48)
-              fg = Image.new('RGBA', (fg_size, fg_size), (0, 0, 0, 0))
-              inner = int(fg_size * 0.62)
-              inner_tile = tile.resize((inner, inner), Image.Resampling.LANCZOS)
-              offset = (fg_size - inner) // 2
-              fg.paste(inner_tile, (offset, offset))
-              fg.save(os.path.join(out_dir, 'ic_launcher_foreground.png'))
+              build_adaptive_foreground(fg_size).save(os.path.join(out_dir, 'ic_launcher_foreground.png'))
 
-          # Clean vector foregrounds so raster ceramic tile shows cleanly
+          # Clean vector foregrounds so raster icon shows cleanly
           for stale in [
               os.path.join(res_dir, 'drawable-v24', 'ic_launcher_foreground.xml'),
               os.path.join(res_dir, 'drawable', 'ic_launcher_background.xml'),
@@ -149,7 +159,7 @@ jobs:
 
           values_bg = os.path.join(res_dir, 'values', 'ic_launcher_background.xml')
           with open(values_bg, 'w') as f:
-              f.write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#070C22</color>\n</resources>\n')
+              f.write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#030B27</color>\n</resources>\n')
 
           anydpi_dir = os.path.join(res_dir, 'mipmap-anydpi-v26')
           os.makedirs(anydpi_dir, exist_ok=True)
@@ -168,8 +178,8 @@ jobs:
           for old_splash in glob.glob(os.path.join(res_dir, 'drawable-*', 'splash.png')):
               os.remove(old_splash)
           splash = Image.new('RGBA', (1080, 1920), bg_color)
-          splash_tile = tile.resize((360, 360), Image.Resampling.LANCZOS)
-          splash.paste(splash_tile, ((1080 - 360) // 2, (1920 - 360) // 2))
+          splash_icon = icon.resize((480, 480), Image.Resampling.LANCZOS)
+          splash.paste(splash_icon, ((1080 - 480) // 2, (1920 - 480) // 2))
           splash.save(os.path.join(res_dir, 'drawable', 'splash.png'))
           PY
 
